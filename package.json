@@ -1,0 +1,13 @@
+{
+  "name": "mario-baseball",
+  "private": true,
+  "scripts": {
+    "dev": "cd web && npm run dev",
+    "build": "cd web && npm run build",
+    "lint": "cd web && npm run lint",
+    "stop": "cd web && npm run stop",
+    "db:init": "cd web && npm run db:init",
+    "db:push": "cd web && npm run db:push",
+    "db:seed": "cd web && npm run db:seed"
+  }
+}
