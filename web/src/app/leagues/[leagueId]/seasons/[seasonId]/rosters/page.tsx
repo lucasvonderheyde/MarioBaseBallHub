@@ -6,6 +6,7 @@ import { characters, rosterInstances } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
+import { characterMugshotUrl } from "@/lib/asset-urls";
 import { assignRosterFormAction } from "@/server/actions";
 
 type Props = {
@@ -62,7 +63,7 @@ export default async function RostersPage({ params, searchParams }: Props) {
             {character.mugshotFile ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`/api/images/characters/${encodeURIComponent(character.mugshotFile)}`}
+                src={characterMugshotUrl(character.mugshotFile)}
                 alt=""
                 width={36}
                 height={36}

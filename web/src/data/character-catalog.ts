@@ -1,4 +1,4 @@
-/** gameCharId as in decoded stats JSON → mugshot filename in Images/CharacterMugShots */
+/** gameCharId as in decoded stats JSON → filename under `public/assets/characters/` */
 export const CHARACTER_CATALOG: {
   gameCharId: string;
   displayName: string;

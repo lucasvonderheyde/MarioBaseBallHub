@@ -11,8 +11,11 @@ import {
   teams,
   users,
 } from "@/db/schema";
-import { computeStandings, type FinishedGame } from "@/lib/standings";
-import { parseTiebreakerOrder } from "@/lib/tiebreakers";
+import {
+  computeStandings,
+  type FinishedGame,
+} from "@/domain/standings/compute-standings";
+import { parseTiebreakerOrder } from "@/domain/standings/tiebreakers";
 
 export async function getSeasonDashboard(seasonId: string) {
   const [season] = await db

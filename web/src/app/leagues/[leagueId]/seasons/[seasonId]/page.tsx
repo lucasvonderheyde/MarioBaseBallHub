@@ -9,7 +9,7 @@ import {
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
-import { parseTiebreakerOrder } from "@/lib/tiebreakers";
+import { parseTiebreakerOrder } from "@/domain/standings/tiebreakers";
 import { UploadStatsForm } from "@/components/UploadStatsForm";
 import {
   addScheduleGameAction,
@@ -19,16 +19,12 @@ import {
   savePoolAction,
   saveYoutubeFormAction,
 } from "@/server/actions";
+import { characterMugshotUrl } from "@/lib/asset-urls";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string }>;
   searchParams: Promise<{ e?: string }>;
 };
-
-function mugUrl(file: string | null) {
-  if (!file) return null;
-  return `/api/images/characters/${encodeURIComponent(file)}`;
-}
 
 export default async function SeasonPage({ params, searchParams }: Props) {
   const { leagueId, seasonId } = await params;
@@ -399,7 +395,11 @@ export default async function SeasonPage({ params, searchParams }: Props) {
                           {c.mugshotFile ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={mugUrl(c.mugshotFile) ?? ""}
+                              src={
+                                c.mugshotFile
+                                  ? characterMugshotUrl(c.mugshotFile)
+                                  : ""
+                              }
                               alt=""
                               width={28}
                               height={28}

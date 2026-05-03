@@ -8,6 +8,7 @@
     "stop": "cd web && npm run stop",
     "db:init": "cd web && npm run db:init",
     "db:push": "cd web && npm run db:push",
-    "db:seed": "cd web && npm run db:seed"
+    "db:seed": "cd web && npm run db:seed",
+    "test": "cd web && npm run test"
   }
 }

@@ -7,14 +7,13 @@ export type FinishedGame = {
   awayScore: number;
 };
 
-export type TeamRow = {
+export type TeamStandingRow = {
   teamId: string;
   name: string;
   wins: number;
   losses: number;
   runsFor: number;
   runsAgainst: number;
-  /** true when tiebreaker chain ends in `one_game` and teams are still tied */
   needsTiebreakerGame?: boolean;
 };
 
@@ -30,7 +29,6 @@ function gamesBetween(
   );
 }
 
-/** Wins for `team` within the subset of games that only involve teams in `subset` */
 function winsInSubset(
   team: string,
   subset: Set<string>,
@@ -70,8 +68,8 @@ function h2hWins(team: string, opponent: string, games: FinishedGame[]): number 
 }
 
 function compareTwoTeams(
-  a: TeamRow,
-  b: TeamRow,
+  a: TeamStandingRow,
+  b: TeamStandingRow,
   games: FinishedGame[],
   order: TiebreakerKey[],
 ): number {
@@ -100,8 +98,8 @@ function buildTeamRows(
   teamIds: string[],
   teamNames: Map<string, string>,
   games: FinishedGame[],
-): TeamRow[] {
-  const rows = new Map<string, TeamRow>();
+): TeamStandingRow[] {
+  const rows = new Map<string, TeamStandingRow>();
   for (const id of teamIds) {
     rows.set(id, {
       teamId: id,
@@ -131,23 +129,19 @@ function buildTeamRows(
   return teamIds.map((id) => rows.get(id)!);
 }
 
-/**
- * Standings for regular season: sort by wins, then tiebreaker order.
- * Multi-team ties: wins within tied subgroup, then same chain for first vs second in subgroup order.
- */
 export function computeStandings(
   teamIds: string[],
   teamNames: Map<string, string>,
   games: FinishedGame[],
   tiebreakerOrder: TiebreakerKey[],
-): TeamRow[] {
+): TeamStandingRow[] {
   const rows = buildTeamRows(teamIds, teamNames, games);
   const sorted = [...rows].sort((a, b) => {
     if (a.wins !== b.wins) return b.wins - a.wins;
     const tied = rows.filter((r) => r.wins === a.wins);
     if (tied.length <= 1) return 0;
     const subset = new Set(tied.map((t) => t.teamId));
-    const subW = (t: TeamRow) => winsInSubset(t.teamId, subset, games);
+    const subW = (t: TeamStandingRow) => winsInSubset(t.teamId, subset, games);
     const swDiff = subW(b) - subW(a);
     if (swDiff !== 0) return swDiff;
     const cmp = compareTwoTeams(a, b, games, tiebreakerOrder);

@@ -13,7 +13,7 @@ export function normalizeStatsGameId(raw: string): string {
   return raw.replace(/,/g, "").trim();
 }
 
-export type ParsedGameStats = {
+export type DecodedGameSummary = {
   statsGameId: string;
   awayPlayer: string;
   homePlayer: string;
@@ -23,10 +23,11 @@ export type ParsedGameStats = {
   rawJson: string;
 };
 
-export function parseDecodedStatsJson(text: string): ParsedGameStats {
+/** Validates and normalizes a decoded MSSB stats JSON export (full file text). */
+export function parseDecodedGameFile(jsonText: string): DecodedGameSummary {
   let data: unknown;
   try {
-    data = JSON.parse(text) as unknown;
+    data = JSON.parse(jsonText) as unknown;
   } catch {
     throw new Error("Invalid JSON");
   }
@@ -42,6 +43,6 @@ export function parseDecodedStatsJson(text: string): ParsedGameStats {
     awayScore: d["Away Score"],
     homeScore: d["Home Score"],
     stadiumId: d["StadiumID"],
-    rawJson: text,
+    rawJson: jsonText,
   };
 }

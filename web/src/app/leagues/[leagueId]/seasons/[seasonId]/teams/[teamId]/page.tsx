@@ -6,6 +6,7 @@ import { characters, rosterInstances, teams, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
+import { characterMugshotUrl, stadiumIconUrl } from "@/lib/asset-urls";
 import { updateTeamAction } from "@/server/actions";
 
 type Props = {
@@ -44,7 +45,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
     ? dash.stadiums.find((s) => s.gameStadiumId === team.homeStadiumGameId)
     : null;
   const stadiumImg = stadiumRow?.iconFile
-    ? `/api/images/stadiums/${encodeURIComponent(stadiumRow.iconFile)}`
+    ? stadiumIconUrl(stadiumRow.iconFile)
     : null;
 
   const isAdmin = role === "admin";
@@ -100,7 +101,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
               {character.mugshotFile ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={`/api/images/characters/${encodeURIComponent(character.mugshotFile)}`}
+                  src={characterMugshotUrl(character.mugshotFile)}
                   alt=""
                   width={28}
                   height={28}

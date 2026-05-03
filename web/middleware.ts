@@ -10,9 +10,6 @@ export function middleware(_request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Skip static assets and API image routes so dev stays responsive.
-     */
-    "/((?!_next/static|_next/image|favicon.ico|api/images|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
