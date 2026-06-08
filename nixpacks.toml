@@ -1,0 +1,16 @@
+# Fallback when Railway Root Directory is NOT set (builds from repo root).
+# Prefer: Root Directory = web, config file = /web/railway.toml
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-9_x", "openssl", "python3", "gcc"]
+
+[phases.install]
+cmds = ["cd web && npm ci"]
+
+[phases.build]
+cmds = ["cd web && npm run build"]
+
+[start]
+cmd = "cd web && npm run start:prod"

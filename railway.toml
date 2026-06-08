@@ -1,0 +1,9 @@
+# Fallback when Railway Root Directory is NOT set (repo root).
+# Recommended: Root Directory = web, config file = /web/railway.toml
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "cd web && npm run start:prod"
+healthcheckPath = "/"

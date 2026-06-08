@@ -1,6 +1,9 @@
 {
   "name": "mario-baseball",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "start": "cd web && npm run start:prod",
     "dev": "cd web && npm run dev",
