@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { leagues, leagueMembers, seasons } from "@/db/schema";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
 import { createLeagueAction } from "@/server/actions";
 
 export default async function LeaguesPage({
@@ -38,6 +38,15 @@ export default async function LeaguesPage({
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="text-2xl font-bold">Your leagues</h1>
+      {userIsSiteAdmin(user) ? (
+        <p className="mt-2 text-sm text-amber-300/90">
+          Site admin —{" "}
+          <Link href="/admin" className="text-amber-400 hover:underline">
+            manage all leagues and users
+          </Link>
+          .
+        </p>
+      ) : null}
       {e ? (
         <p className="mt-2 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {e}
@@ -69,7 +78,7 @@ export default async function LeaguesPage({
           />
           <button
             type="submit"
-            className="rounded-md bg-amber-500 px-4 py-2 font-medium text-zinc-950"
+            className="msb-btn-primary px-4 py-2"
           >
             Create
           </button>

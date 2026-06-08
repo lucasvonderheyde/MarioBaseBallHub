@@ -1,10 +1,11 @@
 import { defineConfig } from "drizzle-kit";
+import { resolveDbPath } from "./src/db/resolve-db-path";
 
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: "./data/league.db",
+    url: resolveDbPath(),
   },
 });

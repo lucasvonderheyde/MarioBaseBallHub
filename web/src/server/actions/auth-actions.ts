@@ -59,3 +59,39 @@ export async function logoutAction() {
   session.destroy();
   redirect("/login");
 }
+
+export async function updateProfileAction(formData: FormData) {
+  const session = await getSession();
+  if (!session.userId) redirectWithFormError("/login", "Not logged in.");
+  const [current] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, session.userId))
+    .limit(1);
+  if (!current) redirectWithFormError("/login", "Not logged in.");
+
+  const username = String(formData.get("username") ?? "").trim();
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  if (username.length < 2) {
+    redirectWithFormError("/account", "Username must be at least 2 characters.");
+  }
+
+  if (username !== current.username) {
+    const [taken] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+    if (taken) redirectWithFormError("/account", "Username already taken.");
+  }
+
+  await db
+    .update(users)
+    .set({
+      username,
+      displayName: displayName || null,
+    })
+    .where(eq(users.id, current.id));
+
+  redirect("/account?m=updated");
+}

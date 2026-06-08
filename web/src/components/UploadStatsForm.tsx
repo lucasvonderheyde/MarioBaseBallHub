@@ -30,7 +30,7 @@ export function UploadStatsForm({ gameId, leagueId, seasonId }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-amber-500 px-3 py-1 text-sm font-medium text-zinc-950 disabled:opacity-50"
+        className="msb-btn-primary px-3 py-1 text-sm disabled:opacity-50"
       >
         {pending ? "Uploading…" : "Save stats to this game"}
       </button>

@@ -17,12 +17,13 @@ import { requireUser } from "@/lib/auth";
 import { getSeasonLeagueId, getLeagueRole } from "@/lib/league-access";
 import { redirectWithFormError } from "@/server/flash-redirect";
 import { newUuid } from "@/server/ids";
+import { deleteCharacterGameStatsForGame } from "@/server/persist-game-stats";
 
 export async function createTeamAction(seasonId: string, formData: FormData) {
   const user = await requireUser();
   const leagueId = await getSeasonLeagueId(seasonId);
   if (!leagueId) redirectWithFormError("/leagues", "Season not found.");
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
     redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
   const name = String(formData.get("name") ?? "").trim();
@@ -65,47 +66,73 @@ export async function updateTeamAction(
   formData: FormData,
 ) {
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
-  if (role !== "admin")
+  const role = await getLeagueRole(leagueId, user);
+  const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+  if (!team || team.seasonId !== seasonId) {
+    redirectWithFormError(
+      `/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}`,
+      "Team not found.",
+    );
+  }
+  const isAdmin = role === "admin";
+  const isManager = team.managerUserId === user.id;
+  if (!isAdmin && !isManager) {
     redirectWithFormError(
       `/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}`,
       "Forbidden.",
     );
-  const name = String(formData.get("name") ?? "").trim();
-  const managerUsername = String(formData.get("managerUsername") ?? "").trim();
-  const homeStadium = String(formData.get("homeStadium") ?? "").trim();
-  let managerUserId: string | null = null;
-  if (managerUsername) {
-    const [m] = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, managerUsername))
-      .limit(1);
-    if (!m)
-      redirectWithFormError(
-        `/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}`,
-        "Manager username not found.",
-      );
-    managerUserId = m.id;
-  } else {
-    managerUserId = null;
   }
-  await db
-    .update(teams)
-    .set({
-      name: name || undefined,
-      managerUserId,
-      homeStadiumGameId: homeStadium || null,
-    })
-    .where(eq(teams.id, teamId));
+
+  const name = String(formData.get("name") ?? "").trim();
+  const homeStadium = String(formData.get("homeStadium") ?? "").trim();
+  if (!name) {
+    redirectWithFormError(
+      `/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}`,
+      "Team name required.",
+    );
+  }
+
+  if (isAdmin) {
+    const managerUsername = String(formData.get("managerUsername") ?? "").trim();
+    let managerUserId: string | null = null;
+    if (managerUsername) {
+      const [m] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, managerUsername))
+        .limit(1);
+      if (!m)
+        redirectWithFormError(
+          `/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}`,
+          "Manager username not found.",
+        );
+      managerUserId = m.id;
+    }
+    await db
+      .update(teams)
+      .set({
+        name,
+        managerUserId,
+        homeStadiumGameId: homeStadium || null,
+      })
+      .where(eq(teams.id, teamId));
+  } else {
+    await db
+      .update(teams)
+      .set({
+        name,
+        homeStadiumGameId: homeStadium || null,
+      })
+      .where(eq(teams.id, teamId));
+  }
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}`);
+  redirect(`/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}?m=updated`);
 }
 
 export async function savePoolAction(seasonId: string, formData: FormData) {
   const user = await requireUser();
   const leagueId = (await getSeasonLeagueId(seasonId))!;
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
     redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
   const allChars = await db.select({ id: characters.id }).from(characters);
@@ -216,7 +243,7 @@ export async function assignRosterFormAction(formData: FormData) {
   if (!instanceId || !seasonId || !leagueId)
     redirectWithFormError("/leagues", "Missing roster fields.");
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
     redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}/rosters`, "Forbidden.");
   await db
@@ -233,7 +260,7 @@ export async function createRoundAction(
   formData: FormData,
 ) {
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
     redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
   const phase = String(formData.get("phase") ?? "regular") as "regular" | "playoffs";
@@ -256,7 +283,7 @@ export async function addScheduleGameAction(
   formData: FormData,
 ) {
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
     redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
   const roundId = String(formData.get("roundId") ?? "");
@@ -291,7 +318,7 @@ export async function saveYoutubeFormAction(formData: FormData) {
   const url = String(formData.get("youtube") ?? "");
   if (!gameId || !leagueId || !seasonId) return;
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (!role) redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
   await db
     .update(scheduleGames)
@@ -308,9 +335,10 @@ export async function clearGameStatsAction(
   _formData?: FormData,
 ) {
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
     redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+  await deleteCharacterGameStatsForGame(gameId);
   await db
     .update(scheduleGames)
     .set({
@@ -318,6 +346,7 @@ export async function clearGameStatsAction(
       awayScore: null,
       statsGameId: null,
       statsRawJson: null,
+      statsStadiumId: null,
       playedAt: null,
     })
     .where(eq(scheduleGames.id, gameId));

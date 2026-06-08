@@ -39,7 +39,7 @@ export default async function LoginPage({
         </div>
         <button
           type="submit"
-          className="w-full rounded-md bg-amber-500 py-2 font-medium text-zinc-950"
+          className="msb-btn-primary w-full py-2"
         >
           Log in
         </button>

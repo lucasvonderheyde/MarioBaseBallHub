@@ -3,9 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { leagues, leagueMembers, seasons } from "@/db/schema";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
-import { createSeasonAction, addMemberAction } from "@/server/actions";
+import {
+  addMemberAction,
+  createSeasonAction,
+  renameLeagueAction,
+} from "@/server/actions";
 
 type Props = {
   params: Promise<{ leagueId: string }>;
@@ -25,7 +29,7 @@ export default async function LeaguePage({ params, searchParams }: Props) {
     .limit(1);
   if (!league) notFound();
 
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (!role) notFound();
 
   const seasonRows = await db
@@ -42,7 +46,11 @@ export default async function LeaguePage({ params, searchParams }: Props) {
           All leagues
         </Link>
       </div>
-      {role === "admin" ? (
+      {userIsSiteAdmin(user) ? (
+        <p className="mt-1 text-sm text-amber-300/90">
+          Site admin — full access to this league.
+        </p>
+      ) : role === "admin" ? (
         <p className="mt-1 text-sm text-amber-400/90">You are a league admin.</p>
       ) : null}
       {e ? (
@@ -55,6 +63,26 @@ export default async function LeaguePage({ params, searchParams }: Props) {
           Member added (or was already in the league).
         </p>
       ) : null}
+      {m === "renamed" ? (
+        <p className="mt-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          League renamed.
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-4 text-sm">
+        <Link
+          href={`/leagues/${leagueId}/characters`}
+          className="text-amber-400 hover:underline"
+        >
+          Character library
+        </Link>
+        <Link
+          href={`/leagues/${leagueId}/stadiums`}
+          className="text-amber-400 hover:underline"
+        >
+          Stadium library
+        </Link>
+      </div>
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Seasons</h2>
@@ -78,6 +106,26 @@ export default async function LeaguePage({ params, searchParams }: Props) {
       {role === "admin" ? (
         <>
           <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
+            <h2 className="font-semibold">Rename league</h2>
+            <form
+              action={renameLeagueAction.bind(null, leagueId)}
+              className="mt-3 flex flex-wrap gap-2"
+            >
+              <input
+                name="name"
+                required
+                defaultValue={league.name}
+                className="min-w-[200px] flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2"
+              />
+              <button
+                type="submit"
+                className="rounded-md border border-zinc-600 px-4 py-2 text-zinc-200 hover:bg-zinc-800"
+              >
+                Save name
+              </button>
+            </form>
+          </section>
+          <section className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
             <h2 className="font-semibold">New season</h2>
             <form
               action={createSeasonAction.bind(null, leagueId)}
@@ -91,7 +139,7 @@ export default async function LeaguePage({ params, searchParams }: Props) {
               />
               <button
                 type="submit"
-                className="rounded-md bg-amber-500 px-4 py-2 font-medium text-zinc-950"
+                className="msb-btn-primary px-4 py-2"
               >
                 Create
               </button>

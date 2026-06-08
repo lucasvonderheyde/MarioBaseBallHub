@@ -8,6 +8,11 @@ import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
 import { netplayLabelWarnings } from "@/domain/stats/netplay-warnings";
+import {
+  persistCharacterGameStats,
+  backfillCharacterGameStats,
+  deleteCharacterGameStatsForGame,
+} from "@/server/persist-game-stats";
 
 export type UploadStatsState =
   | { ok: true; warnings?: string[] }
@@ -34,7 +39,7 @@ export async function uploadStatsAction(
   jsonText: string,
 ): Promise<UploadStatsState> {
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (!role) return { error: "Forbidden" };
   let parsed;
   try {
@@ -89,11 +94,32 @@ export async function uploadStatsAction(
       awayScore: parsed.awayScore,
       statsGameId: parsed.statsGameId,
       statsRawJson: parsed.rawJson,
+      statsStadiumId: parsed.stadiumId ?? null,
       playedAt: new Date(),
     })
     .where(eq(scheduleGames.id, gameId));
+
+  await persistCharacterGameStats({
+    gameId,
+    seasonId,
+    homeTeamId: game.homeTeamId,
+    awayTeamId: game.awayTeamId,
+    rawJson: parsed.rawJson,
+  });
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
   const out: { ok: true; warnings?: string[] } = { ok: true };
   if (warnings.length) out.warnings = warnings;
   return out;
+}
+
+export async function backfillStatsAction(
+  seasonId: string,
+  leagueId: string,
+): Promise<{ ok: true; count: number } | { error: string }> {
+  const user = await requireUser();
+  const role = await getLeagueRole(leagueId, user);
+  if (role !== "admin") return { error: "Forbidden" };
+  const count = await backfillCharacterGameStats(seasonId);
+  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  return { ok: true, count };
 }

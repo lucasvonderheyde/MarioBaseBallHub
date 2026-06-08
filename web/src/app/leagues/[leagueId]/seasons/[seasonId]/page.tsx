@@ -11,11 +11,13 @@ import { getLeagueRole } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { parseTiebreakerOrder } from "@/domain/standings/tiebreakers";
 import { UploadStatsForm } from "@/components/UploadStatsForm";
+import { BackfillStatsButton } from "@/components/BackfillStatsButton";
 import {
   addScheduleGameAction,
   clearGameStatsAction,
   createRoundAction,
   createTeamAction,
+  renameSeasonAction,
   savePoolAction,
   saveYoutubeFormAction,
 } from "@/server/actions";
@@ -23,16 +25,16 @@ import { characterMugshotUrl } from "@/lib/asset-urls";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string }>;
-  searchParams: Promise<{ e?: string }>;
+  searchParams: Promise<{ e?: string; m?: string }>;
 };
 
 export default async function SeasonPage({ params, searchParams }: Props) {
   const { leagueId, seasonId } = await params;
-  const { e } = await searchParams;
+  const { e, m } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (!role) notFound();
 
   const dash = await getSeasonDashboard(seasonId);
@@ -85,12 +87,32 @@ export default async function SeasonPage({ params, searchParams }: Props) {
           {e}
         </p>
       ) : null}
+      {m === "renamed" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Season renamed.
+        </p>
+      ) : null}
       <p className="mt-2 text-sm text-zinc-500">
         Tiebreakers (in order):{" "}
         <span className="font-mono text-zinc-300">
           {parseTiebreakerOrder(season.tiebreakerOrder).join(" → ")}
         </span>
       </p>
+
+      <div className="mt-4 flex flex-wrap gap-4 text-sm">
+        <Link
+          href={`/leagues/${leagueId}/characters?season=${seasonId}`}
+          className="text-amber-400 hover:underline"
+        >
+          Character library
+        </Link>
+        <Link
+          href={`/leagues/${leagueId}/stadiums?season=${seasonId}`}
+          className="text-amber-400 hover:underline"
+        >
+          Stadium library
+        </Link>
+      </div>
 
       <section className="mt-10" id="standings">
         <h2 className="text-lg font-semibold">Standings</h2>
@@ -176,6 +198,18 @@ export default async function SeasonPage({ params, searchParams }: Props) {
                             <span className="font-mono">{game.statsGameId}</span>
                           </>
                         ) : null}
+                        {game.statsRawJson ? (
+                          <>
+                            {" "}
+                            ·{" "}
+                            <Link
+                              href={`/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`}
+                              className="text-amber-400 hover:underline"
+                            >
+                              Box score
+                            </Link>
+                          </>
+                        ) : null}
                       </div>
                       <form
                         action={saveYoutubeFormAction}
@@ -236,6 +270,27 @@ export default async function SeasonPage({ params, searchParams }: Props) {
           <h2 className="text-lg font-semibold text-amber-200">Admin</h2>
 
           <div>
+            <h3 className="font-medium">Rename season</h3>
+            <form
+              action={renameSeasonAction.bind(null, seasonId, leagueId)}
+              className="mt-2 flex flex-wrap gap-2"
+            >
+              <input
+                name="name"
+                required
+                defaultValue={season.name}
+                className="min-w-[200px] flex-1 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+              />
+              <button
+                type="submit"
+                className="rounded border border-zinc-600 px-3 py-1 text-sm text-zinc-200 hover:bg-zinc-800"
+              >
+                Save name
+              </button>
+            </form>
+          </div>
+
+          <div>
             <h3 className="font-medium">Teams</h3>
             <ul className="mt-2 space-y-1 text-sm text-zinc-400">
               {teams.map(({ team, manager }) => (
@@ -272,7 +327,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
               />
               <button
                 type="submit"
-                className="rounded bg-amber-500 px-3 py-1 text-sm font-medium text-zinc-950"
+                className="msb-btn-primary px-3 py-1 text-sm"
               >
                 Add team
               </button>
@@ -430,7 +485,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
               </div>
               <button
                 type="submit"
-                className="mt-3 rounded bg-amber-500 px-3 py-1 text-sm font-medium text-zinc-950"
+                className="msb-btn-primary mt-3 px-3 py-1 text-sm"
               >
                 Save pool
               </button>
@@ -444,6 +499,16 @@ export default async function SeasonPage({ params, searchParams }: Props) {
             >
               Open roster assignment →
             </Link>
+          </div>
+
+          <div>
+            <h3 className="font-medium">Parsed stats</h3>
+            <p className="text-sm text-zinc-500">
+              Backfill character box scores from existing uploaded JSON.
+            </p>
+            <div className="mt-2">
+              <BackfillStatsButton seasonId={seasonId} leagueId={leagueId} />
+            </div>
           </div>
         </section>
       ) : null}

@@ -32,7 +32,7 @@ export async function createLeagueAction(formData: FormData) {
 
 export async function createSeasonAction(leagueId: string, formData: FormData) {
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") redirectWithFormError(`/leagues/${leagueId}`, "Forbidden.");
   const name = String(formData.get("name") ?? "").trim();
   if (!name) redirectWithFormError(`/leagues/${leagueId}`, "Season name required.");
@@ -50,7 +50,7 @@ export async function createSeasonAction(leagueId: string, formData: FormData) {
 
 export async function addMemberAction(leagueId: string, formData: FormData) {
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") redirectWithFormError(`/leagues/${leagueId}`, "Forbidden.");
   const username = String(formData.get("username") ?? "").trim();
   const [target] = await db
@@ -69,4 +69,54 @@ export async function addMemberAction(leagueId: string, formData: FormData) {
     .onConflictDoNothing();
   revalidatePath(`/leagues/${leagueId}`);
   redirect(`/leagues/${leagueId}?m=member`);
+}
+
+export async function renameLeagueAction(leagueId: string, formData: FormData) {
+  const user = await requireUser();
+  const role = await getLeagueRole(leagueId, user);
+  if (role !== "admin") redirectWithFormError(`/leagues/${leagueId}`, "Forbidden.");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) redirectWithFormError(`/leagues/${leagueId}`, "League name required.");
+  const [league] = await db
+    .select({ id: leagues.id })
+    .from(leagues)
+    .where(eq(leagues.id, leagueId))
+    .limit(1);
+  if (!league) redirectWithFormError("/leagues", "League not found.");
+  await db.update(leagues).set({ name }).where(eq(leagues.id, leagueId));
+  revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath("/admin");
+  redirect(`/leagues/${leagueId}?m=renamed`);
+}
+
+export async function renameSeasonAction(
+  seasonId: string,
+  leagueId: string,
+  formData: FormData,
+) {
+  const user = await requireUser();
+  const role = await getLeagueRole(leagueId, user);
+  if (role !== "admin") {
+    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+  }
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) {
+    redirectWithFormError(
+      `/leagues/${leagueId}/seasons/${seasonId}`,
+      "Season name required.",
+    );
+  }
+  const [season] = await db
+    .select({ id: seasons.id, leagueId: seasons.leagueId })
+    .from(seasons)
+    .where(eq(seasons.id, seasonId))
+    .limit(1);
+  if (!season || season.leagueId !== leagueId) {
+    redirectWithFormError(`/leagues/${leagueId}`, "Season not found.");
+  }
+  await db.update(seasons).set({ name }).where(eq(seasons.id, seasonId));
+  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath("/admin");
+  redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=renamed`);
 }

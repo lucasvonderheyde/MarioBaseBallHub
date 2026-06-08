@@ -9,6 +9,10 @@
     "db:init": "cd web && npm run db:init",
     "db:push": "cd web && npm run db:push",
     "db:seed": "cd web && npm run db:seed",
+    "db:bootstrap": "cd web && npm run db:bootstrap",
+    "db:backfill": "cd web && npm run db:backfill",
+    "setup": "bash scripts/setup-local.sh",
+    "setup:railway": "bash scripts/railway-setup.sh",
     "test": "cd web && npm run test"
   }
 }

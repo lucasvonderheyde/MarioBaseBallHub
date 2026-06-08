@@ -22,8 +22,6 @@ export type DecodedGameSummary = {
   stadiumId?: string;
   rawJson: string;
 };
-
-/** Validates and normalizes a decoded MSSB stats JSON export (full file text). */
 export function parseDecodedGameFile(jsonText: string): DecodedGameSummary {
   let data: unknown;
   try {

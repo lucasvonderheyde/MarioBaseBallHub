@@ -20,7 +20,7 @@ export default async function RostersPage({ params, searchParams }: Props) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const role = await getLeagueRole(leagueId, user.id);
+  const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") notFound();
 
   const dash = await getSeasonDashboard(seasonId);
@@ -94,7 +94,7 @@ export default async function RostersPage({ params, searchParams }: Props) {
               </select>
               <button
                 type="submit"
-                className="rounded bg-amber-500 px-2 py-1 text-xs font-medium text-zinc-950"
+                className="msb-btn-primary px-2 py-1 text-xs"
               >
                 Save
               </button>
