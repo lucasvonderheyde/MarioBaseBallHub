@@ -2,6 +2,9 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "postinstall": "npm rebuild better-sqlite3",
     "db:init": "npm rebuild better-sqlite3 && node -e \"require('fs').mkdirSync('data',{recursive:true})\" && drizzle-kit push && tsx src/db/seed.ts",

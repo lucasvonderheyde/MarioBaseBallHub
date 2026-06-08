@@ -1,0 +1,6 @@
+# Pin Node 20+ (Next 16 and better-sqlite3 require it). Python/gcc for native module fallback.
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
+[phases.setup]
+nixPkgs = ["python3", "gcc"]
