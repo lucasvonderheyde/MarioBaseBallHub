@@ -1,6 +1,7 @@
-# Pin Node 20+ (Next 16 and better-sqlite3 require it). Python/gcc for native module fallback.
+# Pin Node 22 (Next 16 + better-sqlite3 require 20+).
+# Include all default nixpacks packages — overriding nixPkgs replaces the list entirely.
 [variables]
 NIXPACKS_NODE_VERSION = "22"
 
 [phases.setup]
-nixPkgs = ["python3", "gcc"]
+nixPkgs = ["nodejs_22", "npm-9_x", "openssl", "python3", "gcc"]
