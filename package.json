@@ -2,6 +2,7 @@
   "name": "mario-baseball",
   "private": true,
   "scripts": {
+    "start": "cd web && npm run start:prod",
     "dev": "cd web && npm run dev",
     "build": "cd web && npm run build",
     "lint": "cd web && npm run lint",

@@ -1,0 +1,10 @@
+# Railway builds from web/ — set service Root Directory to "web" in the dashboard.
+# Config file path (if prompted): /web/railway.toml
+
+[build]
+builder = "nixpacks"
+buildCommand = "npm install && npm run build"
+
+[deploy]
+startCommand = "npm run start:prod"
+healthcheckPath = "/"

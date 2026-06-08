@@ -28,6 +28,7 @@ export async function createTeamAction(seasonId: string, formData: FormData) {
     redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
   const name = String(formData.get("name") ?? "").trim();
   const managerUsername = String(formData.get("managerUsername") ?? "").trim();
+  const claimUsername = String(formData.get("claimUsername") ?? "").trim();
   const homeStadium = String(formData.get("homeStadium") ?? "").trim();
   if (!name)
     redirectWithFormError(
@@ -53,6 +54,7 @@ export async function createTeamAction(seasonId: string, formData: FormData) {
     seasonId,
     name,
     managerUserId,
+    claimUsername: claimUsername || null,
     homeStadiumGameId: homeStadium || null,
   });
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
@@ -94,7 +96,10 @@ export async function updateTeamAction(
 
   if (isAdmin) {
     const managerUsername = String(formData.get("managerUsername") ?? "").trim();
+    const claimUsername = String(formData.get("claimUsername") ?? "").trim();
     let managerUserId: string | null = null;
+    let claimUsernameValue: string | null = null;
+
     if (managerUsername) {
       const [m] = await db
         .select()
@@ -107,12 +112,16 @@ export async function updateTeamAction(
           "Manager username not found.",
         );
       managerUserId = m.id;
+    } else {
+      claimUsernameValue = claimUsername || null;
     }
+
     await db
       .update(teams)
       .set({
         name,
         managerUserId,
+        claimUsername: claimUsernameValue,
         homeStadiumGameId: homeStadium || null,
       })
       .where(eq(teams.id, teamId));

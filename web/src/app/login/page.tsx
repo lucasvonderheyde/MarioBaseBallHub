@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { isSafeRedirectPath } from "@/lib/team-claims";
 import { loginAction } from "@/server/actions";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ e?: string }>;
+  searchParams: Promise<{ e?: string; next?: string }>;
 }) {
   const user = await getCurrentUser();
-  if (user) redirect("/leagues");
-  const { e } = await searchParams;
+  const { e, next } = await searchParams;
+  if (user) {
+    redirect(isSafeRedirectPath(next) ? next : "/leagues");
+  }
   return (
     <div className="mx-auto max-w-sm px-4 py-12">
       <h1 className="text-xl font-semibold">Log in</h1>
@@ -20,6 +23,7 @@ export default async function LoginPage({
         </p>
       ) : null}
       <form action={loginAction} className="mt-6 space-y-4">
+        {next ? <input type="hidden" name="next" value={next} /> : null}
         <div>
           <label className="text-sm text-zinc-400">Username</label>
           <input
@@ -46,7 +50,10 @@ export default async function LoginPage({
       </form>
       <p className="mt-4 text-sm text-zinc-500">
         No account?{" "}
-        <Link href="/register" className="text-amber-400 hover:underline">
+        <Link
+          href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"}
+          className="text-amber-400 hover:underline"
+        >
           Register
         </Link>
       </p>

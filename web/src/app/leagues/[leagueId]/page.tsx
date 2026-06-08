@@ -146,6 +146,15 @@ export default async function LeaguePage({ params, searchParams }: Props) {
             </form>
           </section>
           <section className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
+            <h2 className="font-semibold">Team claims</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Send managers this link to register and claim their team.
+            </p>
+            <p className="mt-2 break-all font-mono text-xs text-amber-300/90">
+              /leagues/{leagueId}/claim
+            </p>
+          </section>
+          <section className="mt-6 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
             <h2 className="font-semibold">Add manager</h2>
             <p className="mt-1 text-sm text-zinc-500">
               User must register first. Enter their exact username.

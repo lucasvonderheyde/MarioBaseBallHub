@@ -65,6 +65,8 @@ export const teams = sqliteTable("teams", {
     .references(() => seasons.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   homeStadiumGameId: text("home_stadium_game_id"),
+  /** If set, only this username may claim the team (case-insensitive). */
+  claimUsername: text("claim_username"),
   managerUserId: text("manager_user_id").references(() => users.id, {
     onDelete: "set null",
   }),

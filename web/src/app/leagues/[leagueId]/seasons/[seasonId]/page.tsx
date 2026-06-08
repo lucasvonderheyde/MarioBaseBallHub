@@ -291,6 +291,23 @@ export default async function SeasonPage({ params, searchParams }: Props) {
           </div>
 
           <div>
+            <h3 className="font-medium">Team claims</h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Share this link so managers can register and claim their team. Leave
+              manager blank when creating teams; optionally reserve a username.
+            </p>
+            <p className="mt-2 break-all font-mono text-xs text-amber-300/90">
+              /leagues/{leagueId}/claim
+            </p>
+            <Link
+              href={`/leagues/${leagueId}/claim`}
+              className="mt-2 inline-block text-sm text-amber-400 hover:underline"
+            >
+              Preview claim page →
+            </Link>
+          </div>
+
+          <div>
             <h3 className="font-medium">Teams</h3>
             <ul className="mt-2 space-y-1 text-sm text-zinc-400">
               {teams.map(({ team, manager }) => (
@@ -301,7 +318,11 @@ export default async function SeasonPage({ params, searchParams }: Props) {
                   >
                     {team.name}
                   </Link>
-                  {manager ? ` — ${manager.username}` : " — no manager"}
+                  {manager
+                    ? ` — ${manager.username}`
+                    : team.claimUsername
+                      ? ` — reserved for ${team.claimUsername}`
+                      : " — unclaimed"}
                 </li>
               ))}
             </ul>
@@ -317,7 +338,12 @@ export default async function SeasonPage({ params, searchParams }: Props) {
               />
               <input
                 name="managerUsername"
-                placeholder="Manager username"
+                placeholder="Manager username (if already registered)"
+                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+              />
+              <input
+                name="claimUsername"
+                placeholder="Reserve for username (claim later)"
                 className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
               />
               <input

@@ -7,6 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # Repo layout (Mario Baseball Hub)
 
 - `web/` — Next.js app (`npm run dev` from repo root runs `cd web && …`).
+- `web/railway.toml` — Railway deploy config. Set service **Root Directory** to `web` in the dashboard; mount volume at `/app/data`.
 - `web/public/assets/characters|stadiums/` — static mugshots and stadium icons (no API route).
 - `data/game-statistics/` — sample or exported MSSB JSON (repo root; not under `web/`).
 - `web/src/domain/` — pure logic (stats decode, standings, tiebreakers); covered by `npm run test`.

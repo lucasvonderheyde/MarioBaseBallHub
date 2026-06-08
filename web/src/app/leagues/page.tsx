@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { leagues, leagueMembers, seasons } from "@/db/schema";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
 import { createLeagueAction } from "@/server/actions";
+import { getLeaguesWithClaimableTeams } from "@/lib/team-claims";
 
 export default async function LeaguesPage({
   searchParams,
@@ -35,6 +36,8 @@ export default async function LeaguesPage({
     }
   }
 
+  const claimableLeagues = await getLeaguesWithClaimableTeams(user);
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="text-2xl font-bold">Your leagues</h1>
@@ -51,6 +54,24 @@ export default async function LeaguesPage({
         <p className="mt-2 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {e}
         </p>
+      ) : null}
+      {claimableLeagues.length > 0 ? (
+        <section className="mt-6 rounded-lg border border-amber-900/50 bg-amber-950/20 p-4">
+          <h2 className="font-semibold text-amber-200">Teams waiting for you</h2>
+          <ul className="mt-2 space-y-2 text-sm">
+            {claimableLeagues.map(({ league, count }) => (
+              <li key={league.id}>
+                <Link
+                  href={`/leagues/${league.id}/claim`}
+                  className="text-amber-400 hover:underline"
+                >
+                  {league.name}
+                </Link>
+                <span className="text-zinc-500"> — {count} team(s) to claim</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
       <ul className="mt-6 space-y-2">
         {memberRows.map(({ league }) => (

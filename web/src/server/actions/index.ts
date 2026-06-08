@@ -22,6 +22,9 @@ export {
   clearGameStatsAction,
 } from "./season-admin-actions";
 export {
+  claimTeamAction,
+} from "./team-claim-actions";
+export {
   uploadStatsFormAction,
   uploadStatsAction,
   backfillStatsAction,

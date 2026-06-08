@@ -19,13 +19,15 @@ SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex')
 
 echo "Setting environment variables…"
 npx @railway/cli variables set \
-  "DATABASE_URL=file:/app/web/data/league.db" \
+  "DATABASE_URL=file:/app/data/league.db" \
   "SESSION_PASSWORD=${SECRET}"
 
 echo ""
-echo "IMPORTANT: In the Railway dashboard for this service:"
-echo "  1. Add a Volume mounted at /app/web/data"
-echo "  2. Redeploy after the volume is attached"
+echo "IMPORTANT — configure once in the Railway dashboard (Settings):"
+echo "  1. Root Directory: web"
+echo "  2. Config file path (if shown): /web/railway.toml"
+echo "  3. Volume mounted at: /app/data"
+echo "  4. Redeploy after the volume is attached"
 echo ""
 echo "Deploying…"
 npx @railway/cli up --detach
@@ -34,6 +36,3 @@ echo ""
 echo "Deployment triggered. After deploy completes:"
 echo "  npx @railway/cli open     — open the live URL"
 echo "  npx @railway/cli logs     — tail logs"
-echo ""
-echo "After you register on the live site, grant yourself master admin:"
-echo "  SITE_ADMIN_USERNAME=your-username npx @railway/cli run -- npm run db:promote-site-admin"

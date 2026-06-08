@@ -1,1 +1,13 @@
+# Dependencies
+node_modules/
+
+# Railway CLI link (local)
 .railway/
+
+# OS / editor
+.DS_Store
+
+# Local SQLite (under web/data when developing)
+web/data/*.db
+web/data/*.db-wal
+web/data/*.db-shm

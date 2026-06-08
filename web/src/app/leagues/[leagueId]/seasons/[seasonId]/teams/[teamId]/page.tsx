@@ -84,6 +84,11 @@ export default async function TeamPage({ params, searchParams }: Props) {
         ← Season
       </Link>
       <h1 className="mt-2 text-2xl font-bold">{team.name}</h1>
+      {m === "claimed" ? (
+        <p className="mt-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Team claimed — you&apos;re the manager now.
+        </p>
+      ) : null}
       {e ? (
         <p className="mt-2 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {e}
@@ -102,7 +107,12 @@ export default async function TeamPage({ params, searchParams }: Props) {
           ) : null}
         </p>
       ) : (
-        <p className="mt-1 text-zinc-500">No manager assigned.</p>
+        <p className="mt-1 text-zinc-500">
+          No manager assigned.
+          {team.claimUsername ? (
+            <span> Reserved for {team.claimUsername}.</span>
+          ) : null}
+        </p>
       )}
 
       {team.homeStadiumGameId ? (
@@ -265,15 +275,28 @@ export default async function TeamPage({ params, searchParams }: Props) {
               />
             </div>
             {isAdmin ? (
-              <div>
-                <label className="text-xs text-zinc-500">Manager username</label>
-                <input
-                  name="managerUsername"
-                  defaultValue={manager?.username ?? ""}
-                  placeholder="empty = none"
-                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-                />
-              </div>
+              <>
+                <div>
+                  <label className="text-xs text-zinc-500">Manager username</label>
+                  <input
+                    name="managerUsername"
+                    defaultValue={manager?.username ?? ""}
+                    placeholder="Assign directly (optional)"
+                    className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                  />
+                </div>
+                {!manager ? (
+                  <div>
+                    <label className="text-xs text-zinc-500">Reserve for username</label>
+                    <input
+                      name="claimUsername"
+                      defaultValue={team.claimUsername ?? ""}
+                      placeholder="Only this user can claim"
+                      className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                    />
+                  </div>
+                ) : null}
+              </>
             ) : null}
             <div>
               <label className="text-xs text-zinc-500">Home stadium (game ID)</label>

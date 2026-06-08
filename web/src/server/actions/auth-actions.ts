@@ -8,8 +8,15 @@ import { users } from "@/db/schema";
 import { getSession } from "@/lib/session";
 import { redirectWithFormError } from "@/server/flash-redirect";
 import { newUuid } from "@/server/ids";
+import { isSafeRedirectPath } from "@/lib/team-claims";
+
+function redirectAfterAuth(next: string | null) {
+  if (isSafeRedirectPath(next)) redirect(next);
+  redirect("/leagues");
+}
 
 export async function registerAction(formData: FormData) {
+  const next = String(formData.get("next") ?? "").trim() || null;
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const displayName = String(formData.get("displayName") ?? "").trim();
@@ -34,10 +41,11 @@ export async function registerAction(formData: FormData) {
   const session = await getSession();
   session.userId = id;
   await session.save();
-  redirect("/leagues");
+  redirectAfterAuth(next);
 }
 
 export async function loginAction(formData: FormData) {
+  const next = String(formData.get("next") ?? "").trim() || null;
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const [u] = await db
@@ -51,7 +59,7 @@ export async function loginAction(formData: FormData) {
   const session = await getSession();
   session.userId = u.id;
   await session.save();
-  redirect("/leagues");
+  redirectAfterAuth(next);
 }
 
 export async function logoutAction() {
