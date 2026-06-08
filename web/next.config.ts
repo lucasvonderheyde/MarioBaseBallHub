@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  // Native addon — must not be webpack-bundled or Node cannot load the .node binary.
+  serverExternalPackages: ["better-sqlite3"],
   turbopack: {
     root: appDir,
   },
