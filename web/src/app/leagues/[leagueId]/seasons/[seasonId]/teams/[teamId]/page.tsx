@@ -75,6 +75,14 @@ export default async function TeamPage({ params, searchParams }: Props) {
     aggregatePitchingByCharId({ seasonId, teamId }),
   ]);
 
+  const rosterCopyCounts = new Map<string, number>();
+  for (const { character } of roster) {
+    rosterCopyCounts.set(
+      character.gameCharId,
+      (rosterCopyCounts.get(character.gameCharId) ?? 0) + 1,
+    );
+  }
+
   const activeKeys = activeRosterStatKeys(
     roster.map(({ character, instance }) => ({
       gameCharId: character.gameCharId,
@@ -117,14 +125,6 @@ export default async function TeamPage({ params, searchParams }: Props) {
         line != null && (line.outsPitched > 0 || line.battersFaced > 0 || line.games > 0),
     )
     .sort((a, b) => a.character.displayName.localeCompare(b.character.displayName));
-
-  const rosterCopyCounts = new Map<string, number>();
-  for (const { character } of roster) {
-    rosterCopyCounts.set(
-      character.gameCharId,
-      (rosterCopyCounts.get(character.gameCharId) ?? 0) + 1,
-    );
-  }
 
   const stadiumRow = team.homeStadiumGameId
     ? dash.stadiums.find((s) => s.gameStadiumId === team.homeStadiumGameId)
