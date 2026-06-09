@@ -44,4 +44,5 @@ export {
   setSiteAdminAction,
   addLeagueMemberAsAdminAction,
   renameUserAction,
+  restoreLeagueBackupAction,
 } from "./site-admin-actions";

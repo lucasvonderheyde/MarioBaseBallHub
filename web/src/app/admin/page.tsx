@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db";
+import { getDatabaseStatus } from "@/db/database-status";
 import { leagueMembers, leagues, seasons, users } from "@/db/schema";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
 import {
@@ -14,6 +15,7 @@ import {
   deleteSeasonAction,
   deleteUserAction,
   renameUserAction,
+  restoreLeagueBackupAction,
   setSiteAdminAction,
 } from "@/server/actions/site-admin-actions";
 import { PageShell } from "@/components/PageShell";
@@ -63,6 +65,14 @@ export default async function AdminPage({
     .orderBy(seasons.createdAt);
 
   const allUsers = await db.select().from(users).orderBy(users.createdAt);
+  const databaseStatus = getDatabaseStatus();
+
+  function formatBytes(bytes: number | null): string {
+    if (bytes == null) return "—";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
   return (
     <PageShell width="wide">
@@ -117,6 +127,98 @@ export default async function AdminPage({
           User renamed.
         </p>
       ) : null}
+      {m === "league-restored" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          League backup restored.
+        </p>
+      ) : null}
+
+      <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+        <h2 className="text-lg font-semibold">Database persistence</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          League data survives redeploys only when SQLite lives on a Railway volume.
+        </p>
+        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-zinc-500">Database file</dt>
+            <dd className="font-mono text-xs text-zinc-300">{databaseStatus.path}</dd>
+          </div>
+          <div>
+            <dt className="text-zinc-500">File size</dt>
+            <dd>{formatBytes(databaseStatus.sizeBytes)}</dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-zinc-500">DATABASE_URL</dt>
+            <dd className="font-mono text-xs text-zinc-300">
+              {databaseStatus.configuredUrl ?? "(not set — using default ./data/league.db)"}
+            </dd>
+          </div>
+        </dl>
+        {databaseStatus.warnings.length > 0 ? (
+          <ul className="mt-3 space-y-2 text-sm text-amber-200">
+            {databaseStatus.warnings.map((warning) => (
+              <li
+                key={warning}
+                className="rounded border border-amber-900/50 bg-amber-950/20 px-3 py-2"
+              >
+                {warning}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-emerald-300">
+            Database path looks correct for Railway volume persistence.
+          </p>
+        )}
+        <p className="mt-3 text-xs text-zinc-500">
+          Railway setup: Root Directory = <code className="text-zinc-400">web</code>, add a
+          volume mounted at <code className="text-zinc-400">/app/data</code>, and set{" "}
+          <code className="text-zinc-400">DATABASE_URL=file:/app/data/league.db</code>.
+        </p>
+      </section>
+
+      <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+        <h2 className="text-lg font-semibold">League backups</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          Download a JSON snapshot before major changes. Restore recreates a league from backup
+          (teams, pool, rosters, schedule — not uploaded game stats files).
+        </p>
+        {allLeagues.length > 0 ? (
+          <ul className="mt-3 space-y-2 text-sm">
+            {allLeagues.map((league) => (
+              <li key={league.id} className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{league.name}</span>
+                <a
+                  href={`/api/admin/league-backup/${league.id}`}
+                  className="text-amber-400 hover:underline"
+                >
+                  Download backup
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-zinc-500">No leagues to back up yet.</p>
+        )}
+        <form action={restoreLeagueBackupAction} className="mt-4 space-y-2">
+          <label className="text-xs text-zinc-500" htmlFor="backupJson">
+            Restore from backup JSON
+          </label>
+          <textarea
+            id="backupJson"
+            name="backupJson"
+            rows={6}
+            placeholder="Paste backup JSON here…"
+            className="w-full rounded border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-xs"
+          />
+          <button
+            type="submit"
+            className="rounded border border-zinc-600 px-3 py-1 text-sm text-zinc-200 hover:bg-zinc-800"
+          >
+            Restore league
+          </button>
+        </form>
+      </section>
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">All leagues</h2>
