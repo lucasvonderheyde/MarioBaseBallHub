@@ -1,14 +1,16 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { scheduleGames, teams, users } from "@/db/schema";
+import { characters, rosterInstances, scheduleGames, teams, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { canUserReportGame } from "@/lib/game-report-access";
 import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
 import { matchNetplayTeams } from "@/domain/stats/match-netplay-teams";
+import { parseCharacterGameStats } from "@/domain/stats/parse-character-game-stats";
+import { charIdsForSide } from "@/domain/stats/roster-team-match";
 import {
   persistCharacterGameStats,
   backfillCharacterGameStats,
@@ -99,15 +101,60 @@ export async function uploadStatsAction(
         .where(eq(users.id, away.managerUserId))
         .limit(1)
     : [null];
-  const match = matchNetplayTeams(parsed, {
-    teamId: home.id,
-    teamName: home.name,
-    manager: hm,
-  }, {
-    teamId: away.id,
-    teamName: away.name,
-    manager: am,
-  });
+
+  let rosterContext;
+  try {
+    const characterStats = parseCharacterGameStats(JSON.parse(jsonText) as unknown);
+    const rosterRows = await db
+      .select({
+        teamId: rosterInstances.teamId,
+        gameCharId: characters.gameCharId,
+      })
+      .from(rosterInstances)
+      .innerJoin(characters, eq(rosterInstances.characterId, characters.id))
+      .where(
+        and(
+          eq(rosterInstances.seasonId, seasonId),
+          isNotNull(rosterInstances.teamId),
+          inArray(rosterInstances.teamId, [home.id, away.id]),
+        ),
+      );
+
+    const charIdsByTeam = new Map<string, string[]>();
+    for (const teamId of [home.id, away.id]) {
+      charIdsByTeam.set(teamId, []);
+    }
+    for (const row of rosterRows) {
+      if (!row.teamId) continue;
+      charIdsByTeam.get(row.teamId)?.push(row.gameCharId);
+    }
+
+    rosterContext = {
+      awayCharIds: charIdsForSide(characterStats.characterStats, "Away"),
+      homeCharIds: charIdsForSide(characterStats.characterStats, "Home"),
+      teamRosters: [home.id, away.id].map((teamId) => ({
+        teamId,
+        charIds: charIdsByTeam.get(teamId) ?? [],
+      })),
+    };
+  } catch {
+    rosterContext = undefined;
+  }
+
+  const match = matchNetplayTeams(
+    parsed,
+    {
+      teamId: home.id,
+      teamName: home.name,
+      manager: hm,
+    },
+    {
+      teamId: away.id,
+      teamName: away.name,
+      manager: am,
+    },
+    rosterContext,
+  );
   if (match.blockingError) {
     return { error: match.blockingError, warnings: match.warnings };
   }

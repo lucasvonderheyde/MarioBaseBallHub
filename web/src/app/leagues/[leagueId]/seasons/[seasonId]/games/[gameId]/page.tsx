@@ -69,8 +69,8 @@ export default async function GameReportPage({ params, searchParams }: Props) {
     ? parseCharacterGameStats(JSON.parse(game.statsRawJson!))
     : null;
 
-  const awayStats = stats.filter((s) => s.teamSide === "Away");
-  const homeStats = stats.filter((s) => s.teamSide === "Home");
+  const awayTeamStats = stats.filter((row) => row.teamId === away.team.id);
+  const homeTeamStats = stats.filter((row) => row.teamId === home.team.id);
 
   function charDisplayName(
     rows: typeof stats,
@@ -321,22 +321,21 @@ export default async function GameReportPage({ params, searchParams }: Props) {
       {hasStats ? (
         <>
           <section className="mt-10 grid gap-6 lg:grid-cols-2">
-            <BoxTable rows={awayStats} label={away.team.name} />
-            <BoxTable rows={homeStats} label={home.team.name} />
+            <BoxTable rows={awayTeamStats} label={away.team.name} />
+            <BoxTable rows={homeTeamStats} label={home.team.name} />
           </section>
 
           <section className="mt-10 grid gap-6 lg:grid-cols-2">
-            <PitchingBoxTable rows={awayStats} label={`${away.team.name} pitching`} />
-            <PitchingBoxTable rows={homeStats} label={`${home.team.name} pitching`} />
+            <PitchingBoxTable rows={awayTeamStats} label={`${away.team.name} pitching`} />
+            <PitchingBoxTable rows={homeTeamStats} label={`${home.team.name} pitching`} />
           </section>
         </>
       ) : canEdit ? (
         <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
           <h2 className="text-lg font-semibold">Report stats</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Paste the decoded game JSON to populate the box score. Uploads are
-            matched to managers using Rio/netplay usernames from your account
-            page.
+            Paste the decoded game JSON to populate the box score. Teams are matched
+            from JSON away/home players and roster characters in the file.
           </p>
           <div className="mt-3 max-w-xl">
             <UploadStatsForm

@@ -1,5 +1,9 @@
 import type { DecodedGameSummary } from "./decode-game-file";
 import {
+  matchTeamsByRosterOverlap,
+  type TeamRosterSnapshot,
+} from "./roster-team-match";
+import {
   managerNetplayLabels,
   netplayLabelMatches,
   primaryNetplayLabel,
@@ -15,16 +19,19 @@ export type NetplayManagerContext = {
   } | null;
 };
 
+export type NetplayRosterContext = {
+  awayCharIds: string[];
+  homeCharIds: string[];
+  teamRosters: TeamRosterSnapshot[];
+};
+
 export type NetplayAlignment = "direct" | "swapped" | "partial" | "unverified";
 
 export type NetplayTeamMatch = {
   alignment: NetplayAlignment;
-  /** Scores stored on schedule_games (relative to schedule home/away). */
   scheduleHomeScore: number;
   scheduleAwayScore: number;
-  /** Schedule team that owns the file's Away-side roster and away score. */
   awaySideTeamId: string;
-  /** Schedule team that owns the file's Home-side roster and home score. */
   homeSideTeamId: string;
   fileWinnerLabel: string;
   scheduleWinnerLabel: string | null;
@@ -82,17 +89,11 @@ function buildMapping(
   };
 }
 
-export function matchNetplayTeams(
-  parsed: Pick<
-    DecodedGameSummary,
-    "homePlayer" | "awayPlayer" | "homeScore" | "awayScore"
-  >,
+function resolvePlayerMapping(
+  parsed: Pick<DecodedGameSummary, "homePlayer" | "awayPlayer">,
   scheduleHome: NetplayManagerContext,
   scheduleAway: NetplayManagerContext,
-): NetplayTeamMatch {
-  const hasHomeManager = scheduleHome.manager != null;
-  const hasAwayManager = scheduleAway.manager != null;
-
+) {
   const homePlayerTeamId = resolveTeamForFilePlayer(
     parsed.homePlayer,
     scheduleHome,
@@ -103,10 +104,6 @@ export function matchNetplayTeams(
     scheduleHome,
     scheduleAway,
   );
-
-  const warnings: string[] = [];
-  let alignment: NetplayAlignment = "unverified";
-  let blockingError: string | null = null;
 
   let homeSideTeamId = homePlayerTeamId;
   let awaySideTeamId = awayPlayerTeamId;
@@ -120,23 +117,83 @@ export function matchNetplayTeams(
     awaySideTeamId = scheduleAway.teamId;
   }
 
-  const verifiedHomePlayer = homePlayerTeamId != null;
-  const verifiedAwayPlayer = awayPlayerTeamId != null;
-  const verifiedCount = Number(verifiedHomePlayer) + Number(verifiedAwayPlayer);
+  return {
+    homeSideTeamId: homeSideTeamId!,
+    awaySideTeamId: awaySideTeamId!,
+    verifiedHomePlayer: homePlayerTeamId != null,
+    verifiedAwayPlayer: awayPlayerTeamId != null,
+  };
+}
+
+export function matchNetplayTeams(
+  parsed: Pick<
+    DecodedGameSummary,
+    "homePlayer" | "awayPlayer" | "homeScore" | "awayScore"
+  >,
+  scheduleHome: NetplayManagerContext,
+  scheduleAway: NetplayManagerContext,
+  rosterContext?: NetplayRosterContext,
+): NetplayTeamMatch {
+  const hasHomeManager = scheduleHome.manager != null;
+  const hasAwayManager = scheduleAway.manager != null;
+  const warnings: string[] = [];
+  let alignment: NetplayAlignment = "unverified";
+  let blockingError: string | null = null;
+
+  const playerMapping = resolvePlayerMapping(parsed, scheduleHome, scheduleAway);
+  const verifiedCount =
+    Number(playerMapping.verifiedHomePlayer) + Number(playerMapping.verifiedAwayPlayer);
+
+  const rosterMapping = rosterContext
+    ? matchTeamsByRosterOverlap(
+        rosterContext.awayCharIds,
+        rosterContext.homeCharIds,
+        scheduleHome.teamId,
+        scheduleAway.teamId,
+        rosterContext.teamRosters,
+      )
+    : null;
+
+  let homeSideTeamId = playerMapping.homeSideTeamId;
+  let awaySideTeamId = playerMapping.awaySideTeamId;
+  let usedRosterMatch = false;
+
+  if (rosterMapping) {
+    const playerAgrees =
+      rosterMapping.awaySideTeamId === playerMapping.awaySideTeamId &&
+      rosterMapping.homeSideTeamId === playerMapping.homeSideTeamId;
+
+    const rosterStrongEnough = rosterMapping.score >= 4;
+    const rosterUsable = rosterMapping.score >= 2;
+
+    if (rosterStrongEnough || (verifiedCount === 0 && rosterUsable)) {
+      homeSideTeamId = rosterMapping.homeSideTeamId;
+      awaySideTeamId = rosterMapping.awaySideTeamId;
+      usedRosterMatch = true;
+      warnings.push(
+        `Matched teams from JSON roster characters (${rosterMapping.score} lineup matches).`,
+      );
+      if (!playerAgrees && verifiedCount > 0) {
+        warnings.push(
+          "JSON roster characters disagreed with netplay name match — using JSON rosters as source of truth.",
+        );
+      }
+    }
+  }
 
   if (homeSideTeamId === awaySideTeamId) {
     alignment = "partial";
     blockingError =
-      "Could not map both netplay players in the stats file to different teams for this game.";
-  } else if (!hasHomeManager && !hasAwayManager) {
+      "Could not map both JSON teams to different schedule teams for this game.";
+  } else if (!hasHomeManager && !hasAwayManager && !usedRosterMatch) {
     alignment = "unverified";
     warnings.push(
       `Stats file lists away "${parsed.awayPlayer}" and home "${parsed.homePlayer}". Neither team has a registered manager yet, so scores were saved using the schedule home/away order.`,
     );
-  } else if (verifiedCount === 0) {
+  } else if (verifiedCount === 0 && !usedRosterMatch) {
     alignment = "partial";
     blockingError =
-      "Netplay names in the stats file do not match either manager for this game. Confirm you are uploading to the correct matchup and that managers have linked their Rio/netplay username.";
+      "Could not match this game from JSON netplay names or roster characters. Confirm the correct game and that lineups are assigned on team rosters.";
     warnings.push(
       `File players: away "${parsed.awayPlayer}", home "${parsed.homePlayer}". Scheduled: away ${primaryNetplayLabel(scheduleAway.manager) ?? "—"}, home ${primaryNetplayLabel(scheduleHome.manager) ?? "—"}.`,
     );
@@ -144,24 +201,24 @@ export function matchNetplayTeams(
     const scheduleMatchesFile =
       homeSideTeamId === scheduleHome.teamId && awaySideTeamId === scheduleAway.teamId;
 
-    if (verifiedCount === 2) {
+    if (verifiedCount === 2 && !usedRosterMatch) {
       alignment = scheduleMatchesFile ? "direct" : "swapped";
       if (!scheduleMatchesFile) {
         warnings.push(
-          `Schedule home/away was reversed. Stats file has home "${parsed.homePlayer}" and away "${parsed.awayPlayer}" — saved using those JSON sides.`,
+          `Schedule home/away was reversed. Stats file has home "${parsed.homePlayer}" and away "${parsed.awayPlayer}".`,
         );
       }
     } else {
       alignment = "partial";
       warnings.push(
-        `Stats file lists home "${parsed.homePlayer}" and away "${parsed.awayPlayer}". Saved using those JSON sides.`,
+        `Stats file lists home "${parsed.homePlayer}" and away "${parsed.awayPlayer}". Character stats follow JSON away/home sides.`,
       );
-      if (!verifiedHomePlayer) {
+      if (!playerMapping.verifiedHomePlayer) {
         warnings.push(
           `Home player "${parsed.homePlayer}" is not linked to an account yet — assigned to ${homeSideTeamId === scheduleHome.teamId ? scheduleHome.teamName : scheduleAway.teamName}.`,
         );
       }
-      if (!verifiedAwayPlayer) {
+      if (!playerMapping.verifiedAwayPlayer) {
         warnings.push(
           `Away player "${parsed.awayPlayer}" is not linked to an account yet — assigned to ${awaySideTeamId === scheduleAway.teamId ? scheduleAway.teamName : scheduleHome.teamName}.`,
         );

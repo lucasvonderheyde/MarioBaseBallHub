@@ -117,4 +117,32 @@ describe("matchNetplayTeams", () => {
     expect(result.alignment).toBe("partial");
     expect(result.blockingError).not.toBeNull();
   });
+
+  it("uses JSON roster characters when netplay names are unavailable", () => {
+    const result = matchNetplayTeams(
+      {
+        homePlayer: "NotRegisteredYet",
+        awayPlayer: "AlsoUnknown",
+        homeScore: 4,
+        awayScore: 2,
+      },
+      homeTeam,
+      {
+        ...awayTeam,
+        manager: null,
+      },
+      {
+        awayCharIds: ["Mario", "Luigi", "Peach", "Daisy", "Yoshi"],
+        homeCharIds: ["Bowser", "Wario", "Waluigi", "Wario", "DK"],
+        teamRosters: [
+          { teamId: "home-id", charIds: ["Bowser", "Wario", "Waluigi", "DK"] },
+          { teamId: "away-id", charIds: ["Mario", "Luigi", "Peach", "Daisy", "Yoshi"] },
+        ],
+      },
+    );
+
+    expect(result.blockingError).toBeNull();
+    expect(result.homeSideTeamId).toBe("home-id");
+    expect(result.awaySideTeamId).toBe("away-id");
+  });
 });

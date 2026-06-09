@@ -34,6 +34,7 @@ const defensiveSchema = z.object({
 });
 
 const rosterEntrySchema = z.object({
+  Team: z.union([z.string(), z.coerce.number()]).optional(),
   CharID: z.string(),
   Superstar: z.coerce.number(),
   Captain: z.coerce.number(),
@@ -42,6 +43,17 @@ const rosterEntrySchema = z.object({
   "Offensive Stats": offensiveSchema,
   "Defensive Stats": defensiveSchema,
 });
+
+/** MSSB JSON uses Team 0 = away, Team 1 = home on each roster line. */
+export function jsonTeamIndexToSide(
+  teamIndex: string | number | null | undefined,
+): "Away" | "Home" | null {
+  if (teamIndex == null || teamIndex === "") return null;
+  const normalized = String(teamIndex).trim();
+  if (normalized === "1") return "Home";
+  if (normalized === "0") return "Away";
+  return null;
+}
 
 export type ParsedCharacterGameStat = {
   teamSide: "Away" | "Home";
@@ -140,13 +152,14 @@ export function parseCharacterGameStats(data: unknown): ParsedGameStats {
   for (const [key, value] of Object.entries(block as Record<string, unknown>)) {
     const m = rosterKeyRe.exec(key);
     if (!m) continue;
-    const teamSide = m[1] as "Away" | "Home";
+    const keySide = m[1] as "Away" | "Home";
     const rosterSlot = Number(m[2]);
     const parsed = rosterEntrySchema.safeParse(value);
     if (!parsed.success) {
       throw new Error(`Invalid roster entry: ${key}`);
     }
     const e = parsed.data;
+    const teamSide = jsonTeamIndexToSide(e.Team) ?? keySide;
     const off = e["Offensive Stats"];
     const def = e["Defensive Stats"];
     characterStats.push({
