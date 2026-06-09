@@ -7,7 +7,17 @@ import { characters, rosterInstances, scheduleGames, teams, users } from "@/db/s
 import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { canUserReportGame } from "@/lib/game-report-access";
-import { gameIdLinkError, netplayParticipantError } from "@/lib/upload-participant";
+import {
+  duplicateStatsGameIdMessage,
+  findStoredStatsGameId,
+  persistPersonalGameStats,
+} from "@/lib/personal-game-stats";
+import {
+  gameIdLinkError,
+  isUserNetplayParticipantInFile,
+  netplayParticipantError,
+  resolveUserTeamSide,
+} from "@/lib/upload-participant";
 import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
 import { matchNetplayTeams } from "@/domain/stats/match-netplay-teams";
 import { parseCharacterGameStats } from "@/domain/stats/parse-character-game-stats";
@@ -52,15 +62,14 @@ export async function uploadStatsAction(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Parse error" };
   }
-  const [existing] = await db
-    .select({ id: scheduleGames.id })
-    .from(scheduleGames)
-    .where(eq(scheduleGames.statsGameId, parsed.statsGameId))
-    .limit(1);
+  const stored = await findStoredStatsGameId(parsed.statsGameId);
+  if (stored.source === "personal") {
+    return { error: duplicateStatsGameIdMessage(stored) };
+  }
   const gameIdError = gameIdLinkError(
     parsed.statsGameId,
     gameId,
-    existing?.id,
+    stored.source === "schedule" ? stored.scheduleGameId : undefined,
   );
   if (gameIdError) return { error: gameIdError };
 
@@ -228,11 +237,9 @@ export async function uploadStatsBatchAction(
   _prev: BatchUploadState,
   formData: FormData,
 ): Promise<BatchUploadState> {
-  const leagueId = String(formData.get("leagueId") ?? "");
-  const seasonId = String(formData.get("seasonId") ?? "");
   const payload = String(formData.get("batchPayload") ?? "");
-  if (!leagueId || !seasonId || !payload) {
-    return { error: "Missing batch upload context." };
+  if (!payload) {
+    return { error: "Missing batch upload payload." };
   }
 
   let files: { fileName: string; jsonText: string }[];
@@ -246,11 +253,6 @@ export async function uploadStatsBatchAction(
   if (files.length > 20) return { error: "Maximum 20 files per batch." };
 
   const user = await requireUser();
-  const role = await getLeagueRole(leagueId, user);
-  if (!role) return { error: "Forbidden" };
-
-  const { findGameForStatsFile } = await import("@/lib/manager-upload-games");
-  const { parseDecodedGameFile } = await import("@/domain/stats/decode-game-file");
 
   const results: BatchUploadFileResult[] = [];
   for (const file of files) {
@@ -266,23 +268,48 @@ export async function uploadStatsBatchAction(
       continue;
     }
 
-    const match = await findGameForStatsFile(user, role, leagueId, seasonId, parsed);
-    if ("error" in match) {
-      results.push({ fileName: file.fileName, ok: false, error: match.error });
-      continue;
-    }
-
-    const upload = await uploadStatsAction(
-      match.gameId,
-      leagueId,
-      seasonId,
-      file.jsonText,
-    );
-    if (upload && "error" in upload) {
+    if (!isUserNetplayParticipantInFile(user, parsed.awayPlayer, parsed.homePlayer)) {
       results.push({
         fileName: file.fileName,
         ok: false,
-        error: upload.error,
+        error:
+          "Your netplay username must match Home Player or Away Player in this file.",
+      });
+      continue;
+    }
+
+    const teamSide = resolveUserTeamSide(user, parsed.awayPlayer, parsed.homePlayer);
+    if (!teamSide) {
+      results.push({
+        fileName: file.fileName,
+        ok: false,
+        error: "Could not determine which side you played in this file.",
+      });
+      continue;
+    }
+
+    const stored = await findStoredStatsGameId(parsed.statsGameId);
+    if (stored.source !== "none") {
+      results.push({
+        fileName: file.fileName,
+        ok: false,
+        error: duplicateStatsGameIdMessage(stored),
+      });
+      continue;
+    }
+
+    try {
+      await persistPersonalGameStats({
+        managerUserId: user.id,
+        uploadedByUserId: user.id,
+        teamSide,
+        parsed,
+      });
+    } catch (e) {
+      results.push({
+        fileName: file.fileName,
+        ok: false,
+        error: e instanceof Error ? e.message : "Could not save game.",
       });
       continue;
     }
@@ -294,7 +321,6 @@ export async function uploadStatsBatchAction(
     });
   }
 
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
   revalidatePath("/account");
   return { ok: true, results };
 }

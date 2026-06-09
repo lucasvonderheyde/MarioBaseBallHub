@@ -13,6 +13,12 @@ import {
   type BattingLine,
   type PitchingLine,
 } from "@/lib/game-stats-queries";
+import {
+  aggregatePersonalBattingByCharId,
+  aggregatePersonalPitchingByCharId,
+  mergeBattingMaps,
+  mergePitchingMaps,
+} from "@/lib/personal-game-stats";
 
 export type ManagerCharacterBatting = { charId: string; line: BattingLine };
 export type ManagerCharacterPitching = { charId: string; line: PitchingLine };
@@ -76,10 +82,16 @@ function emptyLifetimePitching(): PitchingLine {
 export async function getManagerLifetimeStats(
   managerUserId: string,
 ): Promise<ManagerLifetimeStats> {
-  const [battingMap, pitchingMap] = await Promise.all([
-    aggregateBattingByCharId({ managerUserId }),
-    aggregatePitchingByCharId({ managerUserId }),
-  ]);
+  const [leagueBatting, leaguePitching, personalBatting, personalPitching] =
+    await Promise.all([
+      aggregateBattingByCharId({ managerUserId }),
+      aggregatePitchingByCharId({ managerUserId }),
+      aggregatePersonalBattingByCharId(managerUserId),
+      aggregatePersonalPitchingByCharId(managerUserId),
+    ]);
+
+  const battingMap = mergeBattingMaps(leagueBatting, personalBatting);
+  const pitchingMap = mergePitchingMaps(leaguePitching, personalPitching);
 
   const characterBatting = [...battingMap.entries()]
     .map(([charId, line]) => ({ charId, line }))

@@ -3,6 +3,7 @@ import {
   gameIdLinkError,
   isUserNetplayParticipantInFile,
   netplayParticipantError,
+  resolveUserTeamSide,
 } from "./upload-participant";
 
 describe("isUserNetplayParticipantInFile", () => {
@@ -55,6 +56,25 @@ describe("netplayParticipantError", () => {
         "player",
       ),
     ).toMatch(/Account page/);
+  });
+});
+
+describe("resolveUserTeamSide", () => {
+  it("returns the side that matches the user netplay label", () => {
+    expect(
+      resolveUserTeamSide(
+        { username: "zomsoth", netplayUsername: "Zomsoth" },
+        "other",
+        "Zomsoth",
+      ),
+    ).toBe("Home");
+    expect(
+      resolveUserTeamSide(
+        { username: "zomsoth", netplayUsername: "Zomsoth" },
+        "Zomsoth",
+        "other",
+      ),
+    ).toBe("Away");
   });
 });
 

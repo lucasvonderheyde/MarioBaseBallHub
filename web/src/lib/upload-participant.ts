@@ -36,6 +36,20 @@ export function netplayParticipantError(
   );
 }
 
+/** Which netplay side the user played in this file, if unambiguous. */
+export function resolveUserTeamSide(
+  user: NetplayUserLike,
+  awayPlayer: string,
+  homePlayer: string,
+): "Away" | "Home" | null {
+  const labels = managerNetplayLabels(user);
+  const onAway = netplayLabelMatches(labels, awayPlayer);
+  const onHome = netplayLabelMatches(labels, homePlayer);
+  if (onAway && !onHome) return "Away";
+  if (onHome && !onAway) return "Home";
+  return null;
+}
+
 /** Blocks linking a GameID to a different scheduled game; same game is allowed (re-upload). */
 export function gameIdLinkError(
   statsGameId: string,

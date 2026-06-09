@@ -60,18 +60,6 @@ export default async function AccountPage({
     activeTab === "upload" ? getReportableGamesForUser(user.id) : null,
   ]);
 
-  const batchSeasons =
-    activeTab === "upload" && reportableGames
-      ? [
-          ...new Map(
-            reportableGames.map((g) => [
-              g.seasonId,
-              { seasonId: g.seasonId, leagueId: g.leagueId, label: `${g.leagueName} — ${g.seasonName}` },
-            ]),
-          ).values(),
-        ]
-      : [];
-
   return (
     <PageShell width="narrow">
       <div className="flex items-baseline justify-between gap-2">
@@ -419,35 +407,25 @@ export default async function AccountPage({
           ) : (
             <section className="space-y-4">
               <div>
-                <h2 className="text-lg font-semibold">Batch upload</h2>
+                <h2 className="text-lg font-semibold">Lifetime batch</h2>
                 <p className="mt-1 text-sm text-zinc-500">
-                  Upload many files at once. Each file is matched automatically to
-                  an unreported game in the season — use only when every file
-                  belongs to that season. Wrong files can be linked to the wrong
-                  matchup; prefer{" "}
+                  Drag and drop friendlies or extra games here. They count toward
+                  your{" "}
+                  <Link href="/account?tab=stats&section=characters" className="text-amber-400 hover:underline">
+                    lifetime stats
+                  </Link>{" "}
+                  only — not league standings. Each GameID can only be stored once.
+                  Use{" "}
                   <Link
                     href="/account?tab=upload&section=season"
                     className="text-amber-400 hover:underline"
                   >
                     Season games
                   </Link>{" "}
-                  to report one game at a time.
+                  to report scheduled matchups.
                 </p>
               </div>
-              {batchSeasons.length > 0 ? (
-                batchSeasons.map((season) => (
-                  <BatchGameStatsUploader
-                    key={season.seasonId}
-                    leagueId={season.leagueId}
-                    seasonId={season.seasonId}
-                    seasonLabel={season.label}
-                  />
-                ))
-              ) : (
-                <p className="text-sm text-zinc-500">
-                  No seasons with unreported games right now.
-                </p>
-              )}
+              <BatchGameStatsUploader />
             </section>
           )}
         </div>

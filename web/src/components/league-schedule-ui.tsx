@@ -43,6 +43,21 @@ function hasFinalScore(game: ScheduleGameDisplay): boolean {
   return game.homeScore != null && game.awayScore != null;
 }
 
+type ScheduleGameCardStatus = "played" | "scheduled";
+
+function scheduleGameCardStatus(game: ScheduleGameDisplay): ScheduleGameCardStatus {
+  if (hasFinalScore(game) || game.statsRawJson) return "played";
+  return "scheduled";
+}
+
+function scheduleGameCardClass(status: ScheduleGameCardStatus): string {
+  const base = "flex min-h-full flex-col overflow-hidden rounded-lg border";
+  if (status === "played") {
+    return `${base} border-zinc-900 bg-zinc-950/80`;
+  }
+  return `${base} border-msb-grass/45 bg-emerald-950/20`;
+}
+
 function GameScoreDisplay({
   awayName,
   homeName,
@@ -94,11 +109,12 @@ export function ScheduleGameCard({
 }: ScheduleGameCardProps) {
   const gameHref = `/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`;
   const finalScore = hasFinalScore(game);
+  const cardStatus = scheduleGameCardStatus(game);
   const viewLabel = game.statsRawJson ? "Box score & video" : "View game";
   const showReportForm = canReport && !finalScore && !game.statsRawJson;
 
   return (
-    <li className="flex min-h-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
+    <li className={scheduleGameCardClass(cardStatus)}>
       <div className="px-4 py-4 sm:px-5 sm:py-5">
         {finalScore ? (
           <Link href={gameHref} className="block hover:opacity-90">
@@ -120,8 +136,8 @@ export function ScheduleGameCard({
             </h3>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-              <span className="rounded-md border border-zinc-800 bg-zinc-950/40 px-2.5 py-1 text-zinc-500">
-                Not played
+              <span className="rounded-md border border-msb-grass/50 bg-msb-grass/10 px-2.5 py-1 text-msb-grass">
+                Scheduled
               </span>
               {game.youtubeUrl && !game.statsRawJson ? (
                 <span className="text-xs text-zinc-500">Video linked</span>
@@ -147,7 +163,7 @@ export function ScheduleGameCard({
       </div>
 
       {showReportForm ? (
-        <div className="border-t border-zinc-800/80 bg-zinc-950/30 px-4 py-4 sm:px-5">
+        <div className="border-t border-zinc-800/80 bg-zinc-950/40 px-4 py-4 sm:px-5">
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
             Report result
           </p>
@@ -224,7 +240,9 @@ export function SeasonScheduleByRound({
               {scheduleRoundHeading(round.phase, round.roundNumber)}
             </h3>
             {roundGames.length === 0 ? (
-              <p className="mt-3 text-sm text-zinc-600">No games this week.</p>
+              <p className="mt-3 rounded-md border border-red-900/50 bg-red-950/25 px-3 py-2.5 text-sm text-red-300/90">
+                No games scheduled this week.
+              </p>
             ) : (
               <ul className="msb-schedule-grid mt-4">
                 {roundGames.map(({ game }) => {
@@ -267,17 +285,22 @@ export function PlayoffGameCard({
   leagueId: string;
   seasonId: string;
 }) {
+  const gameHref = `/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`;
+  const cardClass = game.played
+    ? "rounded-lg border border-zinc-900 bg-zinc-950/80 px-3 py-2 text-sm"
+    : "rounded-lg border border-msb-grass/45 bg-emerald-950/20 px-3 py-2 text-sm";
+
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-sm">
+    <div className={cardClass}>
       <div className="font-medium">
         ({game.slotInRound}) {game.awayName} @ {game.homeName}
       </div>
       <div className="mt-1 text-zinc-400">
-        {game.played ? `${game.awayScore}–${game.homeScore}` : "TBD"}
+        {game.played ? `${game.awayScore}–${game.homeScore}` : "Scheduled"}
       </div>
       {game.statsGameId ? (
         <Link
-          href={`/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`}
+          href={gameHref}
           className="mt-1 inline-block text-xs text-amber-400 hover:underline"
         >
           Box score

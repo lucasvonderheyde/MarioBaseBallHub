@@ -4,10 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole, isLeagueAdmin } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { parseTiebreakerOrder } from "@/domain/standings/tiebreakers";
-import { groupGamesByRound } from "@/lib/group-games-by-round";
 import { PageShell } from "@/components/PageShell";
 import { PageHero } from "@/components/PageHero";
-import { SeasonScheduleByRound } from "@/components/league-schedule-ui";
 import { SeasonActivityFeed } from "@/components/season/SeasonActivityFeed";
 import { getRecentSeasonEvents } from "@/lib/season-events";
 import { SeasonHubRecentGames } from "@/components/season/SeasonHubRecentGames";
@@ -29,10 +27,9 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const dash = await getSeasonDashboard(seasonId);
   if (!dash || dash.league.id !== leagueId) notFound();
 
-  const { season, teams, rounds, games } = dash;
+  const { season, teams, games } = dash;
   const isAdmin = isLeagueAdmin(role);
   const teamNames = new Map(teams.map((t) => [t.team.id, t.team.name]));
-  const gamesByRound = groupGamesByRound(games);
   const recentEvents = await getRecentSeasonEvents(seasonId, 20);
 
   return (
@@ -173,21 +170,6 @@ export default async function SeasonPage({ params, searchParams }: Props) {
           </tbody>
         </table>
         </div>
-      </section>
-
-      <section className="mt-10" id="schedule">
-        <h2 className="text-lg font-semibold">Schedule</h2>
-        <SeasonScheduleByRound
-          leagueId={leagueId}
-          seasonId={seasonId}
-          rounds={rounds}
-          gamesByRound={gamesByRound}
-          teams={teams}
-          userId={user.id}
-          role={role}
-          isAdmin={isAdmin}
-          className="mt-6 space-y-6"
-        />
       </section>
     </PageShell>
   );

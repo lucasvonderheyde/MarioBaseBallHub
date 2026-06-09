@@ -25,8 +25,8 @@ export function AccountUploadNav({ activeSection }: Props) {
     },
     {
       id: "batch",
-      label: "Batch upload",
-      description: "Auto-match many files to a season",
+      label: "Lifetime batch",
+      description: "Friendlies and extras for lifetime stats only",
     },
   ];
 
