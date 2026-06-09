@@ -1,12 +1,8 @@
 import type { DecodedGameSummary } from "./decode-game-file";
-
-function normalizeNetplayLabel(value: string | null | undefined): string {
-  return (value ?? "").trim().toLowerCase();
-}
+import { netplayLabelMatches, normalizeNetplayLabel } from "@/lib/netplay-label";
 
 /**
- * Warns when decoded file netplay labels do not match managers' display names.
- * Does not block ingest; callers decide how to surface warnings.
+ * @deprecated Prefer matchNetplayTeams for upload validation.
  */
 export function netplayLabelWarnings(
   parsed: Pick<DecodedGameSummary, "homePlayer" | "awayPlayer">,
@@ -14,10 +10,15 @@ export function netplayLabelWarnings(
   awayManagerDisplayName: string | null | undefined,
 ): string[] {
   const warnings: string[] = [];
+  const homeLabels = homeManagerDisplayName
+    ? [normalizeNetplayLabel(homeManagerDisplayName)]
+    : [];
+  const awayLabels = awayManagerDisplayName
+    ? [normalizeNetplayLabel(awayManagerDisplayName)]
+    : [];
   if (
     homeManagerDisplayName &&
-    normalizeNetplayLabel(homeManagerDisplayName) !==
-      normalizeNetplayLabel(parsed.homePlayer)
+    !netplayLabelMatches(homeLabels, parsed.homePlayer)
   ) {
     warnings.push(
       `Home netplay name mismatch: schedule manager "${homeManagerDisplayName}" vs file "${parsed.homePlayer}".`,
@@ -25,8 +26,7 @@ export function netplayLabelWarnings(
   }
   if (
     awayManagerDisplayName &&
-    normalizeNetplayLabel(awayManagerDisplayName) !==
-      normalizeNetplayLabel(parsed.awayPlayer)
+    !netplayLabelMatches(awayLabels, parsed.awayPlayer)
   ) {
     warnings.push(
       `Away netplay name mismatch: schedule manager "${awayManagerDisplayName}" vs file "${parsed.awayPlayer}".`,

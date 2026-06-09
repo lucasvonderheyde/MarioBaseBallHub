@@ -24,8 +24,8 @@ export default async function RegisterPage({
         </p>
       ) : null}
       <p className="mt-1 text-sm text-zinc-500">
-        Use the same username you use in netplay if you want upload name checks
-        to line up.
+        After registering, set your Rio/netplay username on your account page so
+        game stat uploads can match the correct teams.
       </p>
       <form action={registerAction} className="mt-6 space-y-4">
         {next ? <input type="hidden" name="next" value={next} /> : null}

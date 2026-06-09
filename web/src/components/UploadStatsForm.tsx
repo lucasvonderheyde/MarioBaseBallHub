@@ -36,7 +36,16 @@ export function UploadStatsForm({ gameId, leagueId, seasonId, compact = false }:
         {pending ? "Uploading…" : compact ? "Report game" : "Save stats to this game"}
       </button>
       {state && "error" in state ? (
-        <p className="text-sm text-red-400">{state.error}</p>
+        <>
+          <p className="text-sm text-red-400">{state.error}</p>
+          {state.warnings?.length ? (
+            <ul className="list-inside list-disc text-sm text-amber-200">
+              {state.warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          ) : null}
+        </>
       ) : null}
       {state && "ok" in state && state.ok ? (
         <p className="text-sm text-emerald-400">Stats saved.</p>

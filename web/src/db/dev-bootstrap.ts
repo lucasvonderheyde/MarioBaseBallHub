@@ -246,8 +246,8 @@ async function main() {
     await persistCharacterGameStats({
       gameId,
       seasonId,
-      homeTeamId,
-      awayTeamId,
+      awaySideTeamId: awayTeamId,
+      homeSideTeamId: homeTeamId,
       rawJson: parsed.rawJson,
     });
 

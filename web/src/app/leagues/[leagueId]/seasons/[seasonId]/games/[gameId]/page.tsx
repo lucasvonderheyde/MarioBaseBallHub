@@ -334,7 +334,9 @@ export default async function GameReportPage({ params, searchParams }: Props) {
         <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
           <h2 className="text-lg font-semibold">Report stats</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Paste the decoded game JSON to populate the box score.
+            Paste the decoded game JSON to populate the box score. Uploads are
+            matched to managers using Rio/netplay usernames from your account
+            page.
           </p>
           <div className="mt-3 max-w-xl">
             <UploadStatsForm

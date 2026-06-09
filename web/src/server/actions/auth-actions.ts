@@ -89,6 +89,7 @@ export async function updateProfileAction(formData: FormData) {
 
   const username = String(formData.get("username") ?? "").trim();
   const displayName = String(formData.get("displayName") ?? "").trim();
+  const netplayUsername = String(formData.get("netplayUsername") ?? "").trim();
   const profilePictureUrl = String(formData.get("profilePictureUrl") ?? "").trim();
   if (username.length < 2) {
     redirectWithFormError("/account", "Username must be at least 2 characters.");
@@ -111,6 +112,7 @@ export async function updateProfileAction(formData: FormData) {
     .set({
       username,
       displayName: displayName || null,
+      netplayUsername: netplayUsername || null,
       profilePictureUrl: profilePictureUrl || null,
     })
     .where(eq(users.id, current.id));

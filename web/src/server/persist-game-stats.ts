@@ -14,8 +14,10 @@ function newId(): string {
 export type PersistGameStatsInput = {
   gameId: string;
   seasonId: string;
-  homeTeamId: string;
-  awayTeamId: string;
+  /** Schedule team that should receive the file's Away-side roster stats. */
+  awaySideTeamId: string;
+  /** Schedule team that should receive the file's Home-side roster stats. */
+  homeSideTeamId: string;
   rawJson: string;
 };
 
@@ -30,7 +32,7 @@ export async function persistCharacterGameStats(input: PersistGameStatsInput): P
     id: newId(),
     gameId: input.gameId,
     seasonId: input.seasonId,
-    teamId: s.teamSide === "Away" ? input.awayTeamId : input.homeTeamId,
+    teamId: s.teamSide === "Away" ? input.awaySideTeamId : input.homeSideTeamId,
     teamSide: s.teamSide,
     rosterSlot: s.rosterSlot,
     charOccurrenceIndex: s.charOccurrenceIndex,
@@ -127,8 +129,8 @@ export async function backfillCharacterGameStats(seasonId: string): Promise<numb
     await persistCharacterGameStats({
       gameId: g.id,
       seasonId,
-      homeTeamId: g.homeTeamId,
-      awayTeamId: g.awayTeamId,
+      awaySideTeamId: g.awayTeamId,
+      homeSideTeamId: g.homeTeamId,
       rawJson: g.statsRawJson,
     });
     count++;

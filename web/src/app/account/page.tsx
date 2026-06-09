@@ -23,7 +23,8 @@ export default async function AccountPage({
         </Link>
       </div>
       <p className="mt-2 text-sm text-zinc-500">
-        Update your login username, display name, and manager profile picture.
+        Update your login username, Rio/netplay name, display name, and manager profile
+        picture.
       </p>
 
       <div className="mt-4 flex items-center gap-3">
@@ -63,6 +64,19 @@ export default async function AccountPage({
           />
           <p className="mt-1 text-xs text-zinc-600">
             Used to log in and to add you to leagues.
+          </p>
+        </div>
+        <div>
+          <label className="text-sm text-zinc-400">Rio / netplay username</label>
+          <input
+            name="netplayUsername"
+            defaultValue={user.netplayUsername ?? ""}
+            placeholder="Same name shown in decoded game stats"
+            className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+          />
+          <p className="mt-1 text-xs text-zinc-600">
+            Used to verify home/away teams when uploading game stats. Match the name
+            from the stats file&apos;s &quot;Home Player&quot; / &quot;Away Player&quot; fields.
           </p>
         </div>
         <div>

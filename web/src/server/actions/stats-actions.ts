@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { canUserReportGame } from "@/lib/game-report-access";
 import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
-import { netplayLabelWarnings } from "@/domain/stats/netplay-warnings";
+import { matchNetplayTeams } from "@/domain/stats/match-netplay-teams";
 import {
   persistCharacterGameStats,
   backfillCharacterGameStats,
@@ -17,7 +17,7 @@ import {
 
 export type UploadStatsState =
   | { ok: true; warnings?: string[] }
-  | { error: string }
+  | { error: string; warnings?: string[] }
   | null;
 
 export async function uploadStatsFormAction(
@@ -99,12 +99,24 @@ export async function uploadStatsAction(
         .where(eq(users.id, away.managerUserId))
         .limit(1)
     : [null];
-  const warnings = netplayLabelWarnings(parsed, hm?.displayName, am?.displayName);
+  const match = matchNetplayTeams(parsed, {
+    teamId: home.id,
+    teamName: home.name,
+    manager: hm,
+  }, {
+    teamId: away.id,
+    teamName: away.name,
+    manager: am,
+  });
+  if (match.blockingError) {
+    return { error: match.blockingError, warnings: match.warnings };
+  }
+
   await db
     .update(scheduleGames)
     .set({
-      homeScore: parsed.homeScore,
-      awayScore: parsed.awayScore,
+      homeScore: match.scheduleHomeScore,
+      awayScore: match.scheduleAwayScore,
       statsGameId: parsed.statsGameId,
       statsRawJson: parsed.rawJson,
       statsStadiumId: parsed.stadiumId ?? null,
@@ -115,8 +127,8 @@ export async function uploadStatsAction(
   await persistCharacterGameStats({
     gameId,
     seasonId,
-    homeTeamId: game.homeTeamId,
-    awayTeamId: game.awayTeamId,
+    awaySideTeamId: match.awaySideTeamId,
+    homeSideTeamId: match.homeSideTeamId,
     rawJson: parsed.rawJson,
   });
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
@@ -124,7 +136,7 @@ export async function uploadStatsAction(
   revalidatePath(`/leagues/${leagueId}/schedule`);
   revalidatePath(`/leagues/${leagueId}/playoffs`);
   const out: { ok: true; warnings?: string[] } = { ok: true };
-  if (warnings.length) out.warnings = warnings;
+  if (match.warnings.length) out.warnings = match.warnings;
   return out;
 }
 
