@@ -218,6 +218,206 @@ export async function aggregateBattingByCharOccurrence(
   return map;
 }
 
+export type PitchingLine = {
+  charId: string;
+  charOccurrenceIndex: number;
+  games: number;
+  outsPitched: number;
+  battersFaced: number;
+  hitsAllowed: number;
+  runsAllowed: number;
+  earnedRuns: number;
+  walks: number;
+  strikeouts: number;
+  hrAllowed: number;
+  pitchesThrown: number;
+};
+
+export function pitchingStatKey(charId: string, charOccurrenceIndex: number): string {
+  return `${charId}\0${charOccurrenceIndex}`;
+}
+
+const pitchedInGame = sql`(${characterGameStats.wasPitcher} = 1 OR ${characterGameStats.outsPitched} > 0 OR ${characterGameStats.battersFaced} > 0)`;
+
+function toPitchingLine(
+  charId: string,
+  charOccurrenceIndex: number,
+  row: {
+    games: number;
+    outsPitched: number;
+    battersFaced: number;
+    hitsAllowed: number;
+    runsAllowed: number;
+    earnedRuns: number;
+    walks: number;
+    strikeouts: number;
+    hrAllowed: number;
+    pitchesThrown: number;
+  },
+): PitchingLine {
+  return {
+    charId,
+    charOccurrenceIndex,
+    games: row.games,
+    outsPitched: row.outsPitched,
+    battersFaced: row.battersFaced,
+    hitsAllowed: row.hitsAllowed,
+    runsAllowed: row.runsAllowed,
+    earnedRuns: row.earnedRuns,
+    walks: row.walks,
+    strikeouts: row.strikeouts,
+    hrAllowed: row.hrAllowed,
+    pitchesThrown: row.pitchesThrown,
+  };
+}
+
+async function buildStatConditions(filter: StatFilter) {
+  const conditions = [seasonFilter(filter), pitchedInGame];
+  if (filter.teamId) conditions.push(eq(characterGameStats.teamId, filter.teamId));
+  if (filter.charId) conditions.push(eq(characterGameStats.charId, filter.charId));
+  if (filter.managerUserId) {
+    conditions.push(eq(teams.managerUserId, filter.managerUserId));
+  }
+  if (filter.stadiumId) {
+    conditions.push(eq(scheduleGames.statsStadiumId, filter.stadiumId));
+  }
+  if (filter.leagueId && !filter.seasonId) {
+    const seasonIds = await getSeasonIdsForLeague(filter.leagueId);
+    if (seasonIds.length === 0) return null;
+    conditions.push(inArray(characterGameStats.seasonId, seasonIds));
+  }
+  return conditions;
+}
+
+export async function aggregatePitchingByCharOccurrence(
+  filter: StatFilter,
+): Promise<Map<string, PitchingLine>> {
+  const conditions = await buildStatConditions(filter);
+  if (!conditions) return new Map();
+
+  const rows = await db
+    .select({
+      charId: characterGameStats.charId,
+      charOccurrenceIndex: characterGameStats.charOccurrenceIndex,
+      games: sql<number>`count(distinct ${characterGameStats.gameId})`.mapWith(Number),
+      outsPitched: sql<number>`sum(${characterGameStats.outsPitched})`.mapWith(Number),
+      battersFaced: sql<number>`sum(${characterGameStats.battersFaced})`.mapWith(Number),
+      hitsAllowed: sql<number>`sum(${characterGameStats.hitsAllowed})`.mapWith(Number),
+      runsAllowed: sql<number>`sum(${characterGameStats.runsAllowed})`.mapWith(Number),
+      earnedRuns: sql<number>`sum(${characterGameStats.earnedRuns})`.mapWith(Number),
+      walks: sql<number>`sum(${characterGameStats.pitchingWalks} + ${characterGameStats.battersHit})`.mapWith(Number),
+      strikeouts: sql<number>`sum(${characterGameStats.strikeoutsDef})`.mapWith(Number),
+      hrAllowed: sql<number>`sum(${characterGameStats.hrAllowed})`.mapWith(Number),
+      pitchesThrown: sql<number>`sum(${characterGameStats.pitchesThrown})`.mapWith(Number),
+    })
+    .from(characterGameStats)
+    .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
+    .innerJoin(teams, eq(characterGameStats.teamId, teams.id))
+    .where(and(...conditions))
+    .groupBy(characterGameStats.charId, characterGameStats.charOccurrenceIndex);
+
+  const map = new Map<string, PitchingLine>();
+  for (const row of rows) {
+    map.set(
+      pitchingStatKey(row.charId, row.charOccurrenceIndex),
+      toPitchingLine(row.charId, row.charOccurrenceIndex, row),
+    );
+  }
+  return map;
+}
+
+export async function aggregatePitchingByCharId(
+  filter: StatFilter,
+): Promise<Map<string, PitchingLine>> {
+  const conditions = await buildStatConditions(filter);
+  if (!conditions) return new Map();
+
+  const rows = await db
+    .select({
+      charId: characterGameStats.charId,
+      games: sql<number>`count(distinct ${characterGameStats.gameId})`.mapWith(Number),
+      outsPitched: sql<number>`sum(${characterGameStats.outsPitched})`.mapWith(Number),
+      battersFaced: sql<number>`sum(${characterGameStats.battersFaced})`.mapWith(Number),
+      hitsAllowed: sql<number>`sum(${characterGameStats.hitsAllowed})`.mapWith(Number),
+      runsAllowed: sql<number>`sum(${characterGameStats.runsAllowed})`.mapWith(Number),
+      earnedRuns: sql<number>`sum(${characterGameStats.earnedRuns})`.mapWith(Number),
+      walks: sql<number>`sum(${characterGameStats.pitchingWalks} + ${characterGameStats.battersHit})`.mapWith(Number),
+      strikeouts: sql<number>`sum(${characterGameStats.strikeoutsDef})`.mapWith(Number),
+      hrAllowed: sql<number>`sum(${characterGameStats.hrAllowed})`.mapWith(Number),
+      pitchesThrown: sql<number>`sum(${characterGameStats.pitchesThrown})`.mapWith(Number),
+    })
+    .from(characterGameStats)
+    .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
+    .innerJoin(teams, eq(characterGameStats.teamId, teams.id))
+    .where(and(...conditions))
+    .groupBy(characterGameStats.charId);
+
+  const map = new Map<string, PitchingLine>();
+  for (const row of rows) {
+    map.set(row.charId, toPitchingLine(row.charId, 0, row));
+  }
+  return map;
+}
+
+export async function aggregatePitchingByCharAndSeason(
+  charId: string,
+  leagueId: string,
+): Promise<{ seasonId: string; seasonName: string; line: PitchingLine }[]> {
+  const rows = await db
+    .select({
+      seasonId: seasons.id,
+      seasonName: seasons.name,
+      games: sql<number>`count(distinct ${characterGameStats.gameId})`.mapWith(Number),
+      outsPitched: sql<number>`sum(${characterGameStats.outsPitched})`.mapWith(Number),
+      battersFaced: sql<number>`sum(${characterGameStats.battersFaced})`.mapWith(Number),
+      hitsAllowed: sql<number>`sum(${characterGameStats.hitsAllowed})`.mapWith(Number),
+      runsAllowed: sql<number>`sum(${characterGameStats.runsAllowed})`.mapWith(Number),
+      earnedRuns: sql<number>`sum(${characterGameStats.earnedRuns})`.mapWith(Number),
+      walks: sql<number>`sum(${characterGameStats.pitchingWalks} + ${characterGameStats.battersHit})`.mapWith(Number),
+      strikeouts: sql<number>`sum(${characterGameStats.strikeoutsDef})`.mapWith(Number),
+      hrAllowed: sql<number>`sum(${characterGameStats.hrAllowed})`.mapWith(Number),
+      pitchesThrown: sql<number>`sum(${characterGameStats.pitchesThrown})`.mapWith(Number),
+    })
+    .from(characterGameStats)
+    .innerJoin(seasons, eq(characterGameStats.seasonId, seasons.id))
+    .where(
+      and(eq(characterGameStats.charId, charId), eq(seasons.leagueId, leagueId), pitchedInGame),
+    )
+    .groupBy(seasons.id, seasons.name)
+    .orderBy(asc(seasons.createdAt));
+
+  return rows.map((row) => ({
+    seasonId: row.seasonId,
+    seasonName: row.seasonName,
+    line: toPitchingLine(charId, 0, row),
+  }));
+}
+
+/** Stats for characters who appeared in games for this team but are not on the current roster. */
+export async function aggregateOffRosterTeamStats(
+  seasonId: string,
+  teamId: string,
+  activeRosterKeys: Set<string>,
+): Promise<{
+  batting: Map<string, BattingLine>;
+  pitching: Map<string, PitchingLine>;
+}> {
+  const battingAll = await aggregateBattingByCharOccurrence({ seasonId, teamId });
+  const pitchingAll = await aggregatePitchingByCharOccurrence({ seasonId, teamId });
+
+  const batting = new Map<string, BattingLine>();
+  const pitching = new Map<string, PitchingLine>();
+
+  for (const [key, line] of battingAll) {
+    if (!activeRosterKeys.has(key)) batting.set(key, line);
+  }
+  for (const [key, line] of pitchingAll) {
+    if (!activeRosterKeys.has(key)) pitching.set(key, line);
+  }
+
+  return { batting, pitching };
+}
+
 export async function aggregateBattingByCharAndManager(
   filter: StatFilter,
 ): Promise<{ charId: string; managerUserId: string | null; username: string | null; line: BattingLine }[]> {

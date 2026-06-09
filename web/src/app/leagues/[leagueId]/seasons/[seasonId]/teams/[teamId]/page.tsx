@@ -1,19 +1,29 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, rosterInstances, teams, users } from "@/db/schema";
 import { BattingStatCells } from "@/components/BattingStatCells";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
+import { PitchingTableRow, pitchingTableHeaders } from "@/components/PitchingStatCells";
 import { StadiumSelect } from "@/components/StadiumSelect";
 import { getCurrentUser } from "@/lib/auth";
+import { formatCharIdDisplay } from "@/lib/character-display";
 import { managerDisplayName } from "@/lib/manager-profile";
 import { getLeagueRole } from "@/lib/league-access";
 import {
+  aggregateBattingByCharId,
   aggregateBattingByCharOccurrence,
-  battingStatKey,
+  aggregateOffRosterTeamStats,
+  aggregatePitchingByCharId,
+  aggregatePitchingByCharOccurrence,
 } from "@/lib/game-stats-queries";
+import {
+  activeRosterStatKeys,
+  resolveBattingLineForRosterCopy,
+  resolvePitchingLineForRosterCopy,
+} from "@/lib/team-roster-stats";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { characterMugshotUrl, stadiumIconUrl } from "@/lib/asset-urls";
 import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
@@ -53,7 +63,60 @@ export default async function TeamPage({ params, searchParams }: Props) {
     )
     .orderBy(asc(characters.displayName), asc(rosterInstances.copyIndex));
 
-  const battingByOccurrence = await aggregateBattingByCharOccurrence({ seasonId, teamId });
+  const [
+    battingByOccurrence,
+    battingByCharId,
+    pitchingByOccurrence,
+    pitchingByCharId,
+  ] = await Promise.all([
+    aggregateBattingByCharOccurrence({ seasonId, teamId }),
+    aggregateBattingByCharId({ seasonId, teamId }),
+    aggregatePitchingByCharOccurrence({ seasonId, teamId }),
+    aggregatePitchingByCharId({ seasonId, teamId }),
+  ]);
+
+  const activeKeys = activeRosterStatKeys(
+    roster.map(({ character, instance }) => ({
+      gameCharId: character.gameCharId,
+      copyIndex: instance.copyIndex,
+    })),
+  );
+  const offRoster = await aggregateOffRosterTeamStats(seasonId, teamId, activeKeys);
+
+  const offRosterCharIds = [
+    ...new Set([
+      ...[...offRoster.batting.values()].map((line) => line.charId),
+      ...[...offRoster.pitching.values()].map((line) => line.charId),
+    ]),
+  ];
+  const offRosterCharacters =
+    offRosterCharIds.length > 0
+      ? await db
+          .select()
+          .from(characters)
+          .where(inArray(characters.gameCharId, offRosterCharIds))
+      : [];
+  const offRosterCharMap = new Map(
+    offRosterCharacters.map((character) => [character.gameCharId, character]),
+  );
+
+  const rosterPitchers = roster
+    .map(({ character, instance }) => {
+      const copyCount = rosterCopyCounts.get(character.gameCharId) ?? 1;
+      const line = resolvePitchingLineForRosterCopy(
+        character.gameCharId,
+        instance.copyIndex,
+        copyCount,
+        pitchingByOccurrence,
+        pitchingByCharId,
+      );
+      return { character, instance, line };
+    })
+    .filter(
+      ({ line }) =>
+        line != null && (line.outsPitched > 0 || line.battersFaced > 0 || line.games > 0),
+    )
+    .sort((a, b) => a.character.displayName.localeCompare(b.character.displayName));
 
   const rosterCopyCounts = new Map<string, number>();
   for (const { character } of roster) {
@@ -178,9 +241,13 @@ export default async function TeamPage({ params, searchParams }: Props) {
           </thead>
           <tbody>
             {roster.map(({ character, instance }) => {
-              const occurrenceIndex = instance.copyIndex - 1;
-              const line = battingByOccurrence.get(
-                battingStatKey(character.gameCharId, occurrenceIndex),
+              const copyCount = rosterCopyCounts.get(character.gameCharId) ?? 1;
+              const line = resolveBattingLineForRosterCopy(
+                character.gameCharId,
+                instance.copyIndex,
+                copyCount,
+                battingByOccurrence,
+                battingByCharId,
               );
               const showCopy =
                 (rosterCopyCounts.get(character.gameCharId) ?? 0) > 1;
@@ -293,6 +360,205 @@ export default async function TeamPage({ params, searchParams }: Props) {
         </ul>
       </section>
       </div>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Season pitching</h2>
+        <p className="text-sm text-zinc-500">
+          Pitching totals from uploaded game stats this season.
+        </p>
+        <div className="msb-table-wrap mt-3">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-zinc-800 text-zinc-500">
+                <th className="py-2 pr-2">Character</th>
+                {pitchingTableHeaders}
+              </tr>
+            </thead>
+            <tbody>
+              {rosterPitchers.length > 0 ? (
+                rosterPitchers.map(({ character, instance, line }) => {
+                  const showCopy =
+                    (rosterCopyCounts.get(character.gameCharId) ?? 0) > 1;
+                  return (
+                    <tr key={instance.id} className="border-b border-zinc-900">
+                      <td className="py-2 pr-2">
+                        <Link
+                          href={`/leagues/${leagueId}/characters/${encodeURIComponent(character.gameCharId)}?season=${seasonId}&tab=pitching`}
+                          className="flex items-center gap-2 hover:text-amber-400"
+                        >
+                          {character.mugshotFile ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={characterMugshotUrl(character.mugshotFile)}
+                              alt=""
+                              width={28}
+                              height={28}
+                              className="rounded"
+                            />
+                          ) : (
+                            <CharacterMugshot charId={character.gameCharId} />
+                          )}
+                          {character.displayName}
+                          {showCopy ? (
+                            <span className="text-zinc-500">#{instance.copyIndex}</span>
+                          ) : null}
+                        </Link>
+                      </td>
+                      <PitchingTableRow line={line!} />
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr className="border-b border-zinc-900 text-zinc-500">
+                  <td className="py-2 pr-2" colSpan={11}>
+                    No pitching stats recorded yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {offRosterCharIds.length > 0 ? (
+        <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
+          <h2 className="text-lg font-semibold">Former roster</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Characters who appeared in uploaded games for this team but are no longer on
+            the roster (trades, releases, etc.).
+          </p>
+
+          {[...offRoster.batting.entries()].length > 0 ? (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-zinc-400">Batting</h3>
+              <div className="msb-table-wrap mt-2">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-zinc-500">
+                      <th className="py-2 pr-2">Character</th>
+                      <th className="py-2 pr-2">AB</th>
+                      <th className="py-2 pr-2">H</th>
+                      <th className="py-2 pr-2">HR</th>
+                      <th className="py-2 pr-2">RBI</th>
+                      <th className="py-2 pr-2">AVG</th>
+                      <th className="py-2 pr-2">OBP</th>
+                      <th className="py-2 pr-2">SLG</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...offRoster.batting.entries()]
+                      .sort(([, a], [, b]) => {
+                        const nameA =
+                          offRosterCharMap.get(a.charId)?.displayName ??
+                          formatCharIdDisplay(a.charId);
+                        const nameB =
+                          offRosterCharMap.get(b.charId)?.displayName ??
+                          formatCharIdDisplay(b.charId);
+                        return nameA.localeCompare(nameB);
+                      })
+                      .map(([key, line]) => {
+                        const character = offRosterCharMap.get(line.charId);
+                        return (
+                          <tr key={key} className="border-b border-zinc-900">
+                            <td className="py-2 pr-2">
+                              <Link
+                                href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}`}
+                                className="flex items-center gap-2 hover:text-amber-400"
+                              >
+                                {character?.mugshotFile ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={characterMugshotUrl(character.mugshotFile)}
+                                    alt=""
+                                    width={28}
+                                    height={28}
+                                    className="rounded"
+                                  />
+                                ) : (
+                                  <CharacterMugshot charId={line.charId} />
+                                )}
+                                {character?.displayName ?? formatCharIdDisplay(line.charId)}
+                              </Link>
+                            </td>
+                            <BattingStatCells
+                              ab={line.ab}
+                              hits={line.hits}
+                              hr={line.hr}
+                              rbi={line.rbi}
+                              walks4ball={line.walks4ball}
+                              walksHbp={line.walksHbp}
+                              sacFly={line.sacFly}
+                              singles={line.singles}
+                              doubles={line.doubles}
+                              triples={line.triples}
+                              showObpSlg
+                            />
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          {[...offRoster.pitching.entries()].length > 0 ? (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-zinc-400">Pitching</h3>
+              <div className="msb-table-wrap mt-2">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-zinc-500">
+                      <th className="py-2 pr-2">Character</th>
+                      {pitchingTableHeaders}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...offRoster.pitching.entries()]
+                      .sort(([, a], [, b]) => {
+                        const nameA =
+                          offRosterCharMap.get(a.charId)?.displayName ??
+                          formatCharIdDisplay(a.charId);
+                        const nameB =
+                          offRosterCharMap.get(b.charId)?.displayName ??
+                          formatCharIdDisplay(b.charId);
+                        return nameA.localeCompare(nameB);
+                      })
+                      .map(([key, line]) => {
+                        const character = offRosterCharMap.get(line.charId);
+                        return (
+                          <tr key={key} className="border-b border-zinc-900">
+                            <td className="py-2 pr-2">
+                              <Link
+                                href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}&tab=pitching`}
+                                className="flex items-center gap-2 hover:text-amber-400"
+                              >
+                                {character?.mugshotFile ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={characterMugshotUrl(character.mugshotFile)}
+                                    alt=""
+                                    width={28}
+                                    height={28}
+                                    className="rounded"
+                                  />
+                                ) : (
+                                  <CharacterMugshot charId={line.charId} />
+                                )}
+                                {character?.displayName ?? formatCharIdDisplay(line.charId)}
+                              </Link>
+                            </td>
+                            <PitchingTableRow line={line} />
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {isManager ? (
         <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">

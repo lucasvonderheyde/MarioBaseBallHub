@@ -10,6 +10,8 @@ type Props = {
   activeSeasonName: string | null;
   isMember: boolean;
   showClaim: boolean;
+  myTeamHref: string | null;
+  myTeamName: string | null;
 };
 
 type NavItem = {
@@ -29,6 +31,8 @@ export function LeagueNav({
   activeSeasonName,
   isMember,
   showClaim,
+  myTeamHref,
+  myTeamName,
 }: Props) {
   const pathname = usePathname();
   const seasonMatch = pathname.match(/\/seasons\/([^/]+)/);
@@ -82,6 +86,14 @@ export function LeagueNav({
         href: `/leagues/${leagueId}/seasons/${activeSeasonId}`,
         label: activeSeasonName,
         match: (path) => path.startsWith(`${leagueHome}/seasons/${activeSeasonId}`),
+      });
+    }
+
+    if (myTeamHref && myTeamName) {
+      items.push({
+        href: myTeamHref,
+        label: "My team",
+        match: (path) => path === myTeamHref,
       });
     }
   }
