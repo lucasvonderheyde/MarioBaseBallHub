@@ -668,18 +668,59 @@ export async function assignRosterFormAction(formData: FormData) {
   const seasonId = String(formData.get("seasonId") ?? "");
   const leagueId = String(formData.get("leagueId") ?? "");
   const teamId = String(formData.get("teamId") ?? "");
-  if (!instanceId || !seasonId || !leagueId)
-    redirectWithFormError("/leagues", "Missing roster fields.");
+  const result = await assignRosterInstanceAction({
+    instanceId,
+    seasonId,
+    leagueId,
+    teamId: teamId || null,
+  });
+  if (result.error) {
+    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}/rosters`, result.error);
+  }
+  redirect(`/leagues/${leagueId}/seasons/${seasonId}/rosters`);
+}
+
+export async function assignRosterInstanceAction(input: {
+  instanceId: string;
+  seasonId: string;
+  leagueId: string;
+  teamId: string | null;
+}): Promise<{ error?: string }> {
+  const { instanceId, seasonId, leagueId, teamId } = input;
+  if (!instanceId || !seasonId || !leagueId) {
+    return { error: "Missing roster fields." };
+  }
+
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
-  if (role !== "admin")
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}/rosters`, "Forbidden.");
+  if (role !== "admin") return { error: "Forbidden." };
+
+  const [instance] = await db
+    .select({ id: rosterInstances.id })
+    .from(rosterInstances)
+    .where(
+      and(eq(rosterInstances.id, instanceId), eq(rosterInstances.seasonId, seasonId)),
+    )
+    .limit(1);
+  if (!instance) return { error: "Character copy not found." };
+
+  if (teamId) {
+    const [team] = await db
+      .select({ id: teams.id })
+      .from(teams)
+      .where(and(eq(teams.id, teamId), eq(teams.seasonId, seasonId)))
+      .limit(1);
+    if (!team) return { error: "Team not found." };
+  }
+
   await db
     .update(rosterInstances)
-    .set({ teamId: teamId || null })
+    .set({ teamId })
     .where(eq(rosterInstances.id, instanceId));
+
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}/rosters`);
+  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/rosters`);
+  return {};
 }
 
 export async function createRoundAction(

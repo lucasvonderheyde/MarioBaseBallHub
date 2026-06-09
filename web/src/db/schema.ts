@@ -11,6 +11,7 @@ export const users = sqliteTable("users", {
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   displayName: text("display_name"),
+  profilePictureUrl: text("profile_picture_url"),
   isSiteAdmin: integer("is_site_admin", { mode: "boolean" })
     .notNull()
     .default(false),

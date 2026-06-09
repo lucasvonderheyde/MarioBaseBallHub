@@ -3,11 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, rosterInstances } from "@/db/schema";
+import { RosterAssignmentBoard } from "@/components/RosterAssignmentBoard";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
-import { characterMugshotUrl } from "@/lib/asset-urls";
-import { assignRosterFormAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
 
 type Props = {
@@ -52,57 +51,22 @@ export default async function RostersPage({ params, searchParams }: Props) {
         </p>
       ) : null}
       <p className="mt-1 text-sm text-zinc-500">
-        Each row is one league copy of a character. Pick a team or leave
-        unassigned.
+        Drag each league copy of a character onto a team column. Assignments save
+        automatically.
       </p>
-      <ul className="mt-6 space-y-3">
-        {instances.map(({ instance, character }) => (
-          <li
-            key={instance.id}
-            className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3"
-          >
-            {character.mugshotFile ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={characterMugshotUrl(character.mugshotFile)}
-                alt=""
-                width={36}
-                height={36}
-                className="rounded"
-              />
-            ) : null}
-            <div className="min-w-[140px] flex-1 text-sm">
-              <div className="font-medium">{character.displayName}</div>
-              <div className="font-mono text-xs text-zinc-500">
-                #{instance.copyIndex} · {character.gameCharId}
-              </div>
-            </div>
-            <form action={assignRosterFormAction} className="flex items-center gap-2">
-              <input type="hidden" name="instanceId" value={instance.id} />
-              <input type="hidden" name="seasonId" value={seasonId} />
-              <input type="hidden" name="leagueId" value={leagueId} />
-              <select
-                name="teamId"
-                defaultValue={instance.teamId ?? ""}
-                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-              >
-                <option value="">Unassigned</option>
-                {dash.teams.map(({ team }) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="msb-btn-primary px-2 py-1 text-xs"
-              >
-                Save
-              </button>
-            </form>
-          </li>
-        ))}
-      </ul>
+      <RosterAssignmentBoard
+        leagueId={leagueId}
+        seasonId={seasonId}
+        teams={dash.teams.map(({ team }) => ({ id: team.id, name: team.name }))}
+        instances={instances.map(({ instance, character }) => ({
+          id: instance.id,
+          copyIndex: instance.copyIndex,
+          teamId: instance.teamId,
+          gameCharId: character.gameCharId,
+          displayName: character.displayName,
+          mugshotFile: character.mugshotFile,
+        }))}
+      />
     </PageShell>
   );
 }

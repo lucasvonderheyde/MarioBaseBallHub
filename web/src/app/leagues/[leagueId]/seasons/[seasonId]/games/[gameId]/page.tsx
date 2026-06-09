@@ -151,39 +151,72 @@ export default async function GameReportPage({ params, searchParams }: Props) {
     );
   }
 
-  function PitchingLine(side: "Away" | "Home", teamName: string) {
-    const pitcher = stats.find((s) => s.teamSide === side && s.wasPitcher);
-    if (!pitcher) {
-      return (
-        <tr className="border-b border-zinc-900">
-          <td className="py-1 pr-2">{teamName}</td>
-          <td colSpan={8} className="py-1 text-zinc-500">
-            No pitcher recorded
-          </td>
-        </tr>
-      );
-    }
+  function PitchingBoxTable({
+    rows,
+    label,
+  }: {
+    rows: typeof stats;
+    label: string;
+  }) {
+    const pitchingRows = rows.filter(
+      (row) => row.wasPitcher || row.outsPitched > 0 || row.battersFaced > 0,
+    );
+
     return (
-      <tr className="border-b border-zinc-900">
-        <td className="py-1 pr-2">{teamName}</td>
-        <td className="py-1 pr-2">
-          {charDisplayName(
-            stats.filter((s) => s.teamSide === side),
-            pitcher,
-          )}
-        </td>
-        <td className="py-1 pr-2 tabular-nums">
-          {inningsPitched(pitcher.outsPitched)}
-        </td>
-        <td className="py-1 pr-2 tabular-nums">{pitcher.hitsAllowed}</td>
-        <td className="py-1 pr-2 tabular-nums">{pitcher.runsAllowed}</td>
-        <td className="py-1 pr-2 tabular-nums">{pitcher.earnedRuns}</td>
-        <td className="py-1 pr-2 tabular-nums">
-          {pitcher.pitchingWalks + pitcher.battersHit}
-        </td>
-        <td className="py-1 pr-2 tabular-nums">{pitcher.strikeoutsDef}</td>
-        <td className="py-1 pr-2 tabular-nums">{pitcher.hrAllowed}</td>
-      </tr>
+      <div>
+        <h3 className="text-sm font-semibold text-zinc-300">{label}</h3>
+        <div className="msb-table-wrap mt-2">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-zinc-800 text-zinc-500">
+                <th className="py-1 pr-2">Pitcher</th>
+                <th className="py-1 pr-2">IP</th>
+                <th className="py-1 pr-2">BF</th>
+                <th className="py-1 pr-2">H</th>
+                <th className="py-1 pr-2">R</th>
+                <th className="py-1 pr-2">ER</th>
+                <th className="py-1 pr-2">BB</th>
+                <th className="py-1 pr-2">K</th>
+                <th className="py-1 pr-2">HR</th>
+                <th className="py-1 pr-2">Pit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pitchingRows.length > 0 ? (
+                pitchingRows.map((row) => (
+                  <tr key={row.id} className="border-b border-zinc-900">
+                    <td className="py-1 pr-2">
+                      <span className="flex items-center gap-1.5">
+                        <CharacterMugshot charId={row.charId} size={24} />
+                        {charDisplayName(rows, row)}
+                      </span>
+                    </td>
+                    <td className="py-1 pr-2 tabular-nums">
+                      {inningsPitched(row.outsPitched)}
+                    </td>
+                    <td className="py-1 pr-2 tabular-nums">{row.battersFaced}</td>
+                    <td className="py-1 pr-2 tabular-nums">{row.hitsAllowed}</td>
+                    <td className="py-1 pr-2 tabular-nums">{row.runsAllowed}</td>
+                    <td className="py-1 pr-2 tabular-nums">{row.earnedRuns}</td>
+                    <td className="py-1 pr-2 tabular-nums">
+                      {row.pitchingWalks + row.battersHit}
+                    </td>
+                    <td className="py-1 pr-2 tabular-nums">{row.strikeoutsDef}</td>
+                    <td className="py-1 pr-2 tabular-nums">{row.hrAllowed}</td>
+                    <td className="py-1 pr-2 tabular-nums">{row.pitchesThrown}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr className="border-b border-zinc-900 text-zinc-500">
+                  <td className="py-1 pr-2" colSpan={10}>
+                    No pitching stats recorded
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     );
   }
 
@@ -292,29 +325,9 @@ export default async function GameReportPage({ params, searchParams }: Props) {
             <BoxTable rows={homeStats} label={home.team.name} />
           </section>
 
-          <section className="mt-8">
-            <h2 className="text-lg font-semibold">Pitching</h2>
-            <div className="msb-table-wrap mt-2">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-800 text-zinc-500">
-                    <th className="py-1 pr-2">Team</th>
-                    <th className="py-1 pr-2">Pitcher</th>
-                    <th className="py-1 pr-2">IP</th>
-                    <th className="py-1 pr-2">H</th>
-                    <th className="py-1 pr-2">R</th>
-                    <th className="py-1 pr-2">ER</th>
-                    <th className="py-1 pr-2">BB</th>
-                    <th className="py-1 pr-2">K</th>
-                    <th className="py-1 pr-2">HR</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PitchingLine("Away", away.team.name)}
-                  {PitchingLine("Home", home.team.name)}
-                </tbody>
-              </table>
-            </div>
+          <section className="mt-10 grid gap-6 lg:grid-cols-2">
+            <PitchingBoxTable rows={awayStats} label={`${away.team.name} pitching`} />
+            <PitchingBoxTable rows={homeStats} label={`${home.team.name} pitching`} />
           </section>
         </>
       ) : canEdit ? (

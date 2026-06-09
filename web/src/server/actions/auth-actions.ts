@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   isConfiguredSiteAdminUsername,
@@ -10,6 +11,7 @@ import {
 } from "@/db/grant-site-admin";
 import { users } from "@/db/schema";
 import { getSession } from "@/lib/session";
+import { isValidProfilePictureUrl } from "@/lib/manager-profile";
 import { redirectWithFormError } from "@/server/flash-redirect";
 import { newUuid } from "@/server/ids";
 import { isSafeRedirectPath } from "@/lib/team-claims";
@@ -87,8 +89,12 @@ export async function updateProfileAction(formData: FormData) {
 
   const username = String(formData.get("username") ?? "").trim();
   const displayName = String(formData.get("displayName") ?? "").trim();
+  const profilePictureUrl = String(formData.get("profilePictureUrl") ?? "").trim();
   if (username.length < 2) {
     redirectWithFormError("/account", "Username must be at least 2 characters.");
+  }
+  if (!isValidProfilePictureUrl(profilePictureUrl)) {
+    redirectWithFormError("/account", "Profile picture must be an http(s) URL.");
   }
 
   if (username !== current.username) {
@@ -105,8 +111,16 @@ export async function updateProfileAction(formData: FormData) {
     .set({
       username,
       displayName: displayName || null,
+      profilePictureUrl: profilePictureUrl || null,
     })
     .where(eq(users.id, current.id));
 
+  revalidatePath("/account");
+  revalidatePath("/leagues", "layout");
+
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  if (isSafeRedirectPath(returnTo)) {
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}m=profile-updated`);
+  }
   redirect("/account?m=updated");
 }

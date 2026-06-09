@@ -5,7 +5,9 @@ import { db } from "@/db";
 import { characters, rosterInstances, teams, users } from "@/db/schema";
 import { BattingStatCells } from "@/components/BattingStatCells";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { ManagerAvatar } from "@/components/ManagerAvatar";
 import { getCurrentUser } from "@/lib/auth";
+import { managerDisplayName } from "@/lib/manager-profile";
 import { getLeagueRole } from "@/lib/league-access";
 import {
   aggregateBattingByCharOccurrence,
@@ -14,7 +16,7 @@ import {
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { characterMugshotUrl, stadiumIconUrl } from "@/lib/asset-urls";
 import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
-import { updateTeamAction } from "@/server/actions";
+import { updateTeamAction, updateProfileAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
 
 type Props = {
@@ -113,13 +115,22 @@ export default async function TeamPage({ params, searchParams }: Props) {
           Team updated.
         </p>
       ) : null}
-      {manager ? (
-        <p className="mt-1 text-zinc-400">
-          Manager: <span className="text-zinc-200">{manager.username}</span>
-          {manager.displayName ? (
-            <span className="text-zinc-500"> ({manager.displayName})</span>
-          ) : null}
+      {m === "profile-updated" ? (
+        <p className="mt-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Profile picture updated.
         </p>
+      ) : null}
+      {manager ? (
+        <div className="mt-3 flex items-center gap-3">
+          <ManagerAvatar user={manager} size={56} />
+          <div>
+            <p className="text-zinc-400">
+              Manager:{" "}
+              <span className="text-zinc-200">{managerDisplayName(manager)}</span>
+            </p>
+            <p className="text-sm text-zinc-500">@{manager.username}</p>
+          </div>
+        </div>
       ) : (
         <p className="mt-1 text-zinc-500">
           No manager assigned.
@@ -281,6 +292,44 @@ export default async function TeamPage({ params, searchParams }: Props) {
         </ul>
       </section>
       </div>
+
+      {isManager ? (
+        <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+          <h2 className="text-lg font-semibold">Your manager profile</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Shown on your team page and anywhere your manager name appears. Paste a
+            direct link to an image (Imgur, Discord CDN, etc.).
+          </p>
+          <form action={updateProfileAction} className="mt-4 space-y-3">
+            <input type="hidden" name="username" value={user.username} />
+            <input type="hidden" name="displayName" value={user.displayName ?? ""} />
+            <input
+              type="hidden"
+              name="returnTo"
+              value={`/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}`}
+            />
+            <div className="flex items-center gap-3">
+              <ManagerAvatar user={user} size={64} />
+              <div className="min-w-0 flex-1">
+                <label className="text-xs text-zinc-500" htmlFor="profilePictureUrl">
+                  Profile picture URL
+                </label>
+                <input
+                  id="profilePictureUrl"
+                  name="profilePictureUrl"
+                  type="url"
+                  defaultValue={user.profilePictureUrl ?? ""}
+                  placeholder="https://…"
+                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+            <button type="submit" className="msb-btn-primary px-3 py-1 text-sm">
+              Save profile picture
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       {canEdit ? (
         <section className="mt-10 rounded-lg border border-amber-900/40 bg-amber-950/10 p-4">

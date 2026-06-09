@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
+import { ManagerAvatar } from "@/components/ManagerAvatar";
 import { updateProfileAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
 
@@ -22,8 +23,13 @@ export default async function AccountPage({
         </Link>
       </div>
       <p className="mt-2 text-sm text-zinc-500">
-        Update your login username and display name.
+        Update your login username, display name, and manager profile picture.
       </p>
+
+      <div className="mt-4 flex items-center gap-3">
+        <ManagerAvatar user={user} size={56} />
+        <p className="text-sm text-zinc-400">Preview of how your avatar appears on team pages.</p>
+      </div>
 
       {e ? (
         <p className="mt-3 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
@@ -67,6 +73,19 @@ export default async function AccountPage({
             placeholder="Optional"
             className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
           />
+        </div>
+        <div>
+          <label className="text-sm text-zinc-400">Profile picture URL</label>
+          <input
+            name="profilePictureUrl"
+            type="url"
+            defaultValue={user.profilePictureUrl ?? ""}
+            placeholder="https://… (optional)"
+            className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+          />
+          <p className="mt-1 text-xs text-zinc-600">
+            Direct link to a square image works best.
+          </p>
         </div>
         <button type="submit" className="msb-btn-primary w-full py-2">
           Save changes
