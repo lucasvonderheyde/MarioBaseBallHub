@@ -206,6 +206,12 @@ body {
   color: var(--msb-gold-bright);
 }
 
+.msb-btn-nav-active {
+  border-color: color-mix(in srgb, var(--msb-sky) 70%, transparent);
+  background: color-mix(in srgb, var(--msb-sky) 12%, var(--zinc-900));
+  color: var(--msb-gold-bright);
+}
+
 .msb-badge {
   display: inline-flex;
   align-items: center;

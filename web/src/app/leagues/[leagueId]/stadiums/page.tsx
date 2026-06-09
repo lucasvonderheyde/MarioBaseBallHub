@@ -33,10 +33,7 @@ export default async function StadiumLibraryPage({ params, searchParams }: Props
 
   return (
     <PageShell width="wide">
-      <Link href={`/leagues/${leagueId}`} className="text-sm text-zinc-500 hover:text-zinc-300">
-        ← League
-      </Link>
-      <h1 className="mt-2 text-2xl font-bold">Stadium library</h1>
+      <h1 className="text-2xl font-bold">Stadium library</h1>
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <Link

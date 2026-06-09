@@ -6,6 +6,7 @@ import { characters, rosterInstances, teams, users } from "@/db/schema";
 import { BattingStatCells } from "@/components/BattingStatCells";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
+import { StadiumSelect } from "@/components/StadiumSelect";
 import { getCurrentUser } from "@/lib/auth";
 import { managerDisplayName } from "@/lib/manager-profile";
 import { getLeagueRole } from "@/lib/league-access";
@@ -379,11 +380,9 @@ export default async function TeamPage({ params, searchParams }: Props) {
               </>
             ) : null}
             <div>
-              <label className="text-xs text-zinc-500">Home stadium (game ID)</label>
-              <input
-                name="homeStadium"
-                defaultValue={team.homeStadiumGameId ?? ""}
-                placeholder="e.g. Bowser Castle"
+              <label className="text-xs text-zinc-500">Home stadium</label>
+              <StadiumSelect
+                defaultValue={team.homeStadiumGameId}
                 className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
               />
             </div>

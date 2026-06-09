@@ -171,9 +171,13 @@ export default async function AdminPage({
           </p>
         )}
         <p className="mt-3 text-xs text-zinc-500">
-          Railway setup: Root Directory = <code className="text-zinc-400">web</code>, add a
-          volume mounted at <code className="text-zinc-400">/app/data</code>, and set{" "}
-          <code className="text-zinc-400">DATABASE_URL=file:/app/data/league.db</code>.
+          Railway setup: Root Directory = <code className="text-zinc-400">web</code>. Volumes are
+          not in Settings — open your project canvas, press{" "}
+          <code className="text-zinc-400">Ctrl+K</code> (or right-click the canvas), search{" "}
+          <strong className="font-medium text-zinc-400">Volume</strong>, pick your web service,
+          mount at <code className="text-zinc-400">/app/data</code>, and set{" "}
+          <code className="text-zinc-400">DATABASE_URL=file:/app/data/league.db</code>. Redeploy
+          after saving.
         </p>
       </section>
 

@@ -14,27 +14,10 @@ type Props = {
 export function LeaguePublicHub({ leagueId, leagueName, activeSeason }: Props) {
   return (
     <PageShell width="default">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="text-2xl font-bold">{leagueName}</h1>
-        <Link href="/leagues" className="text-sm text-zinc-400 hover:text-white">
-          Your leagues
-        </Link>
-      </div>
+      <h1 className="text-2xl font-bold">{leagueName}</h1>
       <p className="mt-2 text-sm text-zinc-500">
         League schedule and standings. Contact the commissioner for team setup.
       </p>
-
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Link href={`/leagues/${leagueId}/schedule`} className="msb-btn-nav">
-          Schedule
-        </Link>
-        <Link href={`/leagues/${leagueId}/playoffs`} className="msb-btn-nav">
-          Playoff picture
-        </Link>
-        <Link href={`/leagues/${leagueId}/claim`} className="msb-btn-nav">
-          Claim a team
-        </Link>
-      </div>
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Current season</h2>

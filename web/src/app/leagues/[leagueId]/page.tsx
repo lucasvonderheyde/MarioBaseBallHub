@@ -68,12 +68,7 @@ export default async function LeaguePage({ params, searchParams }: Props) {
 
   return (
     <PageShell width="default">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="text-2xl font-bold">{league.name}</h1>
-        <Link href="/leagues" className="text-sm text-zinc-400 hover:text-white">
-          All leagues
-        </Link>
-      </div>
+      <h1 className="text-2xl font-bold">{league.name}</h1>
       {userIsSiteAdmin(user) ? (
         <p className="mt-1 text-sm text-amber-300/90">
           Site admin — full access to this league.
@@ -96,21 +91,6 @@ export default async function LeaguePage({ params, searchParams }: Props) {
           League renamed.
         </p>
       ) : null}
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href={`/leagues/${leagueId}/schedule`} className="msb-btn-nav">
-          Schedule
-        </Link>
-        <Link href={`/leagues/${leagueId}/playoffs`} className="msb-btn-nav">
-          Playoff picture
-        </Link>
-        <Link href={`/leagues/${leagueId}/characters`} className="msb-btn-nav">
-          Character library
-        </Link>
-        <Link href={`/leagues/${leagueId}/stadiums`} className="msb-btn-nav">
-          Stadium library
-        </Link>
-      </div>
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Seasons</h2>

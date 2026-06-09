@@ -71,26 +71,11 @@ export default async function LeaguePlayoffsPage({ params, searchParams }: Props
 
   return (
     <PageShell width="wide">
-      <Link
-        href={`/leagues/${leagueId}`}
-        className="text-sm text-zinc-500 hover:text-zinc-300"
-      >
-        ← {dash.league.name}
-      </Link>
-      <h1 className="mt-2 text-2xl font-bold">Playoff picture</h1>
+      <h1 className="text-2xl font-bold">Playoff picture</h1>
       <p className="mt-1 text-sm text-zinc-500">
         Seeding from regular-season standings. Play-in and bracket games come from
         the playoff schedule.
       </p>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-        <Link
-          href={`/leagues/${leagueId}/schedule`}
-          className="text-amber-400 hover:underline"
-        >
-          Full schedule
-        </Link>
-      </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {seasons.map((s) => (

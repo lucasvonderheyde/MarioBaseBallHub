@@ -22,6 +22,7 @@ import { groupGamesByRound } from "@/lib/group-games-by-round";
 import { scheduleRoundHeading } from "@/lib/schedule-labels";
 import { BackfillStatsButton } from "@/components/BackfillStatsButton";
 import { PageShell } from "@/components/PageShell";
+import { StadiumSelect } from "@/components/StadiumSelect";
 import { SeasonScheduleByRound } from "@/components/league-schedule-ui";
 import {
   addScheduleGameAction,
@@ -55,9 +56,8 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const dash = await getSeasonDashboard(seasonId);
   if (!dash || dash.league.id !== leagueId) notFound();
 
-  const { season, league, teams, rounds, games } = dash;
+  const { season, teams, rounds, games } = dash;
   const isAdmin = isLeagueAdmin(role);
-  const isMember = role != null;
   const playoffSettings = parsePlayoffSettings(season.playoffSettings);
   const scheduleSettings = parseSeasonScheduleSettings(season.scheduleSettings);
   const teamCount = teams.length;
@@ -94,42 +94,9 @@ export default async function SeasonPage({ params, searchParams }: Props) {
 
   return (
     <PageShell width="wide">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold sm:text-3xl">{season.name}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href={`/leagues/${leagueId}`} className="msb-btn-nav">
-            {league.name}
-          </Link>
-          <span className="msb-badge">{season.status}</span>
-          <Link
-            href={`/leagues/${leagueId}/schedule`}
-            className="msb-btn-nav"
-          >
-            League schedule
-          </Link>
-          <Link
-            href={`/leagues/${leagueId}/playoffs?season=${seasonId}`}
-            className="msb-btn-nav"
-          >
-            Playoff picture
-          </Link>
-          {isMember ? (
-            <>
-              <Link
-                href={`/leagues/${leagueId}/characters?season=${seasonId}`}
-                className="msb-btn-nav"
-              >
-                Character library
-              </Link>
-              <Link
-                href={`/leagues/${leagueId}/stadiums?season=${seasonId}`}
-                className="msb-btn-nav"
-              >
-                Stadium library
-              </Link>
-            </>
-          ) : null}
-        </div>
+        <span className="msb-badge">{season.status}</span>
       </div>
 
       {e ? (
@@ -468,11 +435,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
                 placeholder="Reserve for username (claim later)"
                 className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
               />
-              <input
-                name="homeStadium"
-                placeholder="Home stadium (game name, e.g. Bowser Castle)"
-                className="min-w-[240px] flex-1 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
-              />
+              <StadiumSelect className="min-w-[240px] flex-1 rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm" />
               <button
                 type="submit"
                 className="msb-btn-primary px-3 py-1 text-sm"

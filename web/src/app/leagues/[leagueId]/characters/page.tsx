@@ -50,10 +50,7 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
 
   return (
     <PageShell width="wide">
-      <Link href={`/leagues/${leagueId}`} className="text-sm text-zinc-500 hover:text-zinc-300">
-        ← League
-      </Link>
-      <h1 className="mt-2 text-2xl font-bold">Character library</h1>
+      <h1 className="text-2xl font-bold">Character library</h1>
       <p className="mt-1 text-sm text-zinc-500">
         All characters in the league pool. Active characters are in use for{" "}
         {seasonId ? `"${selectedSeason!.name}"` : "at least one season"}; inactive
