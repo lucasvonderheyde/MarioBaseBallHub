@@ -74,4 +74,41 @@ describe("matchNetplayTeams", () => {
     expect(result.alignment).toBe("partial");
     expect(result.blockingError).not.toBeNull();
   });
+
+  it("allows upload when only the home manager matches", () => {
+    const result = matchNetplayTeams(
+      {
+        homePlayer: "Zomsoth",
+        awayPlayer: "NotRegisteredYet",
+        homeScore: 5,
+        awayScore: 3,
+      },
+      homeTeam,
+      {
+        ...awayTeam,
+        manager: null,
+      },
+    );
+    expect(result.blockingError).toBeNull();
+    expect(result.alignment).toBe("partial");
+    expect(result.scheduleHomeScore).toBe(5);
+    expect(result.scheduleAwayScore).toBe(3);
+  });
+
+  it("allows upload when only one manager matches via swapped sides", () => {
+    const result = matchNetplayTeams(
+      {
+        homePlayer: "Zomsoth",
+        awayPlayer: "NotRegisteredYet",
+        homeScore: 5,
+        awayScore: 3,
+      },
+      awayTeam,
+      homeTeam,
+    );
+    expect(result.blockingError).toBeNull();
+    expect(result.alignment).toBe("partial");
+    expect(result.scheduleHomeScore).toBe(3);
+    expect(result.scheduleAwayScore).toBe(5);
+  });
 });

@@ -32,10 +32,41 @@ export type NetplayTeamMatch = {
   blockingError: string | null;
 };
 
-function winnerLabel(homeScore: number, awayScore: number, homeName: string, awayName: string): string {
+function winnerLabel(
+  homeScore: number,
+  awayScore: number,
+  homeName: string,
+  awayName: string,
+): string {
   if (homeScore > awayScore) return `${homeName} (${homeScore}-${awayScore})`;
   if (awayScore > homeScore) return `${awayName} (${awayScore}-${homeScore})`;
   return `Tie (${homeScore}-${awayScore})`;
+}
+
+function applyDirectMapping(
+  parsed: Pick<DecodedGameSummary, "homeScore" | "awayScore">,
+  scheduleHome: NetplayManagerContext,
+  scheduleAway: NetplayManagerContext,
+) {
+  return {
+    scheduleHomeScore: parsed.homeScore,
+    scheduleAwayScore: parsed.awayScore,
+    awaySideTeamId: scheduleAway.teamId,
+    homeSideTeamId: scheduleHome.teamId,
+  };
+}
+
+function applySwappedMapping(
+  parsed: Pick<DecodedGameSummary, "homeScore" | "awayScore">,
+  scheduleHome: NetplayManagerContext,
+  scheduleAway: NetplayManagerContext,
+) {
+  return {
+    scheduleHomeScore: parsed.awayScore,
+    scheduleAwayScore: parsed.homeScore,
+    awaySideTeamId: scheduleHome.teamId,
+    homeSideTeamId: scheduleAway.teamId,
+  };
 }
 
 export function matchNetplayTeams(
@@ -56,22 +87,23 @@ export function matchNetplayTeams(
   const swappedHome = netplayLabelMatches(homeLabels, parsed.awayPlayer);
   const swappedAway = netplayLabelMatches(awayLabels, parsed.homePlayer);
 
+  const directSignals = Number(directHome) + Number(directAway);
+  const swapSignals = Number(swappedHome) + Number(swappedAway);
+  const homeSideKnown = directHome || swappedHome;
+  const awaySideKnown = directAway || swappedAway;
+  const anyKnownSide = homeSideKnown || awaySideKnown;
+
   const warnings: string[] = [];
   let alignment: NetplayAlignment = "unverified";
-  let scheduleHomeScore = parsed.homeScore;
-  let scheduleAwayScore = parsed.awayScore;
-  let awaySideTeamId = scheduleAway.teamId;
-  let homeSideTeamId = scheduleHome.teamId;
   let blockingError: string | null = null;
+
+  let mapping = applyDirectMapping(parsed, scheduleHome, scheduleAway);
 
   if (directHome && directAway) {
     alignment = "direct";
   } else if (swappedHome && swappedAway) {
     alignment = "swapped";
-    scheduleHomeScore = parsed.awayScore;
-    scheduleAwayScore = parsed.homeScore;
-    awaySideTeamId = scheduleHome.teamId;
-    homeSideTeamId = scheduleAway.teamId;
+    mapping = applySwappedMapping(parsed, scheduleHome, scheduleAway);
     warnings.push(
       `Home and away were swapped on the schedule. Stats file has "${parsed.homePlayer}" at home and "${parsed.awayPlayer}" away — applied scores and rosters to the matching managers.`,
     );
@@ -80,35 +112,45 @@ export function matchNetplayTeams(
     warnings.push(
       "Neither team has a manager assigned, so netplay names could not be verified. Scores were saved using the schedule home/away order.",
     );
-  } else if (
-    (hasHomeManager && homeLabels.length === 0) ||
-    (hasAwayManager && awayLabels.length === 0)
-  ) {
-    alignment = "unverified";
-    warnings.push(
-      "Set your Rio/netplay username on your account page so uploads can verify the correct home and away teams.",
-    );
-  } else if (directHome || directAway || swappedHome || swappedAway) {
-    alignment = "partial";
-    blockingError =
-      "Netplay names only partially match this game. Check the schedule home/away teams and make sure each manager's Rio/netplay username is set on their account page.";
-    if (!directHome && !swappedHome && hasHomeManager) {
-      warnings.push(
-        `Scheduled home manager (${primaryNetplayLabel(scheduleHome.manager) ?? scheduleHome.teamName}) does not match file home "${parsed.homePlayer}" or away "${parsed.awayPlayer}".`,
-      );
-    }
-    if (!directAway && !swappedAway && hasAwayManager) {
-      warnings.push(
-        `Scheduled away manager (${primaryNetplayLabel(scheduleAway.manager) ?? scheduleAway.teamName}) does not match file home "${parsed.homePlayer}" or away "${parsed.awayPlayer}".`,
-      );
-    }
-  } else {
+  } else if (!anyKnownSide) {
     alignment = "partial";
     blockingError =
       "Netplay names in the stats file do not match either manager for this game. Confirm you are uploading to the correct matchup and that managers have linked their Rio/netplay username.";
     warnings.push(
       `File players: away "${parsed.awayPlayer}", home "${parsed.homePlayer}". Scheduled: away ${primaryNetplayLabel(scheduleAway.manager) ?? "—"}, home ${primaryNetplayLabel(scheduleHome.manager) ?? "—"}.`,
     );
+  } else {
+    alignment = "partial";
+    const useSwap = swapSignals > directSignals;
+
+    if (useSwap) {
+      mapping = applySwappedMapping(parsed, scheduleHome, scheduleAway);
+      warnings.push(
+        `Only one manager matched and their side looked swapped on the schedule — scores and rosters were flipped to match the stats file.`,
+      );
+    } else {
+      mapping = applyDirectMapping(parsed, scheduleHome, scheduleAway);
+      warnings.push(
+        "Only one manager could be verified from netplay names — saved using schedule home/away for the other team.",
+      );
+    }
+
+    if (hasHomeManager && !homeSideKnown) {
+      warnings.push(
+        `Scheduled home manager (${primaryNetplayLabel(scheduleHome.manager) ?? scheduleHome.teamName}) did not match file home "${parsed.homePlayer}" or away "${parsed.awayPlayer}".`,
+      );
+    }
+    if (hasAwayManager && !awaySideKnown) {
+      warnings.push(
+        `Scheduled away manager (${primaryNetplayLabel(scheduleAway.manager) ?? scheduleAway.teamName}) did not match file home "${parsed.homePlayer}" or away "${parsed.awayPlayer}".`,
+      );
+    }
+    if (!hasHomeManager) {
+      warnings.push("Scheduled home team has no manager yet — could not verify that side.");
+    }
+    if (!hasAwayManager) {
+      warnings.push("Scheduled away team has no manager yet — could not verify that side.");
+    }
   }
 
   const fileWinnerLabel = winnerLabel(
@@ -118,25 +160,25 @@ export function matchNetplayTeams(
     parsed.awayPlayer,
   );
   const scheduleWinnerLabel =
-    alignment === "partial"
-      ? null
-      : winnerLabel(
-          scheduleHomeScore,
-          scheduleAwayScore,
+    blockingError == null
+      ? winnerLabel(
+          mapping.scheduleHomeScore,
+          mapping.scheduleAwayScore,
           scheduleHome.teamName,
           scheduleAway.teamName,
-        );
+        )
+      : null;
 
-  if (alignment !== "partial" && scheduleWinnerLabel) {
+  if (blockingError == null && scheduleWinnerLabel) {
     warnings.push(`Winner from stats file: ${fileWinnerLabel}. Saved as ${scheduleWinnerLabel}.`);
   }
 
   return {
     alignment,
-    scheduleHomeScore,
-    scheduleAwayScore,
-    awaySideTeamId,
-    homeSideTeamId,
+    scheduleHomeScore: mapping.scheduleHomeScore,
+    scheduleAwayScore: mapping.scheduleAwayScore,
+    awaySideTeamId: mapping.awaySideTeamId,
+    homeSideTeamId: mapping.homeSideTeamId,
     fileWinnerLabel,
     scheduleWinnerLabel,
     warnings,
