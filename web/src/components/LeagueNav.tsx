@@ -38,11 +38,9 @@ export function LeagueNav({
   const seasonHub = activeSeasonId
     ? `/leagues/${leagueId}/seasons/${activeSeasonId}`
     : null;
-  const standingsHref = seasonHub ? `${seasonHub}#standings` : leagueHome;
-
-  const playoffsHref = contextSeasonId
-    ? `/leagues/${leagueId}/playoffs?season=${contextSeasonId}`
-    : `/leagues/${leagueId}/playoffs`;
+  const standingsHref = contextSeasonId
+    ? `/leagues/${leagueId}/standings?season=${contextSeasonId}`
+    : `/leagues/${leagueId}/standings`;
   const charactersHref = contextSeasonId
     ? `/leagues/${leagueId}/characters?season=${contextSeasonId}`
     : `/leagues/${leagueId}/characters`;
@@ -89,12 +87,7 @@ export function LeagueNav({
       {
         href: standingsHref,
         label: "Standings",
-        match: (path) => seasonHub != null && path === seasonHub,
-      },
-      {
-        href: playoffsHref,
-        label: "Playoffs",
-        match: (path) => path.startsWith(`${leagueHome}/playoffs`),
+        match: (path) => path.startsWith(`${leagueHome}/standings`),
       },
       {
         href: charactersHref,

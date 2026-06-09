@@ -204,6 +204,6 @@ export async function updateSeasonStatusAction(
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
   revalidatePath(`/leagues/${leagueId}`);
   revalidatePath(`/leagues/${leagueId}/schedule`);
-  revalidatePath(`/leagues/${leagueId}/playoffs`);
+  revalidatePath(`/leagues/${leagueId}/standings`);
   redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=status-updated`);
 }

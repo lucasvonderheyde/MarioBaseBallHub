@@ -10,7 +10,8 @@ import { db } from "@/db";
 import { leagues } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole, isLeagueAdmin, leagueExists } from "@/lib/league-access";
-import { groupGamesByRound } from "@/lib/group-games-by-round";
+import { buildScheduleGamesByRound } from "@/lib/build-schedule-games-by-round";
+import { getPendingScheduleProposalsForSeason } from "@/lib/schedule-proposals";
 import { getLeagueScheduleData } from "@/lib/league-seasons";
 import { PageShell } from "@/components/PageShell";
 
@@ -37,7 +38,15 @@ export default async function LeagueSchedulePage({ params }: Props) {
   const isAdmin = isLeagueAdmin(role);
 
   const seasons = await getLeagueScheduleData(leagueId);
-  if (seasons.length === 0) {
+  const seasonsWithSchedule = await Promise.all(
+    seasons.map(async ({ season, dash }) => {
+      const proposals = await getPendingScheduleProposalsForSeason(season.id);
+      const gamesByRound = buildScheduleGamesByRound(dash.games, proposals);
+      return { season, dash, gamesByRound };
+    }),
+  );
+
+  if (seasonsWithSchedule.length === 0) {
     return (
       <PageShell width="wide">
         <PageHero
@@ -58,10 +67,7 @@ export default async function LeagueSchedulePage({ params }: Props) {
       />
 
       <div className="space-y-10">
-        {seasons.map(({ season, dash }) => {
-          const gamesByRound = groupGamesByRound(dash.games);
-
-          return (
+        {seasonsWithSchedule.map(({ season, dash, gamesByRound }) => (
             <section
               key={season.id}
               className={`rounded-lg border p-5 sm:p-6 ${seasonStatusClass(season.status)}`}
@@ -84,8 +90,7 @@ export default async function LeagueSchedulePage({ params }: Props) {
                 className="mt-6 space-y-6"
               />
             </section>
-          );
-        })}
+        ))}
       </div>
     </PageShell>
   );

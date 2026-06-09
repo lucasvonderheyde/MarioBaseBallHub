@@ -214,7 +214,7 @@ export async function uploadStatsAction(
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`);
   revalidatePath(`/leagues/${leagueId}/schedule`);
-  revalidatePath(`/leagues/${leagueId}/playoffs`);
+  revalidatePath(`/leagues/${leagueId}/standings`);
   revalidatePath(`/leagues/${leagueId}/stadiums`);
   const out: { ok: true; warnings?: string[] } = { ok: true };
   if (match.warnings.length) out.warnings = match.warnings;

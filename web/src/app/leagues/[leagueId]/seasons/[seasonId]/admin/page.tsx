@@ -196,7 +196,7 @@ export default async function SeasonAdminPage({ params, searchParams }: Props) {
             <p className="mt-1 text-sm text-zinc-500">
               Controls seeding on the{" "}
               <Link
-                href={`/leagues/${leagueId}/playoffs?season=${seasonId}`}
+                href={`/leagues/${leagueId}/standings?season=${seasonId}`}
                 className="text-amber-400 hover:underline"
               >
                 playoff picture
@@ -251,6 +251,67 @@ export default async function SeasonAdminPage({ params, searchParams }: Props) {
                   defaultValue={playoffSettings.playInRoundNumber}
                   className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
                 />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-500">Main bracket teams</label>
+                <input
+                  name="mainBracketTeamCount"
+                  type="number"
+                  min={2}
+                  max={32}
+                  defaultValue={playoffSettings.mainBracketTeamCount}
+                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-500">Play-in best-of</label>
+                <select
+                  name="playInBestOf"
+                  defaultValue={playoffSettings.playInBestOf}
+                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                >
+                  <option value={1}>Best of 1</option>
+                  <option value={3}>Best of 3</option>
+                  <option value={5}>Best of 5</option>
+                  <option value={7}>Best of 7</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-500">Main rounds best-of</label>
+                <select
+                  name="mainRoundBestOf"
+                  defaultValue={playoffSettings.mainRoundBestOf}
+                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                >
+                  <option value={1}>Best of 1</option>
+                  <option value={3}>Best of 3</option>
+                  <option value={5}>Best of 5</option>
+                  <option value={7}>Best of 7</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-500">Finals best-of</label>
+                <select
+                  name="finalsBestOf"
+                  defaultValue={playoffSettings.finalsBestOf}
+                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                >
+                  <option value={1}>Best of 1</option>
+                  <option value={3}>Best of 3</option>
+                  <option value={5}>Best of 5</option>
+                  <option value={7}>Best of 7</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    type="checkbox"
+                    name="higherSeedHomeField"
+                    defaultChecked={playoffSettings.higherSeedHomeField}
+                    className="rounded border-zinc-600"
+                  />
+                  Higher seed gets home field
+                </label>
               </div>
               <button
                 type="submit"

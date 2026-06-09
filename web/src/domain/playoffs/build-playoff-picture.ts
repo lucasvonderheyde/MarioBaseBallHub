@@ -1,6 +1,7 @@
 import type { TeamStandingRow } from "@/domain/standings/compute-standings";
 import {
   type PlayoffSettings,
+  getDirectQualifyCount,
   playInEnabled,
 } from "@/domain/playoffs/playoff-settings";
 
@@ -58,13 +59,16 @@ function seedStatuses(
   settings: PlayoffSettings,
 ): SeededTeam[] {
   const playIn = playInEnabled(settings);
+  const directSpots = getDirectQualifyCount(settings);
   return standings.map((row, index) => {
     const seed = index + 1;
     let status: SeedStatus = "out";
-    if (seed <= settings.autoQualifyCount) {
+    if (seed <= directSpots) {
       status = "qualified";
-    } else if (playIn && seed <= settings.autoQualifyCount + settings.playInTeamCount) {
+    } else if (playIn && seed <= directSpots + settings.playInTeamCount) {
       status = "play-in";
+    } else if (!playIn && seed <= settings.autoQualifyCount) {
+      status = "qualified";
     }
     return {
       seed,

@@ -170,9 +170,67 @@ export const scheduleGames = sqliteTable(
     statsRawJson: text("stats_raw_json"),
     statsStadiumId: text("stats_stadium_id"),
     playedAt: integer("played_at", { mode: "timestamp" }),
+    /** When both managers accept a proposed play time. */
+    agreedPlayAt: integer("agreed_play_at", { mode: "timestamp" }),
   },
   (t) => [uniqueIndex("schedule_round_slot").on(t.roundId, t.slotInRound)],
 );
+
+export const gameScheduleProposals = sqliteTable("game_schedule_proposals", {
+  id: text("id").primaryKey(),
+  seasonId: text("season_id")
+    .notNull()
+    .references(() => seasons.id, { onDelete: "cascade" }),
+  gameId: text("game_id")
+    .notNull()
+    .references(() => scheduleGames.id, { onDelete: "cascade" }),
+  proposedByUserId: text("proposed_by_user_id")
+    .notNull()
+    .references(() => users.id),
+  proposedPlayAt: integer("proposed_play_at", { mode: "timestamp" }).notNull(),
+  note: text("note"),
+  status: text("status", {
+    enum: ["pending", "accepted", "declined", "cancelled"],
+  })
+    .notNull()
+    .default("pending"),
+  respondedByUserId: text("responded_by_user_id").references(() => users.id),
+  respondedAt: integer("responded_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const tradeRequests = sqliteTable("trade_requests", {
+  id: text("id").primaryKey(),
+  seasonId: text("season_id")
+    .notNull()
+    .references(() => seasons.id, { onDelete: "cascade" }),
+  fromTeamId: text("from_team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  toTeamId: text("to_team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  proposedByUserId: text("proposed_by_user_id")
+    .notNull()
+    .references(() => users.id),
+  status: text("status", {
+    enum: ["pending", "accepted", "declined", "cancelled"],
+  })
+    .notNull()
+    .default("pending"),
+  /** JSON array of roster_instances.id on fromTeamId */
+  offeredInstanceIds: text("offered_instance_ids").notNull(),
+  /** JSON array of roster_instances.id on toTeamId */
+  requestedInstanceIds: text("requested_instance_ids").notNull(),
+  message: text("message"),
+  respondedByUserId: text("responded_by_user_id").references(() => users.id),
+  respondedAt: integer("responded_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
 
 export const characterGameStats = sqliteTable(
   "character_game_stats",

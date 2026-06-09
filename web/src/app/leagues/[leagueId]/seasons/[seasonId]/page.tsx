@@ -10,6 +10,20 @@ import { SeasonActivityFeed } from "@/components/season/SeasonActivityFeed";
 import { getRecentSeasonEvents } from "@/lib/season-events";
 import { SeasonHubRecentGames } from "@/components/season/SeasonHubRecentGames";
 import { SeasonHubTeamGrid } from "@/components/season/SeasonHubTeamGrid";
+import { SeasonHubUpcomingGames } from "@/components/season/SeasonHubUpcomingGames";
+import { SeasonTradePanel } from "@/components/season/SeasonTradePanel";
+import { getManagedTeamInSeason } from "@/lib/manager-team";
+import { getTeamRosterCountsForSeason } from "@/lib/roster-rules";
+import {
+  pendingProposalsByGameId,
+  getPendingScheduleProposalsForSeason,
+} from "@/lib/schedule-proposals";
+import { toScheduleGameDisplay } from "@/lib/schedule-display";
+import { selectUpcomingScheduleGames } from "@/lib/upcoming-schedule-games";
+import {
+  getPendingTradeRequestsForSeason,
+  getTradeRosterInstancesForSeason,
+} from "@/lib/trade-requests";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string }>;
@@ -31,6 +45,20 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const isAdmin = isLeagueAdmin(role);
   const teamNames = new Map(teams.map((t) => [t.team.id, t.team.name]));
   const recentEvents = await getRecentSeasonEvents(seasonId, 20);
+  const scheduleProposals = await getPendingScheduleProposalsForSeason(seasonId);
+  const proposalMap = pendingProposalsByGameId(scheduleProposals);
+  const { games: upcomingRaw, phase: upcomingPhase } = selectUpcomingScheduleGames(
+    games,
+    4,
+  );
+  const upcomingGames = upcomingRaw.map(({ game, round }) => ({
+    game: toScheduleGameDisplay(game, proposalMap.get(game.id) ?? null),
+    round,
+  }));
+  const rosterCounts = await getTeamRosterCountsForSeason(seasonId);
+  const userTeam = await getManagedTeamInSeason(user.id, seasonId);
+  const tradeRoster = await getTradeRosterInstancesForSeason(seasonId);
+  const pendingTrades = await getPendingTradeRequestsForSeason(seasonId);
 
   return (
     <PageShell width="wide">
@@ -116,6 +144,35 @@ export default async function SeasonPage({ params, searchParams }: Props) {
         seasonId={seasonId}
         teams={teams}
         standings={dash.standings}
+        rosterCounts={rosterCounts}
+      />
+
+      <SeasonTradePanel
+        leagueId={leagueId}
+        seasonId={seasonId}
+        userId={user.id}
+        userTeam={userTeam}
+        teams={teams.map(({ team, manager }) => ({
+          id: team.id,
+          name: team.name,
+          managerUserId: manager?.id ?? null,
+        }))}
+        roster={tradeRoster}
+        pendingTrades={pendingTrades}
+      />
+
+      <SeasonHubUpcomingGames
+        leagueId={leagueId}
+        seasonId={seasonId}
+        phase={upcomingPhase}
+        upcoming={upcomingGames}
+        teams={teams.map(({ team, manager }) => ({
+          team,
+          manager: manager ? { id: manager.id } : null,
+        }))}
+        userId={user.id}
+        role={role}
+        isAdmin={isAdmin}
       />
 
       <SeasonActivityFeed
@@ -125,52 +182,6 @@ export default async function SeasonPage({ params, searchParams }: Props) {
           createdAt: event.createdAt,
         }))}
       />
-
-      <section className="mt-10 msb-panel p-4 sm:p-5" id="standings">
-        <h2 className="text-lg font-semibold">Standings</h2>
-        <p className="text-sm text-zinc-500">
-          Regular-season games only. Playoff rows on the schedule do not affect
-          this table yet.
-        </p>
-        <div className="msb-table-wrap mt-3">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-zinc-800 text-zinc-500">
-              <th className="py-2 pr-2">#</th>
-              <th className="py-2 pr-2">Team</th>
-              <th className="py-2 pr-2">W</th>
-              <th className="py-2 pr-2">L</th>
-              <th className="py-2 pr-2">RF</th>
-              <th className="py-2 pr-2">RA</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dash.standings.map((row, i) => (
-              <tr key={row.teamId} className="border-b border-zinc-900">
-                <td className="py-2 pr-2 text-zinc-500">{i + 1}</td>
-                <td className="py-2 pr-2">
-                  <Link
-                    href={`/leagues/${leagueId}/seasons/${seasonId}/teams/${row.teamId}`}
-                    className="text-amber-400 hover:underline"
-                  >
-                    {row.name}
-                  </Link>
-                  {row.needsTiebreakerGame ? (
-                    <span className="ml-2 text-xs text-amber-300">
-                      (tiebreaker game)
-                    </span>
-                  ) : null}
-                </td>
-                <td className="py-2 pr-2">{row.wins}</td>
-                <td className="py-2 pr-2">{row.losses}</td>
-                <td className="py-2 pr-2">{row.runsFor}</td>
-                <td className="py-2 pr-2">{row.runsAgainst}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-      </section>
     </PageShell>
   );
 }

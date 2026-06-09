@@ -18,6 +18,11 @@ import { requireUser } from "@/lib/auth";
 import { getSeasonLeagueId, getLeagueRole } from "@/lib/league-access";
 import { canUserReportGame } from "@/lib/game-report-access";
 import {
+  countTeamRosterInstances,
+  minimumRosterError,
+  MIN_TEAM_ROSTER_SIZE,
+} from "@/lib/roster-rules";
+import {
   parsePlayoffSettings,
   serializePlayoffSettings,
 } from "@/domain/playoffs/playoff-settings";
@@ -218,19 +223,44 @@ export async function savePlayoffSettingsAction(
   const playInTeamCount = Number(formData.get("playInTeamCount"));
   const playInSpots = Number(formData.get("playInSpots"));
   const playInRoundNumber = Number(formData.get("playInRoundNumber"));
+  const mainBracketTeamCount = Number(formData.get("mainBracketTeamCount"));
+  const playInBestOf = Number(formData.get("playInBestOf"));
+  const mainRoundBestOf = Number(formData.get("mainRoundBestOf"));
+  const finalsBestOf = Number(formData.get("finalsBestOf"));
+  const higherSeedHomeField = formData.get("higherSeedHomeField") === "on";
 
-  const settings = parsePlayoffSettings(null);
+  const [existing] = await db
+    .select({ playoffSettings: seasons.playoffSettings })
+    .from(seasons)
+    .where(eq(seasons.id, seasonId))
+    .limit(1);
+
+  const current = parsePlayoffSettings(existing?.playoffSettings);
   const next = {
+    ...current,
     autoQualifyCount: Number.isFinite(autoQualifyCount)
       ? autoQualifyCount
-      : settings.autoQualifyCount,
+      : current.autoQualifyCount,
     playInTeamCount: Number.isFinite(playInTeamCount)
       ? playInTeamCount
-      : settings.playInTeamCount,
-    playInSpots: Number.isFinite(playInSpots) ? playInSpots : settings.playInSpots,
+      : current.playInTeamCount,
+    playInSpots: Number.isFinite(playInSpots) ? playInSpots : current.playInSpots,
     playInRoundNumber: Number.isFinite(playInRoundNumber)
       ? playInRoundNumber
-      : settings.playInRoundNumber,
+      : current.playInRoundNumber,
+    mainBracketTeamCount: Number.isFinite(mainBracketTeamCount)
+      ? mainBracketTeamCount
+      : current.mainBracketTeamCount,
+    playInBestOf: ([1, 3, 5, 7] as const).includes(playInBestOf as 1 | 3 | 5 | 7)
+      ? (playInBestOf as 1 | 3 | 5 | 7)
+      : current.playInBestOf,
+    mainRoundBestOf: ([1, 3, 5, 7] as const).includes(mainRoundBestOf as 1 | 3 | 5 | 7)
+      ? (mainRoundBestOf as 1 | 3 | 5 | 7)
+      : current.mainRoundBestOf,
+    finalsBestOf: ([1, 3, 5, 7] as const).includes(finalsBestOf as 1 | 3 | 5 | 7)
+      ? (finalsBestOf as 1 | 3 | 5 | 7)
+      : current.finalsBestOf,
+    higherSeedHomeField,
   };
 
   const validated = parsePlayoffSettings(serializePlayoffSettings(next));
@@ -240,7 +270,7 @@ export async function savePlayoffSettingsAction(
     .where(eq(seasons.id, seasonId));
 
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
-  revalidatePath(`/leagues/${leagueId}/playoffs`);
+  revalidatePath(`/leagues/${leagueId}/standings`);
   redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=playoff-settings`);
 }
 
@@ -696,13 +726,25 @@ export async function assignRosterInstanceAction(input: {
   if (role !== "admin") return { error: "Forbidden." };
 
   const [instance] = await db
-    .select({ id: rosterInstances.id })
+    .select({ id: rosterInstances.id, teamId: rosterInstances.teamId })
     .from(rosterInstances)
     .where(
       and(eq(rosterInstances.id, instanceId), eq(rosterInstances.seasonId, seasonId)),
     )
     .limit(1);
   if (!instance) return { error: "Character copy not found." };
+
+  if (instance.teamId && instance.teamId !== teamId) {
+    const currentCount = await countTeamRosterInstances(instance.teamId);
+    if (currentCount - 1 < MIN_TEAM_ROSTER_SIZE) {
+      const [team] = await db
+        .select({ name: teams.name })
+        .from(teams)
+        .where(eq(teams.id, instance.teamId))
+        .limit(1);
+      return { error: minimumRosterError(team?.name) };
+    }
+  }
 
   if (teamId) {
     const [team] = await db
