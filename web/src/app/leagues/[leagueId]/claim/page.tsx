@@ -6,6 +6,7 @@ import { leagues } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getClaimableTeamsForLeague } from "@/lib/team-claims";
 import { claimTeamAction } from "@/server/actions";
+import { PageShell } from "@/components/PageShell";
 
 type Props = {
   params: Promise<{ leagueId: string }>;
@@ -30,7 +31,7 @@ export default async function ClaimTeamsPage({ params, searchParams }: Props) {
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-12">
+      <PageShell width="narrow" className="py-12">
         <h1 className="text-2xl font-bold">Claim your team</h1>
         <p className="mt-2 text-zinc-400">
           Join <span className="text-zinc-200">{league.name}</span> by logging in
@@ -47,7 +48,7 @@ export default async function ClaimTeamsPage({ params, searchParams }: Props) {
             Log in
           </Link>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
@@ -60,7 +61,7 @@ export default async function ClaimTeamsPage({ params, searchParams }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-8">
+    <PageShell width="narrow">
       <h1 className="text-2xl font-bold">Claim your team</h1>
       <p className="mt-1 text-zinc-400">{league.name}</p>
       {e ? (
@@ -131,6 +132,6 @@ export default async function ClaimTeamsPage({ params, searchParams }: Props) {
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

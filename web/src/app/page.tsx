@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { PageShell } from "@/components/PageShell";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
   if (user) redirect("/leagues");
   return (
-    <div className="mx-auto max-w-lg px-4 py-16">
+    <PageShell width="narrow" className="py-16">
       <h1 className="text-3xl font-bold tracking-tight">
         <span className="text-msb-mario">Mario</span>{" "}
         <span className="text-msb-gold-bright">Baseball</span> Hub
@@ -26,6 +27,6 @@ export default async function HomePage() {
           Log in
         </Link>
       </div>
-    </div>
+    </PageShell>
   );
 }

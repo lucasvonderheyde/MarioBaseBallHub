@@ -8,10 +8,11 @@
   "scripts": {
     "postinstall": "npm rebuild better-sqlite3",
     "db:init": "npm rebuild better-sqlite3 && node -e \"require('fs').mkdirSync('data',{recursive:true})\" && drizzle-kit push && tsx src/db/seed.ts",
+    "predev": "npm rebuild better-sqlite3",
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "start:prod": "node -e \"require('fs').mkdirSync('data',{recursive:true})\" && drizzle-kit push && tsx src/db/seed.ts && next start",
+    "start:prod": "node -e \"require('fs').mkdirSync('data',{recursive:true})\" && drizzle-kit push --force && tsx src/db/seed.ts && next start",
     "lint": "eslint",
     "test": "vitest run",
     "db:push": "drizzle-kit push",

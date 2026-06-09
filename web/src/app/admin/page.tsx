@@ -16,6 +16,7 @@ import {
   renameUserAction,
   setSiteAdminAction,
 } from "@/server/actions/site-admin-actions";
+import { PageShell } from "@/components/PageShell";
 
 export default async function AdminPage({
   searchParams,
@@ -64,7 +65,7 @@ export default async function AdminPage({
   const allUsers = await db.select().from(users).orderBy(users.createdAt);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <PageShell width="wide">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-bold">Site admin</h1>
         <Link href="/leagues" className="text-sm text-zinc-400 hover:text-white">
@@ -333,6 +334,6 @@ export default async function AdminPage({
           ))}
         </ul>
       </section>
-    </div>
+    </PageShell>
   );
 }

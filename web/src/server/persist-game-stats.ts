@@ -1,8 +1,11 @@
 import crypto from "crypto";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { characterGameStats, rounds, scheduleGames } from "@/db/schema";
-import { parseCharacterGameStats } from "@/domain/stats/parse-character-game-stats";
+import {
+  assignCharOccurrenceIndexes,
+  parseCharacterGameStats,
+} from "@/domain/stats/parse-character-game-stats";
 
 function newId(): string {
   return crypto.randomUUID();
@@ -30,6 +33,7 @@ export async function persistCharacterGameStats(input: PersistGameStatsInput): P
     teamId: s.teamSide === "Away" ? input.awayTeamId : input.homeTeamId,
     teamSide: s.teamSide,
     rosterSlot: s.rosterSlot,
+    charOccurrenceIndex: s.charOccurrenceIndex,
     charId: s.charId,
     isCaptain: s.isCaptain,
     isSuperstar: s.isSuperstar,
@@ -74,6 +78,30 @@ export async function persistCharacterGameStats(input: PersistGameStatsInput): P
     .where(eq(scheduleGames.id, input.gameId));
 }
 
+/** Recomputes occurrence indexes for rows already stored (e.g. after schema migration). */
+export async function recomputeCharOccurrenceIndexesForGame(gameId: string): Promise<void> {
+  const rows = await db
+    .select({
+      id: characterGameStats.id,
+      teamSide: characterGameStats.teamSide,
+      rosterSlot: characterGameStats.rosterSlot,
+      charId: characterGameStats.charId,
+    })
+    .from(characterGameStats)
+    .where(eq(characterGameStats.gameId, gameId))
+    .orderBy(asc(characterGameStats.teamSide), asc(characterGameStats.rosterSlot));
+
+  if (rows.length === 0) return;
+
+  const withOccurrence = assignCharOccurrenceIndexes(rows);
+  for (const row of withOccurrence) {
+    await db
+      .update(characterGameStats)
+      .set({ charOccurrenceIndex: row.charOccurrenceIndex })
+      .where(eq(characterGameStats.id, row.id));
+  }
+}
+
 /** Backfill parsed stats for games that have raw JSON but no character_game_stats rows. */
 export async function backfillCharacterGameStats(seasonId: string): Promise<number> {
   const unparsed = await db
@@ -105,6 +133,23 @@ export async function backfillCharacterGameStats(seasonId: string): Promise<numb
     });
     count++;
   }
+
+  const parsedGames = await db
+    .select({ id: scheduleGames.id })
+    .from(scheduleGames)
+    .innerJoin(rounds, eq(scheduleGames.roundId, rounds.id))
+    .where(
+      and(
+        eq(rounds.seasonId, seasonId),
+        isNotNull(scheduleGames.statsRawJson),
+        sql`EXISTS (SELECT 1 FROM character_game_stats cgs WHERE cgs.game_id = ${scheduleGames.id})`,
+      ),
+    );
+
+  for (const g of parsedGames) {
+    await recomputeCharOccurrenceIndexesForGame(g.id);
+  }
+
   return count;
 }
 

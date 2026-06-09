@@ -18,13 +18,47 @@ import {
 
 export type BattingLine = BattingTotals & {
   charId: string;
+  charOccurrenceIndex: number;
   ba: number | null;
   obp: number | null;
   slg: number | null;
 };
 
+export function emptyBattingLine(charId: string): BattingLine {
+  return {
+    charId,
+    charOccurrenceIndex: 0,
+    games: 0,
+    ab: 0,
+    hits: 0,
+    singles: 0,
+    doubles: 0,
+    triples: 0,
+    hr: 0,
+    walks4ball: 0,
+    walksHbp: 0,
+    sacFly: 0,
+    rbi: 0,
+    ba: null,
+    obp: null,
+    slg: null,
+  };
+}
+
+export function getBattingLine(
+  map: Map<string, BattingLine>,
+  charId: string,
+): BattingLine {
+  return map.get(charId) ?? emptyBattingLine(charId);
+}
+
+export function battingStatKey(charId: string, charOccurrenceIndex: number): string {
+  return `${charId}\0${charOccurrenceIndex}`;
+}
+
 function toBattingLine(
   charId: string,
+  charOccurrenceIndex: number,
   row: {
     games: number;
     ab: number;
@@ -54,6 +88,7 @@ function toBattingLine(
   };
   return {
     charId,
+    charOccurrenceIndex,
     ...totals,
     ba: battingAverage(totals),
     obp: onBasePercentage(totals),
@@ -126,7 +161,59 @@ export async function aggregateBattingByCharId(
 
   const map = new Map<string, BattingLine>();
   for (const r of rows) {
-    map.set(r.charId, toBattingLine(r.charId, r));
+    map.set(r.charId, toBattingLine(r.charId, 0, r));
+  }
+  return map;
+}
+
+/** Season totals per character copy on a team (charId + occurrence index). */
+export async function aggregateBattingByCharOccurrence(
+  filter: StatFilter,
+): Promise<Map<string, BattingLine>> {
+  const conditions = [seasonFilter(filter)];
+  if (filter.teamId) conditions.push(eq(characterGameStats.teamId, filter.teamId));
+  if (filter.charId) conditions.push(eq(characterGameStats.charId, filter.charId));
+  if (filter.managerUserId) {
+    conditions.push(eq(teams.managerUserId, filter.managerUserId));
+  }
+  if (filter.stadiumId) {
+    conditions.push(eq(scheduleGames.statsStadiumId, filter.stadiumId));
+  }
+
+  if (filter.leagueId && !filter.seasonId) {
+    const seasonIds = await getSeasonIdsForLeague(filter.leagueId);
+    if (seasonIds.length === 0) return new Map();
+    conditions.push(inArray(characterGameStats.seasonId, seasonIds));
+  }
+
+  const rows = await db
+    .select({
+      charId: characterGameStats.charId,
+      charOccurrenceIndex: characterGameStats.charOccurrenceIndex,
+      games: sql<number>`count(distinct ${characterGameStats.gameId})`.mapWith(Number),
+      ab: sql<number>`sum(${characterGameStats.ab})`.mapWith(Number),
+      hits: sql<number>`sum(${characterGameStats.hits})`.mapWith(Number),
+      singles: sql<number>`sum(${characterGameStats.singles})`.mapWith(Number),
+      doubles: sql<number>`sum(${characterGameStats.doubles})`.mapWith(Number),
+      triples: sql<number>`sum(${characterGameStats.triples})`.mapWith(Number),
+      hr: sql<number>`sum(${characterGameStats.hr})`.mapWith(Number),
+      walks4ball: sql<number>`sum(${characterGameStats.walks4ball})`.mapWith(Number),
+      walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
+      sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
+      rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+    })
+    .from(characterGameStats)
+    .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
+    .innerJoin(teams, eq(characterGameStats.teamId, teams.id))
+    .where(and(...conditions))
+    .groupBy(characterGameStats.charId, characterGameStats.charOccurrenceIndex);
+
+  const map = new Map<string, BattingLine>();
+  for (const r of rows) {
+    map.set(
+      battingStatKey(r.charId, r.charOccurrenceIndex),
+      toBattingLine(r.charId, r.charOccurrenceIndex, r),
+    );
   }
   return map;
 }
@@ -170,7 +257,7 @@ export async function aggregateBattingByCharAndManager(
     charId: r.charId,
     managerUserId: r.managerUserId,
     username: r.username,
-    line: toBattingLine(r.charId, r),
+    line: toBattingLine(r.charId, 0, r),
   }));
 }
 
@@ -202,7 +289,7 @@ export async function aggregateBattingByCharAndSeason(
   return rows.map((r) => ({
     seasonId: r.seasonId,
     seasonName: r.seasonName,
-    line: toBattingLine(charId, r),
+    line: toBattingLine(charId, 0, r),
   }));
 }
 
@@ -243,7 +330,7 @@ export async function aggregateBattingByCharAndStadium(
     .filter((r): r is typeof r & { stadiumId: string } => r.stadiumId != null)
     .map((r) => ({
       stadiumId: r.stadiumId,
-      line: toBattingLine(charId, r),
+      line: toBattingLine(charId, 0, r),
     }));
 }
 
@@ -359,7 +446,7 @@ export async function getTopCharsAtStadium(
     .filter((r) => r.ab >= minAb)
     .map((r) => ({
       charId: r.charId,
-      line: toBattingLine(r.charId, r),
+      line: toBattingLine(r.charId, 0, r),
     }))
     .sort((a, b) => (b.line.slg ?? 0) - (a.line.slg ?? 0));
 }

@@ -30,12 +30,12 @@ export function CharacterLibraryFilters({
   }
 
   return (
-    <div className="mt-6 flex flex-wrap gap-3 text-sm">
+    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <label className="flex flex-col gap-1">
         <span className="text-xs text-zinc-500">Season</span>
         <select
           defaultValue={seasonId ?? ""}
-          className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
+          className="min-w-[10rem] rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
           onChange={(e) => navigate(e.target.value, managerUserId ?? "")}
         >
           <option value="">All seasons</option>
@@ -50,7 +50,7 @@ export function CharacterLibraryFilters({
         <span className="text-xs text-zinc-500">Manager</span>
         <select
           defaultValue={managerUserId ?? ""}
-          className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
+          className="min-w-[10rem] rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
           onChange={(e) => navigate(seasonId ?? "", e.target.value)}
         >
           <option value="">All managers</option>

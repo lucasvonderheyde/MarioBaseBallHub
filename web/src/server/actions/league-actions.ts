@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { leagueMembers, leagues, seasons, users } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { requireUser, userIsSiteAdmin } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import {
   DEFAULT_TIEBREAKER_ORDER,
@@ -16,6 +16,9 @@ import { newUuid, slugifyLeagueSegment } from "@/server/ids";
 
 export async function createLeagueAction(formData: FormData) {
   const user = await requireUser();
+  if (!userIsSiteAdmin(user)) {
+    redirectWithFormError("/leagues", "Only site admins can create leagues.");
+  }
   const name = String(formData.get("name") ?? "").trim();
   if (!name) redirectWithFormError("/leagues", "League name required.");
   const id = newUuid();
@@ -119,4 +122,37 @@ export async function renameSeasonAction(
   revalidatePath(`/leagues/${leagueId}`);
   revalidatePath("/admin");
   redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=renamed`);
+}
+
+export async function updateSeasonStatusAction(
+  seasonId: string,
+  leagueId: string,
+  formData: FormData,
+) {
+  const user = await requireUser();
+  const role = await getLeagueRole(leagueId, user);
+  if (role !== "admin") {
+    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+  }
+  const status = String(formData.get("status") ?? "") as "setup" | "active" | "completed";
+  if (!["setup", "active", "completed"].includes(status)) {
+    redirectWithFormError(
+      `/leagues/${leagueId}/seasons/${seasonId}`,
+      "Invalid season status.",
+    );
+  }
+  const [season] = await db
+    .select({ id: seasons.id, leagueId: seasons.leagueId })
+    .from(seasons)
+    .where(eq(seasons.id, seasonId))
+    .limit(1);
+  if (!season || season.leagueId !== leagueId) {
+    redirectWithFormError(`/leagues/${leagueId}`, "Season not found.");
+  }
+  await db.update(seasons).set({ status }).where(eq(seasons.id, seasonId));
+  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath(`/leagues/${leagueId}/schedule`);
+  revalidatePath(`/leagues/${leagueId}/playoffs`);
+  redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=status-updated`);
 }

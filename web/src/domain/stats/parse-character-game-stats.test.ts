@@ -37,4 +37,22 @@ describe("parse-character-game-stats", () => {
     expect(isCompletedPlateAppearance("HR")).toBe(true);
     expect(isCompletedPlateAppearance("Walk (BB)")).toBe(true);
   });
+
+  it("assigns distinct occurrence indexes for duplicate charIds on one team", () => {
+    const json = fs.readFileSync(
+      path.join(
+        gameStatisticsSamplesDirectory(),
+        "decoded.20260529T005935_CaptainBowserTime-Vs-Zomsoth_3171543132.json",
+      ),
+      "utf8",
+    );
+    const parsed = parseCharacterGameStats(JSON.parse(json) as unknown);
+    const awayDaisies = parsed.characterStats.filter(
+      (r) => r.teamSide === "Away" && r.charId === "Daisy",
+    );
+    expect(awayDaisies).toHaveLength(2);
+    expect(awayDaisies.map((r) => r.charOccurrenceIndex).sort()).toEqual([0, 1]);
+    expect(awayDaisies.map((r) => r.rosterSlot).sort()).toEqual([2, 6]);
+    expect(awayDaisies[0]!.ab).not.toBe(awayDaisies[1]!.ab);
+  });
 });

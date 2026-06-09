@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { getStadiumGameCounts } from "@/lib/game-stats-queries";
 import { stadiumIconUrl } from "@/lib/asset-urls";
+import { PageShell } from "@/components/PageShell";
 
 type Props = {
   params: Promise<{ leagueId: string }>;
@@ -31,7 +32,7 @@ export default async function StadiumLibraryPage({ params, searchParams }: Props
   const counts = await getStadiumGameCounts(leagueId, seasonId || undefined);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <PageShell width="wide">
       <Link href={`/leagues/${leagueId}`} className="text-sm text-zinc-500 hover:text-zinc-300">
         ← League
       </Link>
@@ -55,7 +56,7 @@ export default async function StadiumLibraryPage({ params, searchParams }: Props
         ))}
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {STADIUM_CATALOG.map((stadium) => {
           const played = counts.get(stadium.gameStadiumId) ?? 0;
           return (
@@ -80,6 +81,6 @@ export default async function StadiumLibraryPage({ params, searchParams }: Props
           );
         })}
       </div>
-    </div>
+    </PageShell>
   );
 }

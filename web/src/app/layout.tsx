@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "League schedule, rosters, trades, and game stats",
 };
 
+const themeInitScript = `(function(){try{var t=localStorage.getItem("msb-theme");var d=t?t==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d);document.documentElement.dataset.theme=d?"dark":"light";}catch(e){document.documentElement.classList.add("dark");document.documentElement.dataset.theme="dark";}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,8 +28,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="flex min-h-full flex-col text-zinc-100">
         <Nav />
         <main className="flex-1">{children}</main>

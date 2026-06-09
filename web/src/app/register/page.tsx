@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { isSafeRedirectPath } from "@/lib/team-claims";
 import { registerAction } from "@/server/actions";
+import { PageShell } from "@/components/PageShell";
 
 export default async function RegisterPage({
   searchParams,
@@ -15,7 +16,7 @@ export default async function RegisterPage({
     redirect(isSafeRedirectPath(next) ? next : "/leagues");
   }
   return (
-    <div className="mx-auto max-w-sm px-4 py-12">
+    <PageShell width="narrow" className="py-12">
       <h1 className="text-xl font-semibold">Register</h1>
       {e ? (
         <p className="mt-2 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
@@ -70,6 +71,6 @@ export default async function RegisterPage({
           Back to log in
         </Link>
       </p>
-    </div>
+    </PageShell>
   );
 }

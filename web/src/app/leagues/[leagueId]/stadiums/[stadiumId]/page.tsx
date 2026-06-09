@@ -15,6 +15,7 @@ import {
 } from "@/lib/game-stats-queries";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { stadiumIconUrl } from "@/lib/asset-urls";
+import { PageShell } from "@/components/PageShell";
 
 type Props = {
   params: Promise<{ leagueId: string; stadiumId: string }>;
@@ -90,7 +91,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
   );
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <PageShell width="wide">
       <Link
         href={`/leagues/${leagueId}/stadiums${seasonId ? `?season=${seasonId}` : ""}`}
         className="text-sm text-zinc-500 hover:text-zinc-300"
@@ -111,6 +112,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Games at this stadium</h2>
+        <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
@@ -146,6 +148,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
             ))}
           </tbody>
         </table>
+        </div>
         {gameList.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-500">No games recorded here yet.</p>
         ) : null}
@@ -153,6 +156,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Top characters (5+ AB)</h2>
+        <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
@@ -185,10 +189,12 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Manager records</h2>
+        <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
@@ -213,7 +219,8 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
             ))}
           </tbody>
         </table>
+        </div>
       </section>
-    </div>
+    </PageShell>
   );
 }

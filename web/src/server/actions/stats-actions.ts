@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { scheduleGames, teams, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
+import { canUserReportGame } from "@/lib/game-report-access";
 import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
 import { netplayLabelWarnings } from "@/domain/stats/netplay-warnings";
 import {
@@ -72,6 +73,18 @@ export async function uploadStatsAction(
     .where(eq(teams.id, game.awayTeamId))
     .limit(1);
   if (!home || !away) return { error: "Teams missing" };
+
+  if (
+    !canUserReportGame(
+      user.id,
+      role,
+      home.managerUserId,
+      away.managerUserId,
+    )
+  ) {
+    return { error: "Only league admins or managers in this game can upload stats." };
+  }
+
   const [hm] = home.managerUserId
     ? await db
         .select()
@@ -107,6 +120,9 @@ export async function uploadStatsAction(
     rawJson: parsed.rawJson,
   });
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`);
+  revalidatePath(`/leagues/${leagueId}/schedule`);
+  revalidatePath(`/leagues/${leagueId}/playoffs`);
   const out: { ok: true; warnings?: string[] } = { ok: true };
   if (warnings.length) out.warnings = warnings;
   return out;

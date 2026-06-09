@@ -1,21 +1,23 @@
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
 import { logoutAction } from "@/server/actions";
 
 export async function Nav() {
   const user = await getCurrentUser();
   return (
-    <header className="border-b-2 border-msb-grass bg-zinc-950/90 shadow-[0_4px_24px_rgb(10_34_64_/_0.6)] backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+    <header className="border-b-2 border-msb-grass bg-zinc-950/90 shadow-[0_4px_24px_rgb(10_34_64/0.15)] backdrop-blur dark:shadow-[0_4px_24px_rgb(10_34_64/0.6)]">
+      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">
         <Link
           href={user ? "/leagues" : "/"}
-          className="font-semibold tracking-tight"
+          className="text-lg font-bold tracking-tight sm:text-xl"
         >
           <span className="text-msb-mario">Mario</span>{" "}
           <span className="text-msb-gold-bright">Baseball</span>{" "}
           <span className="text-zinc-200">Hub</span>
         </Link>
-        <nav className="flex items-center gap-3 text-sm">
+        <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <ThemeToggle />
           {user ? (
             <>
               <Link
@@ -34,7 +36,7 @@ export async function Nav() {
               ) : null}
               <Link
                 href="/account"
-                className="text-zinc-500 hover:text-msb-gold-bright"
+                className="hidden text-zinc-500 hover:text-msb-gold-bright sm:inline"
               >
                 {user.displayName ?? user.username}
               </Link>

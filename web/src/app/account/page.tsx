@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { updateProfileAction } from "@/server/actions";
+import { PageShell } from "@/components/PageShell";
 
 export default async function AccountPage({
   searchParams,
@@ -13,7 +14,7 @@ export default async function AccountPage({
   const { e, m } = await searchParams;
 
   return (
-    <div className="mx-auto max-w-sm px-4 py-8">
+    <PageShell width="narrow">
       <div className="flex items-baseline justify-between gap-2">
         <h1 className="text-xl font-semibold">Account</h1>
         <Link href="/leagues" className="text-sm text-zinc-400 hover:text-white">
@@ -62,6 +63,6 @@ export default async function AccountPage({
           Save changes
         </button>
       </form>
-    </div>
+    </PageShell>
   );
 }

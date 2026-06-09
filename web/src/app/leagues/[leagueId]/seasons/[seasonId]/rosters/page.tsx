@@ -8,6 +8,7 @@ import { getLeagueRole } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { characterMugshotUrl } from "@/lib/asset-urls";
 import { assignRosterFormAction } from "@/server/actions";
+import { PageShell } from "@/components/PageShell";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string }>;
@@ -37,7 +38,7 @@ export default async function RostersPage({ params, searchParams }: Props) {
     .orderBy(asc(characters.displayName), asc(rosterInstances.copyIndex));
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <PageShell width="wide">
       <Link
         href={`/leagues/${leagueId}/seasons/${seasonId}`}
         className="text-sm text-zinc-500 hover:text-zinc-300"
@@ -102,6 +103,6 @@ export default async function RostersPage({ params, searchParams }: Props) {
           </li>
         ))}
       </ul>
-    </div>
+    </PageShell>
   );
 }

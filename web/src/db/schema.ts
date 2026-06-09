@@ -53,6 +53,10 @@ export const seasons = sqliteTable("seasons", {
     .default("setup"),
   /** JSON array: h2h_record | h2h_runs | season_runs | one_game */
   tiebreakerOrder: text("tiebreaker_order").notNull(),
+  /** JSON: autoQualifyCount, playInTeamCount, playInSpots, playInRoundNumber */
+  playoffSettings: text("playoff_settings"),
+  /** JSON: regularSeasonFormat (manual | round_robin) */
+  scheduleSettings: text("schedule_settings"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -182,6 +186,7 @@ export const characterGameStats = sqliteTable(
       .references(() => teams.id, { onDelete: "cascade" }),
     teamSide: text("team_side", { enum: ["Away", "Home"] }).notNull(),
     rosterSlot: integer("roster_slot").notNull(),
+    charOccurrenceIndex: integer("char_occurrence_index").notNull().default(0),
     charId: text("char_id").notNull(),
     isCaptain: integer("is_captain", { mode: "boolean" }).notNull(),
     isSuperstar: integer("is_superstar", { mode: "boolean" }).notNull(),

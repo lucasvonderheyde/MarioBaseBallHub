@@ -1,14 +1,20 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { leagueMembers, seasons } from "@/db/schema";
+import { leagueMembers, leagues, seasons } from "@/db/schema";
 import { type AppUser, userIsSiteAdmin } from "@/lib/auth";
 
+export type LeagueRole = "admin" | "manager";
+
 export type LeagueAccessUser = Pick<AppUser, "id" | "isSiteAdmin">;
+
+export function isLeagueAdmin(role: LeagueRole | null): boolean {
+  return role === "admin";
+}
 
 export async function getLeagueRole(
   leagueId: string,
   user: LeagueAccessUser,
-): Promise<"admin" | "manager" | null> {
+): Promise<LeagueRole | null> {
   if (userIsSiteAdmin(user)) return "admin";
 
   const [row] = await db
@@ -24,13 +30,42 @@ export async function getLeagueRole(
   return row?.role ?? null;
 }
 
+/** Logged-in users may view league hub, schedule, and playoffs without membership. */
+export async function leagueExists(leagueId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: leagues.id })
+    .from(leagues)
+    .where(eq(leagues.id, leagueId))
+    .limit(1);
+  return row != null;
+}
+
 export async function canAccessLeague(
   leagueId: string,
   user: LeagueAccessUser,
 ): Promise<boolean> {
+  if (!(await leagueExists(leagueId))) return false;
   if (userIsSiteAdmin(user)) return true;
   const role = await getLeagueRole(leagueId, user);
   return role !== null;
+}
+
+/** Character library, stadium library, and roster tools require league membership. */
+export async function requireLeagueMember(
+  leagueId: string,
+  user: LeagueAccessUser,
+): Promise<LeagueRole> {
+  const role = await getLeagueRole(leagueId, user);
+  if (!role) throw new Error("Forbidden");
+  return role;
+}
+
+export async function requireLeagueAdmin(
+  leagueId: string,
+  user: LeagueAccessUser,
+): Promise<void> {
+  const role = await getLeagueRole(leagueId, user);
+  if (role !== "admin") throw new Error("Forbidden");
 }
 
 export async function getSeasonLeagueId(seasonId: string) {

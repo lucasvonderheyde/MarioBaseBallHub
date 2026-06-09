@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, rosterInstances, teams, users } from "@/db/schema";
 import { BattingStatCells } from "@/components/BattingStatCells";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
-import { aggregateBattingByCharId } from "@/lib/game-stats-queries";
+import {
+  aggregateBattingByCharOccurrence,
+  battingStatKey,
+} from "@/lib/game-stats-queries";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { characterMugshotUrl, stadiumIconUrl } from "@/lib/asset-urls";
+import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
 import { updateTeamAction } from "@/server/actions";
+import { PageShell } from "@/components/PageShell";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string; teamId: string }>;
@@ -42,9 +47,18 @@ export default async function TeamPage({ params, searchParams }: Props) {
     .innerJoin(characters, eq(rosterInstances.characterId, characters.id))
     .where(
       and(eq(rosterInstances.seasonId, seasonId), eq(rosterInstances.teamId, teamId)),
-    );
+    )
+    .orderBy(asc(characters.displayName), asc(rosterInstances.copyIndex));
 
-  const battingByChar = await aggregateBattingByCharId({ seasonId, teamId });
+  const battingByOccurrence = await aggregateBattingByCharOccurrence({ seasonId, teamId });
+
+  const rosterCopyCounts = new Map<string, number>();
+  for (const { character } of roster) {
+    rosterCopyCounts.set(
+      character.gameCharId,
+      (rosterCopyCounts.get(character.gameCharId) ?? 0) + 1,
+    );
+  }
 
   const stadiumRow = team.homeStadiumGameId
     ? dash.stadiums.find((s) => s.gameStadiumId === team.homeStadiumGameId)
@@ -76,7 +90,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
     });
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <PageShell width="wide">
       <Link
         href={`/leagues/${leagueId}/seasons/${seasonId}`}
         className="text-sm text-zinc-500 hover:text-zinc-300"
@@ -130,12 +144,14 @@ export default async function TeamPage({ params, searchParams }: Props) {
         </section>
       ) : null}
 
-      <section className="mt-8">
+      <div className="mt-8 grid gap-10 lg:grid-cols-2 lg:items-start">
+      <section>
         <h2 className="text-lg font-semibold">Roster & season stats</h2>
         <p className="text-sm text-zinc-500">
           Batting totals from uploaded game stats this season.
         </p>
-        <table className="mt-3 w-full text-left text-sm">
+        <div className="msb-table-wrap mt-3">
+        <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
               <th className="py-2 pr-2">Character</th>
@@ -150,7 +166,12 @@ export default async function TeamPage({ params, searchParams }: Props) {
           </thead>
           <tbody>
             {roster.map(({ character, instance }) => {
-              const line = battingByChar.get(character.gameCharId);
+              const occurrenceIndex = instance.copyIndex - 1;
+              const line = battingByOccurrence.get(
+                battingStatKey(character.gameCharId, occurrenceIndex),
+              );
+              const showCopy =
+                (rosterCopyCounts.get(character.gameCharId) ?? 0) > 1;
               return (
                 <tr key={instance.id} className="border-b border-zinc-900">
                   <td className="py-2 pr-2">
@@ -171,6 +192,9 @@ export default async function TeamPage({ params, searchParams }: Props) {
                         <CharacterMugshot charId={character.gameCharId} />
                       )}
                       {character.displayName}
+                      {showCopy ? (
+                        <span className="text-zinc-500">#{instance.copyIndex}</span>
+                      ) : null}
                     </Link>
                   </td>
                   {line ? (
@@ -203,12 +227,13 @@ export default async function TeamPage({ params, searchParams }: Props) {
             })}
           </tbody>
         </table>
+        </div>
         {roster.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-500">No players assigned yet.</p>
         ) : null}
       </section>
 
-      <section className="mt-10">
+      <section>
         <h2 className="text-lg font-semibold">Schedule</h2>
         <ul className="mt-3 space-y-2">
           {teamGames.map(({ game, round, isHome, opp, played, result }) => (
@@ -218,8 +243,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-zinc-500">
-                  {round.phase === "playoffs" ? "PO" : "R"}
-                  {round.roundNumber} ·{" "}
+                  {scheduleRoundShortLabel(round.phase, round.roundNumber)} ·{" "}
                   {isHome ? "vs" : "@"}{" "}
                 </span>
                 <span className="font-medium">{opp?.team.name ?? "?"}</span>
@@ -256,6 +280,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
           ))}
         </ul>
       </section>
+      </div>
 
       {canEdit ? (
         <section className="mt-10 rounded-lg border border-amber-900/40 bg-amber-950/10 p-4">
@@ -287,7 +312,13 @@ export default async function TeamPage({ params, searchParams }: Props) {
                 </div>
                 {!manager ? (
                   <div>
-                    <label className="text-xs text-zinc-500">Reserve for username</label>
+                    <label className="text-xs text-zinc-500">
+                      Reserve for username
+                    </label>
+                    <p className="text-xs text-zinc-600">
+                      Set or change anytime before the team is claimed. Leave blank
+                      to allow any league member to claim.
+                    </p>
                     <input
                       name="claimUsername"
                       defaultValue={team.claimUsername ?? ""}
@@ -316,6 +347,6 @@ export default async function TeamPage({ params, searchParams }: Props) {
           </form>
         </section>
       ) : null}
-    </div>
+    </PageShell>
   );
 }

@@ -25,20 +25,30 @@ export function slugToCharId(slug: string): string {
 }
 
 /** Display name for a raw CharID from game JSON, with optional captain prefix. */
-export function formatCharIdDisplay(charId: string, isCaptain = false): string {
+export function formatCharIdDisplay(
+  charId: string,
+  isCaptain = false,
+  copyNumber?: number,
+): string {
   const catalog = catalogByGameCharId.get(charId);
+  let name: string;
   if (catalog) {
-    return isCaptain ? `Captain ${catalog.displayName}` : catalog.displayName;
+    name = isCaptain ? `Captain ${catalog.displayName}` : catalog.displayName;
+  } else {
+    const paren = /\(([^)]+)\)$/.exec(charId);
+    if (paren) {
+      const base = charId.slice(0, paren.index).trim();
+      const code = paren[1];
+      const color = COLOR_CODES[code] ?? code;
+      name = isCaptain ? `Captain ${base} (${color})` : `${base} (${color})`;
+    } else {
+      name = isCaptain ? `Captain ${charId}` : charId;
+    }
   }
-  const paren = /\(([^)]+)\)$/.exec(charId);
-  if (paren) {
-    const base = charId.slice(0, paren.index).trim();
-    const code = paren[1];
-    const color = COLOR_CODES[code] ?? code;
-    const name = `${base} (${color})`;
-    return isCaptain ? `Captain ${name}` : name;
+  if (copyNumber != null) {
+    return `${name} (#${copyNumber})`;
   }
-  return isCaptain ? `Captain ${charId}` : charId;
+  return name;
 }
 
 export function mugshotFileForCharId(charId: string): string | null {

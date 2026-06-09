@@ -46,6 +46,8 @@ const rosterEntrySchema = z.object({
 export type ParsedCharacterGameStat = {
   teamSide: "Away" | "Home";
   rosterSlot: number;
+  /** 0-based index among same charId on this team in this game (by roster slot). */
+  charOccurrenceIndex: number;
   charId: string;
   isCaptain: boolean;
   isSuperstar: boolean;
@@ -88,6 +90,39 @@ export type ParsedGameStats = {
 
 const rosterKeyRe = /^(Away|Home) Roster (\d+)$/;
 
+type CharOccurrenceInput = {
+  teamSide: "Away" | "Home";
+  rosterSlot: number;
+  charId: string;
+};
+
+/** Assigns occurrence index so duplicate charIds on one team stay distinct. */
+export function assignCharOccurrenceIndexes<T extends CharOccurrenceInput>(
+  stats: T[],
+): (T & { charOccurrenceIndex: number })[] {
+  const byTeamChar = new Map<string, T[]>();
+  for (const row of stats) {
+    const key = `${row.teamSide}\0${row.charId}`;
+    const group = byTeamChar.get(key);
+    if (group) group.push(row);
+    else byTeamChar.set(key, [row]);
+  }
+
+  const occurrenceBySideSlot = new Map<string, number>();
+  for (const group of byTeamChar.values()) {
+    group.sort((a, b) => a.rosterSlot - b.rosterSlot);
+    group.forEach((row, index) => {
+      occurrenceBySideSlot.set(`${row.teamSide}\0${row.rosterSlot}`, index);
+    });
+  }
+
+  return stats.map((row) => ({
+    ...row,
+    charOccurrenceIndex:
+      occurrenceBySideSlot.get(`${row.teamSide}\0${row.rosterSlot}`) ?? 0,
+  }));
+}
+
 /** Parses Character Game Stats from a decoded MSSB JSON object. */
 export function parseCharacterGameStats(data: unknown): ParsedGameStats {
   if (typeof data !== "object" || data == null) {
@@ -101,7 +136,7 @@ export function parseCharacterGameStats(data: unknown): ParsedGameStats {
     throw new Error("Character Game Stats missing");
   }
 
-  const characterStats: ParsedCharacterGameStat[] = [];
+  const characterStats: Omit<ParsedCharacterGameStat, "charOccurrenceIndex">[] = [];
   for (const [key, value] of Object.entries(block as Record<string, unknown>)) {
     const m = rosterKeyRe.exec(key);
     if (!m) continue;
@@ -152,7 +187,7 @@ export function parseCharacterGameStats(data: unknown): ParsedGameStats {
     });
   }
 
-  characterStats.sort(
+  const sorted = characterStats.sort(
     (a, b) =>
       a.teamSide.localeCompare(b.teamSide) || a.rosterSlot - b.rosterSlot,
   );
@@ -165,7 +200,7 @@ export function parseCharacterGameStats(data: unknown): ParsedGameStats {
         : typeof inningsRaw === "string"
           ? Number(inningsRaw)
           : null,
-    characterStats,
+    characterStats: assignCharOccurrenceIndexes(sorted) as ParsedCharacterGameStat[],
   };
 }
 
