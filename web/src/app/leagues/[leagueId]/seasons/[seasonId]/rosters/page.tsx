@@ -51,8 +51,8 @@ export default async function RostersPage({ params, searchParams }: Props) {
         </p>
       ) : null}
       <p className="mt-1 text-sm text-zinc-500">
-        Drag each league copy of a character onto a team column. Assignments save
-        automatically.
+        Click a character, then click a team to assign. Drag-and-drop still works.
+        All teams are shown in a grid so nothing is hidden off-screen.
       </p>
       <RosterAssignmentBoard
         leagueId={leagueId}
