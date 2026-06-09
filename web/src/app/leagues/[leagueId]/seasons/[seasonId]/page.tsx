@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole, isLeagueAdmin } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { parseTiebreakerOrder } from "@/domain/standings/tiebreakers";
+import { TiebreakerOrderDisplay } from "@/components/standings/TiebreakerOrderDisplay";
 import { PageShell } from "@/components/PageShell";
 import { PageHero } from "@/components/PageHero";
 import { SeasonActivityFeed } from "@/components/season/SeasonActivityFeed";
@@ -11,7 +12,9 @@ import { getRecentSeasonEvents } from "@/lib/season-events";
 import { SeasonHubRecentGames } from "@/components/season/SeasonHubRecentGames";
 import { SeasonHubTeamGrid } from "@/components/season/SeasonHubTeamGrid";
 import { SeasonHubUpcomingGames } from "@/components/season/SeasonHubUpcomingGames";
+import { SeasonRecordsPanel } from "@/components/season/SeasonRecordsPanel";
 import { SeasonTradePanel } from "@/components/season/SeasonTradePanel";
+import { getSeasonRecords } from "@/lib/season-records";
 import { getManagedTeamInSeason } from "@/lib/manager-team";
 import { getTeamRosterCountsForSeason } from "@/lib/roster-rules";
 import {
@@ -59,6 +62,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const userTeam = await getManagedTeamInSeason(user.id, seasonId);
   const tradeRoster = await getTradeRosterInstancesForSeason(seasonId);
   const pendingTrades = await getPendingTradeRequestsForSeason(seasonId);
+  const seasonRecords = await getSeasonRecords(seasonId);
 
   return (
     <PageShell width="wide">
@@ -69,9 +73,9 @@ export default async function SeasonPage({ params, searchParams }: Props) {
         subtitle={
           <>
             Tiebreakers (in order):{" "}
-            <span className="break-words font-mono text-zinc-300">
-              {parseTiebreakerOrder(season.tiebreakerOrder).join(" → ")}
-            </span>
+            <TiebreakerOrderDisplay
+              order={parseTiebreakerOrder(season.tiebreakerOrder)}
+            />
           </>
         }
       />
@@ -137,6 +141,13 @@ export default async function SeasonPage({ params, searchParams }: Props) {
         seasonId={seasonId}
         games={games}
         teamNames={teamNames}
+      />
+
+      <SeasonRecordsPanel
+        leagueId={leagueId}
+        seasonId={seasonId}
+        records={seasonRecords}
+        compact
       />
 
       <SeasonHubTeamGrid

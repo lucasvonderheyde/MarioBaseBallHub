@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AccountCharacterSortSelect } from "@/components/AccountCharacterSortSelect";
 import { AccountNav } from "@/components/AccountNav";
 import { AccountStatsNav, type StatsSection } from "@/components/AccountStatsNav";
 import {
@@ -8,7 +9,12 @@ import {
 } from "@/components/AccountUploadNav";
 import { BatchGameStatsUploader } from "@/components/BatchGameStatsUploader";
 import { BattingStatCells } from "@/components/BattingStatCells";
-import { PitchingTableRow, pitchingTableHeaders } from "@/components/PitchingStatCells";
+import {
+  battingStatHeaders,
+  pitchingStatHeaders,
+  teamRecordStatHeaders,
+} from "@/components/stats/stat-table-headers";
+import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
 import { GameStatsUploader } from "@/components/GameStatsUploader";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
@@ -18,6 +24,14 @@ import {
   getManagerHeadToHeadRecords,
   getManagerLifetimeStats,
 } from "@/lib/manager-stats";
+import {
+  MANAGER_BATTING_SORT_OPTIONS,
+  MANAGER_PITCHING_SORT_OPTIONS,
+  parseManagerBattingSort,
+  parseManagerPitchingSort,
+  sortManagerCharacterBatting,
+  sortManagerCharacterPitching,
+} from "@/lib/sort-manager-character-stats";
 import { getReportableGamesForUser } from "@/lib/manager-upload-games";
 import { updateProfileAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
@@ -44,11 +58,19 @@ function parseStatsSection(value: string | undefined): StatsSection {
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ e?: string; m?: string; tab?: string; section?: string }>;
+  searchParams: Promise<{
+    e?: string;
+    m?: string;
+    tab?: string;
+    section?: string;
+    batSort?: string;
+    pitSort?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const { e, m, tab: tabParam, section: sectionParam } = await searchParams;
+  const { e, m, tab: tabParam, section: sectionParam, batSort, pitSort } =
+    await searchParams;
   const activeTab = parseTab(tabParam);
   const uploadSection = parseUploadSection(sectionParam);
   const statsSection =
@@ -60,8 +82,19 @@ export default async function AccountPage({
     activeTab === "upload" ? getReportableGamesForUser(user.id) : null,
   ]);
 
+  const battingSort = parseManagerBattingSort(batSort);
+  const pitchingSort = parseManagerPitchingSort(pitSort);
+  const sortedCharacterBatting =
+    lifetime != null
+      ? sortManagerCharacterBatting(lifetime.characterBatting, battingSort)
+      : [];
+  const sortedCharacterPitching =
+    lifetime != null
+      ? sortManagerCharacterPitching(lifetime.characterPitching, pitchingSort)
+      : [];
+
   return (
-    <PageShell width="narrow">
+    <PageShell width={activeTab === "profile" ? "narrow" : "default"}>
       <div className="flex items-baseline justify-between gap-2">
         <h1 className="text-xl font-semibold">Account</h1>
         <Link href="/leagues" className="text-sm text-zinc-400 hover:text-white">
@@ -163,26 +196,28 @@ export default async function AccountPage({
           <AccountStatsNav activeSection={statsSection} />
 
           {statsSection === "overview" ? (
-            <section>
-              <h2 className="text-lg font-semibold">Lifetime hitting</h2>
-              <p className="text-sm text-zinc-500">Across all leagues and seasons.</p>
-              <div className="msb-table-wrap mt-3">
-                <table className="w-full text-left text-sm">
+            <section className="msb-panel p-4 sm:p-6">
+              <h2 className="text-xl font-semibold">Lifetime hitting</h2>
+              <p className="mt-1 text-sm text-zinc-500 sm:text-base">
+                Across all leagues and seasons. G is uploaded games, not plate
+                appearances summed across characters.
+              </p>
+              <div className="msb-table-wrap mt-4">
+                <table className="w-full min-w-[36rem] text-left text-sm sm:text-base">
                   <thead>
                     <tr className="border-b border-zinc-800 text-zinc-500">
-                      <th className="py-1 pr-2">G</th>
-                      <th className="py-1 pr-2">AB</th>
-                      <th className="py-1 pr-2">H</th>
-                      <th className="py-1 pr-2">HR</th>
-                      <th className="py-1 pr-2">RBI</th>
-                      <th className="py-1 pr-2">AVG</th>
-                      <th className="py-1 pr-2">OBP</th>
-                      <th className="py-1 pr-2">SLG</th>
+                      {battingStatHeaders({
+                        className: "py-2 pr-3",
+                        includeG: true,
+                        includeObpSlg: true,
+                      })}
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b border-zinc-900">
-                      <td className="py-1 pr-2 tabular-nums">{lifetime.batting.games}</td>
+                      <td className="py-2 pr-3 tabular-nums font-medium">
+                        {lifetime.batting.games}
+                      </td>
                       <BattingStatCells
                         ab={lifetime.batting.ab}
                         hits={lifetime.batting.hits}
@@ -195,6 +230,7 @@ export default async function AccountPage({
                         doubles={lifetime.batting.doubles}
                         triples={lifetime.batting.triples}
                         showObpSlg
+                        cellClassName="py-2 pr-3 tabular-nums font-medium"
                       />
                     </tr>
                   </tbody>
@@ -218,29 +254,33 @@ export default async function AccountPage({
           {statsSection === "characters" ? (
             <div className="space-y-10">
               <section>
-                <h2 className="text-lg font-semibold">Hitting by character</h2>
-                <p className="text-sm text-zinc-500">
-                  Your lifetime batting stats with each character, sorted by plate
-                  appearances.
-                </p>
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">Hitting by character</h2>
+                    <p className="text-sm text-zinc-500">
+                      Your lifetime batting stats with each character.
+                    </p>
+                  </div>
+                  {lifetime.characterBatting.length > 0 ? (
+                    <AccountCharacterSortSelect
+                      paramName="batSort"
+                      value={battingSort}
+                      defaultValue="ab"
+                      options={MANAGER_BATTING_SORT_OPTIONS}
+                    />
+                  ) : null}
+                </div>
                 {lifetime.characterBatting.length > 0 ? (
                   <div className="msb-table-wrap mt-3">
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-zinc-800 text-zinc-500">
                           <th className="py-1 pr-2">Character</th>
-                          <th className="py-1 pr-2">G</th>
-                          <th className="py-1 pr-2">AB</th>
-                          <th className="py-1 pr-2">H</th>
-                          <th className="py-1 pr-2">HR</th>
-                          <th className="py-1 pr-2">RBI</th>
-                          <th className="py-1 pr-2">AVG</th>
-                          <th className="py-1 pr-2">OBP</th>
-                          <th className="py-1 pr-2">SLG</th>
+                          {battingStatHeaders({ includeG: true, includeObpSlg: true })}
                         </tr>
                       </thead>
                       <tbody>
-                        {lifetime.characterBatting.map(({ charId, line }) => (
+                        {sortedCharacterBatting.map(({ charId, line }) => (
                           <tr key={charId} className="border-b border-zinc-900">
                             <td className="py-1 pr-2">
                               <span className="flex items-center gap-2">
@@ -277,20 +317,30 @@ export default async function AccountPage({
 
               {lifetime.characterPitching.length > 0 ? (
                 <section>
-                  <h2 className="text-lg font-semibold">Pitching by character</h2>
-                  <p className="text-sm text-zinc-500">
-                    Lifetime pitching appearances, sorted by innings pitched.
-                  </p>
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold">Pitching by character</h2>
+                      <p className="text-sm text-zinc-500">
+                        Lifetime pitching appearances with each character.
+                      </p>
+                    </div>
+                    <AccountCharacterSortSelect
+                      paramName="pitSort"
+                      value={pitchingSort}
+                      defaultValue="ip"
+                      options={MANAGER_PITCHING_SORT_OPTIONS}
+                    />
+                  </div>
                   <div className="msb-table-wrap mt-3">
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-zinc-800 text-zinc-500">
                           <th className="py-1 pr-2">Character</th>
-                          {pitchingTableHeaders}
+                          {pitchingStatHeaders()}
                         </tr>
                       </thead>
                       <tbody>
-                        {lifetime.characterPitching.map(({ charId, line }) => (
+                        {sortedCharacterPitching.map(({ charId, line }) => (
                           <tr key={charId} className="border-b border-zinc-900">
                             <td className="py-1 pr-2">
                               <span className="flex items-center gap-2">
@@ -320,10 +370,7 @@ export default async function AccountPage({
                   <thead>
                     <tr className="border-b border-zinc-800 text-zinc-500">
                       <th className="py-1 pr-2">Opponent</th>
-                      <th className="py-1 pr-2">G</th>
-                      <th className="py-1 pr-2">W-L</th>
-                      <th className="py-1 pr-2">RF</th>
-                      <th className="py-1 pr-2">RA</th>
+                      {teamRecordStatHeaders()}
                     </tr>
                   </thead>
                   <tbody>

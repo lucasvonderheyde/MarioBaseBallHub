@@ -1,4 +1,5 @@
-import { PitchingTableRow, pitchingTableHeaders } from "@/components/PitchingStatCells";
+import { PitchingTableRow } from "@/components/PitchingStatCells";
+import { pitchingStatHeaders } from "@/components/stats/stat-table-headers";
 import { inningsPitched } from "@/domain/stats/batting-metrics";
 import type { PitchingLine } from "@/lib/game-stats-queries";
 
@@ -27,7 +28,9 @@ export function CharacterPitchingSummary({ title, line, compact = false }: Props
       <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-zinc-800 text-zinc-500">{pitchingTableHeaders}</tr>
+            <tr className="border-b border-zinc-800 text-zinc-500">
+              {pitchingStatHeaders()}
+            </tr>
           </thead>
           <tbody>
             <tr className="border-b border-zinc-900">

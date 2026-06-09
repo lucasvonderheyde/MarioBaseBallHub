@@ -443,3 +443,50 @@ export async function respondTradeAction(input: {
   revalidatePath(`/leagues/${input.leagueId}/seasons/${input.seasonId}/rosters`);
   return {};
 }
+
+export async function rescindTradeAction(input: {
+  tradeId: string;
+  leagueId: string;
+  seasonId: string;
+}): Promise<{ error?: string }> {
+  const user = await requireUser();
+  const role = await getLeagueRole(input.leagueId, user);
+  if (!role) return { error: "Forbidden." };
+
+  const [trade] = await db
+    .select()
+    .from(tradeRequests)
+    .where(
+      and(
+        eq(tradeRequests.id, input.tradeId),
+        eq(tradeRequests.seasonId, input.seasonId),
+        eq(tradeRequests.status, "pending"),
+      ),
+    )
+    .limit(1);
+  if (!trade) return { error: "Trade request not found." };
+
+  const [fromTeam] = await db
+    .select({ managerUserId: teams.managerUserId })
+    .from(teams)
+    .where(eq(teams.id, trade.fromTeamId))
+    .limit(1);
+  if (
+    trade.proposedByUserId !== user.id &&
+    fromTeam?.managerUserId !== user.id
+  ) {
+    return { error: "Only the team that sent this offer can rescind it." };
+  }
+
+  await db
+    .update(tradeRequests)
+    .set({
+      status: "cancelled",
+      respondedByUserId: user.id,
+      respondedAt: new Date(),
+    })
+    .where(eq(tradeRequests.id, trade.id));
+
+  revalidateSeasonPaths(input.leagueId, input.seasonId);
+  return {};
+}

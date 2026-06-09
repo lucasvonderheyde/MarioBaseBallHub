@@ -19,11 +19,13 @@ import {
   mergeBattingMaps,
   mergePitchingMaps,
 } from "@/lib/personal-game-stats";
+import { countManagerUploadedGames } from "@/lib/manager-uploaded-games";
 
 export type ManagerCharacterBatting = { charId: string; line: BattingLine };
 export type ManagerCharacterPitching = { charId: string; line: PitchingLine };
 
 export type ManagerLifetimeStats = {
+  uploadedGames: number;
   batting: BattingLine;
   pitching: PitchingLine;
   characterBatting: ManagerCharacterBatting[];
@@ -82,13 +84,19 @@ function emptyLifetimePitching(): PitchingLine {
 export async function getManagerLifetimeStats(
   managerUserId: string,
 ): Promise<ManagerLifetimeStats> {
-  const [leagueBatting, leaguePitching, personalBatting, personalPitching] =
-    await Promise.all([
-      aggregateBattingByCharId({ managerUserId }),
-      aggregatePitchingByCharId({ managerUserId }),
-      aggregatePersonalBattingByCharId(managerUserId),
-      aggregatePersonalPitchingByCharId(managerUserId),
-    ]);
+  const [
+    uploadedGames,
+    leagueBatting,
+    leaguePitching,
+    personalBatting,
+    personalPitching,
+  ] = await Promise.all([
+    countManagerUploadedGames(managerUserId),
+    aggregateBattingByCharId({ managerUserId }),
+    aggregatePitchingByCharId({ managerUserId }),
+    aggregatePersonalBattingByCharId(managerUserId),
+    aggregatePersonalPitchingByCharId(managerUserId),
+  ]);
 
   const battingMap = mergeBattingMaps(leagueBatting, personalBatting);
   const pitchingMap = mergePitchingMaps(leaguePitching, personalPitching);
@@ -108,7 +116,7 @@ export async function getManagerLifetimeStats(
 
   const battingTotals = [...battingMap.values()].reduce<BattingTotals>(
     (acc, line) => ({
-      games: acc.games + line.games,
+      games: 0,
       ab: acc.ab + line.ab,
       hits: acc.hits + line.hits,
       singles: acc.singles + line.singles,
@@ -142,18 +150,19 @@ export async function getManagerLifetimeStats(
           charId: "_lifetime",
           charOccurrenceIndex: 0,
           ...battingTotals,
+          games: uploadedGames,
           ba: battingAverage(battingTotals),
           obp: onBasePercentage(battingTotals),
           slg: sluggingPercentage(battingTotals),
         }
-      : emptyLifetimeBatting();
+      : { ...emptyLifetimeBatting(), games: uploadedGames };
 
   const pitching: PitchingLine =
     pitchingLines.length > 0
       ? {
           charId: "_lifetime",
           charOccurrenceIndex: 0,
-          games: pitchingLines.reduce((sum, line) => sum + line.games, 0),
+          games: uploadedGames,
           outsPitched: pitchingLines.reduce((sum, line) => sum + line.outsPitched, 0),
           battersFaced: pitchingLines.reduce((sum, line) => sum + line.battersFaced, 0),
           hitsAllowed: pitchingLines.reduce((sum, line) => sum + line.hitsAllowed, 0),
@@ -166,7 +175,7 @@ export async function getManagerLifetimeStats(
         }
       : emptyLifetimePitching();
 
-  return { batting, pitching, characterBatting, characterPitching };
+  return { uploadedGames, batting, pitching, characterBatting, characterPitching };
 }
 
 export async function getManagerHeadToHeadRecords(

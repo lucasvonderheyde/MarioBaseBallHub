@@ -12,6 +12,7 @@ type Props = {
   doubles: number;
   triples: number;
   showObpSlg?: boolean;
+  cellClassName?: string;
 };
 
 export function BattingStatCells({
@@ -26,6 +27,7 @@ export function BattingStatCells({
   doubles,
   triples,
   showObpSlg = false,
+  cellClassName = "py-1 pr-2 tabular-nums",
 }: Props) {
   const ba = ab === 0 ? null : hits / ab;
   const obp =
@@ -37,15 +39,15 @@ export function BattingStatCells({
 
   return (
     <>
-      <td className="py-1 pr-2 tabular-nums">{ab}</td>
-      <td className="py-1 pr-2 tabular-nums">{hits}</td>
-      <td className="py-1 pr-2 tabular-nums">{hr}</td>
-      <td className="py-1 pr-2 tabular-nums">{rbi}</td>
-      <td className="py-1 pr-2 tabular-nums">{formatRate(ba)}</td>
+      <td className={cellClassName}>{ab}</td>
+      <td className={cellClassName}>{hits}</td>
+      <td className={cellClassName}>{hr}</td>
+      <td className={cellClassName}>{rbi}</td>
+      <td className={cellClassName}>{formatRate(ba)}</td>
       {showObpSlg ? (
         <>
-          <td className="py-1 pr-2 tabular-nums">{formatRate(obp)}</td>
-          <td className="py-1 pr-2 tabular-nums">{formatRate(slg)}</td>
+          <td className={cellClassName}>{formatRate(obp)}</td>
+          <td className={cellClassName}>{formatRate(slg)}</td>
         </>
       ) : null}
     </>

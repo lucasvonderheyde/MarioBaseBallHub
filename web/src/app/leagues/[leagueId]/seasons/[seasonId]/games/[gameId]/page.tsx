@@ -4,6 +4,16 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { scheduleGames } from "@/db/schema";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { InningLineScoreTable } from "@/components/games/InningLineScoreTable";
+import {
+  winnerScoreClass,
+  winnerTeamNameClass,
+  gameWinnerSide,
+} from "@/components/games/GameMatchupScore";
+import {
+  boxScoreBattingHeaders,
+  pitchingStatHeaders,
+} from "@/components/stats/stat-table-headers";
 import { PageShell } from "@/components/PageShell";
 import { GameStatsUploader } from "@/components/GameStatsUploader";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
@@ -19,6 +29,7 @@ import {
   inningsPitched,
 } from "@/domain/stats/batting-metrics";
 import { parseCharacterGameStats } from "@/domain/stats/parse-character-game-stats";
+import { parseLineScoreFromEvents } from "@/domain/stats/parse-line-score";
 import { normalizeStadiumId } from "@/domain/stats/stadium-id";
 import { saveYoutubeFormAction } from "@/server/actions";
 
@@ -66,9 +77,11 @@ export default async function GameReportPage({ params, searchParams }: Props) {
     game.playedAt != null && game.homeScore != null && game.awayScore != null;
 
   const stats = hasStats ? await getGameCharacterStats(gameId) : [];
-  const meta = hasStats
-    ? parseCharacterGameStats(JSON.parse(game.statsRawJson!))
-    : null;
+  const statsJson = hasStats ? JSON.parse(game.statsRawJson!) : null;
+  const meta = statsJson ? parseCharacterGameStats(statsJson) : null;
+  const lineScore = statsJson ? parseLineScoreFromEvents(statsJson) : null;
+
+  const winner = played ? gameWinnerSide(game.awayScore!, game.homeScore!) : "tie";
 
   const awayTeamStats = stats.filter((row) => row.teamId === away.team.id);
   const homeTeamStats = stats.filter((row) => row.teamId === home.team.id);
@@ -104,13 +117,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
               <tr className="border-b border-zinc-800 text-zinc-500">
                 <th className="py-1 pr-2">#</th>
                 <th className="py-1 pr-2">Character</th>
-                <th className="py-1 pr-2">AB</th>
-                <th className="py-1 pr-2">H</th>
-                <th className="py-1 pr-2">HR</th>
-                <th className="py-1 pr-2">RBI</th>
-                <th className="py-1 pr-2">BB</th>
-                <th className="py-1 pr-2">K</th>
-                <th className="py-1 pr-2">AVG</th>
+                {boxScoreBattingHeaders()}
               </tr>
             </thead>
             <tbody>
@@ -171,15 +178,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-500">
                 <th className="py-1 pr-2">Pitcher</th>
-                <th className="py-1 pr-2">IP</th>
-                <th className="py-1 pr-2">BF</th>
-                <th className="py-1 pr-2">H</th>
-                <th className="py-1 pr-2">R</th>
-                <th className="py-1 pr-2">ER</th>
-                <th className="py-1 pr-2">BB</th>
-                <th className="py-1 pr-2">K</th>
-                <th className="py-1 pr-2">HR</th>
-                <th className="py-1 pr-2">Pit</th>
+                {pitchingStatHeaders({ includeG: false })}
               </tr>
             </thead>
             <tbody>
@@ -229,16 +228,36 @@ export default async function GameReportPage({ params, searchParams }: Props) {
       >
         ← Schedule
       </Link>
-      <h1 className="mt-2 text-2xl font-bold">
-        {away.team.name} @ {home.team.name}
-      </h1>
-      {played ? (
-        <p className="mt-1 text-lg text-zinc-300">
-          {game.awayScore} – {game.homeScore}
-        </p>
-      ) : (
-        <p className="mt-1 text-zinc-500">Scheduled — stats not reported yet</p>
-      )}
+
+      <header className="mt-4 flex flex-col items-center text-center">
+        {stadiumId && stadiumRow?.iconFile ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={stadiumIconUrl(stadiumRow.iconFile)}
+            alt=""
+            width={192}
+            height={192}
+            className="mb-4 h-48 w-48 rounded-lg object-contain"
+          />
+        ) : null}
+        <h1 className="text-2xl font-bold sm:text-3xl">
+          <span className={winnerTeamNameClass("away", winner)}>{away.team.name}</span>
+          <span className="mx-2 font-normal text-zinc-500">@</span>
+          <span className={winnerTeamNameClass("home", winner)}>{home.team.name}</span>
+        </h1>
+        {stadiumId ? (
+          <p className="mt-1 text-sm text-zinc-500">{stadiumId}</p>
+        ) : null}
+        {played ? (
+          <p className="mt-3 text-3xl font-semibold tabular-nums sm:text-4xl">
+            <span className={winnerScoreClass("away", winner)}>{game.awayScore}</span>
+            <span className="mx-2 text-zinc-600">–</span>
+            <span className={winnerScoreClass("home", winner)}>{game.homeScore}</span>
+          </p>
+        ) : (
+          <p className="mt-2 text-zinc-500">Scheduled — stats not reported yet</p>
+        )}
+      </header>
 
       {e ? (
         <p className="mt-3 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
@@ -251,20 +270,19 @@ export default async function GameReportPage({ params, searchParams }: Props) {
         </p>
       ) : null}
 
-      {stadiumId ? (
-        <div className="mt-3 flex items-center gap-2 text-sm text-zinc-400">
-          {stadiumRow?.iconFile ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={stadiumIconUrl(stadiumRow.iconFile)}
-              alt=""
-              width={32}
-              height={32}
-              className="rounded"
+      {played && lineScore ? (
+        <section className="mt-8">
+          <h2 className="text-center text-lg font-semibold">Line score</h2>
+          <div className="mx-auto mt-3 max-w-3xl">
+            <InningLineScoreTable
+              awayTeamName={away.team.name}
+              homeTeamName={home.team.name}
+              lineScore={lineScore}
+              awayScore={game.awayScore!}
+              homeScore={game.homeScore!}
             />
-          ) : null}
-          {stadiumId}
-        </div>
+          </div>
+        </section>
       ) : null}
 
       <section className="mt-8">

@@ -26,6 +26,18 @@ export async function Nav() {
               >
                 Leagues
               </Link>
+              <Link
+                href="/characters"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                Characters
+              </Link>
+              <Link
+                href="/h2h"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                H2H
+              </Link>
               {userIsSiteAdmin(user) ? (
                 <Link
                   href="/admin"

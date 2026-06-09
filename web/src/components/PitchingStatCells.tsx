@@ -1,3 +1,4 @@
+import { pitchingStatHeaders } from "@/components/stats/stat-table-headers";
 import { inningsPitched } from "@/domain/stats/batting-metrics";
 import type { PitchingLine } from "@/lib/game-stats-queries";
 
@@ -40,20 +41,7 @@ export function PitchingStatCells({
   );
 }
 
-export const pitchingTableHeaders = (
-  <>
-    <th className="py-1 pr-2">G</th>
-    <th className="py-1 pr-2">IP</th>
-    <th className="py-1 pr-2">BF</th>
-    <th className="py-1 pr-2">H</th>
-    <th className="py-1 pr-2">R</th>
-    <th className="py-1 pr-2">ER</th>
-    <th className="py-1 pr-2">BB</th>
-    <th className="py-1 pr-2">K</th>
-    <th className="py-1 pr-2">HR</th>
-    <th className="py-1 pr-2">Pit</th>
-  </>
-);
+export const pitchingTableHeaders = pitchingStatHeaders();
 
 export function PitchingTableRow({ line }: { line: PitchingLine }) {
   return (

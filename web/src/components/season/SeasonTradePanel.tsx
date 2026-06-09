@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   proposeTradeAction,
   respondTradeAction,
+  rescindTradeAction,
 } from "@/server/actions/manager-requests-actions";
 import {
   describeTradeInstances,
@@ -108,6 +109,14 @@ export function SeasonTradePanel({
     });
   }
 
+  function handleRescind(tradeId: string) {
+    setError(null);
+    startTransition(async () => {
+      const result = await rescindTradeAction({ tradeId, leagueId, seasonId });
+      if (result.error) setError(result.error);
+    });
+  }
+
   if (!userTeam) {
     return (
       <section className="mt-8 msb-panel p-4 sm:p-5">
@@ -173,14 +182,38 @@ export function SeasonTradePanel({
       ) : null}
 
       {outgoingTrades.length > 0 ? (
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           <h3 className="text-sm font-medium text-zinc-300">Your pending offers</h3>
           {outgoingTrades.map((trade) => (
-            <p key={trade.id} className="text-sm text-zinc-500">
-              Waiting on {teamNameById.get(trade.toTeamId) ?? "opponent"}: offer{" "}
-              {describeTradeInstances(trade.offeredInstanceIds, roster).join(", ")} for{" "}
-              {describeTradeInstances(trade.requestedInstanceIds, roster).join(", ")}
-            </p>
+            <div
+              key={trade.id}
+              className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-sm"
+            >
+              <p className="font-medium text-zinc-200">
+                To {teamNameById.get(trade.toTeamId) ?? "team"}
+              </p>
+              <p className="mt-1 text-zinc-400">
+                You offer:{" "}
+                {describeTradeInstances(trade.offeredInstanceIds, roster).join(", ")}
+              </p>
+              <p className="mt-1 text-zinc-400">
+                For:{" "}
+                {describeTradeInstances(trade.requestedInstanceIds, roster).join(", ")}
+              </p>
+              {trade.message ? (
+                <p className="mt-1 text-zinc-500">Note: {trade.message}</p>
+              ) : null}
+              <div className="mt-3">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => handleRescind(trade.id)}
+                  className="msb-btn-nav text-xs"
+                >
+                  Rescind offer
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       ) : null}

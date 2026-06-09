@@ -9,7 +9,13 @@ import { CharacterDetailNav } from "@/components/CharacterDetailNav";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
 import { CharacterPitchingSummary } from "@/components/CharacterPitchingSummary";
 import { CharacterStatSummary } from "@/components/CharacterStatSummary";
-import { PitchingTableRow, pitchingTableHeaders } from "@/components/PitchingStatCells";
+import { GameMatchupInline } from "@/components/games/GameMatchupScore";
+import {
+  battingStatHeaders,
+  pitchingStatHeaders,
+  stadiumBattingStatHeaders,
+} from "@/components/stats/stat-table-headers";
+import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { getCharacterRatings } from "@/data/character-ratings";
 import { formatRate } from "@/domain/stats/batting-metrics";
 import { getCurrentUser } from "@/lib/auth";
@@ -83,14 +89,7 @@ function ManagerStatsTable({
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
               <th className="py-1 pr-2">Manager</th>
-              <th className="py-1 pr-2">G</th>
-              <th className="py-1 pr-2">AB</th>
-              <th className="py-1 pr-2">H</th>
-              <th className="py-1 pr-2">HR</th>
-              <th className="py-1 pr-2">RBI</th>
-              <th className="py-1 pr-2">AVG</th>
-              <th className="py-1 pr-2">OBP</th>
-              <th className="py-1 pr-2">SLG</th>
+              {battingStatHeaders({ includeG: true, includeObpSlg: true })}
             </tr>
           </thead>
           <tbody>
@@ -269,14 +268,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-500">
                     <th className="py-1 pr-2">Season</th>
-                    <th className="py-1 pr-2">G</th>
-                    <th className="py-1 pr-2">AB</th>
-                    <th className="py-1 pr-2">H</th>
-                    <th className="py-1 pr-2">HR</th>
-                    <th className="py-1 pr-2">RBI</th>
-                    <th className="py-1 pr-2">AVG</th>
-                    <th className="py-1 pr-2">OBP</th>
-                    <th className="py-1 pr-2">SLG</th>
+                    {battingStatHeaders({ includeG: true, includeObpSlg: true })}
                   </tr>
                 </thead>
                 <tbody>
@@ -325,12 +317,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-500">
                     <th className="py-1 pr-2">Stadium</th>
-                    <th className="py-1 pr-2">G</th>
-                    <th className="py-1 pr-2">AB</th>
-                    <th className="py-1 pr-2">AVG</th>
-                    <th className="py-1 pr-2">HR</th>
-                    <th className="py-1 pr-2">RBI</th>
-                    <th className="py-1 pr-2">SLG</th>
+                    {stadiumBattingStatHeaders()}
                   </tr>
                 </thead>
                 <tbody>
@@ -379,6 +366,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                       <th className="py-1 pr-2">Date</th>
                       <th className="py-1 pr-2">Manager</th>
                       <th className="py-1 pr-2">Line</th>
+                      <th className="py-1 pr-2">Result</th>
                       <th className="py-1 pr-2">Game</th>
                     </tr>
                   </thead>
@@ -403,6 +391,18 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                           <td className="py-1 pr-2">{manager?.username ?? "—"}</td>
                           <td className="py-1 pr-2 tabular-nums">
                             {stat.ab}/{stat.hits}/{stat.hr}/{stat.rbi} · {wl} vs {oppName}
+                          </td>
+                          <td className="py-1 pr-2">
+                            {game.homeScore != null && game.awayScore != null ? (
+                              <GameMatchupInline
+                                awayName={teamNames.get(game.awayTeamId) ?? "?"}
+                                homeName={teamNames.get(game.homeTeamId) ?? "?"}
+                                awayScore={game.awayScore}
+                                homeScore={game.homeScore}
+                              />
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="py-1 pr-2">
                             <Link
@@ -448,7 +448,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-500">
                     <th className="py-1 pr-2">Season</th>
-                    {pitchingTableHeaders}
+                    {pitchingStatHeaders()}
                   </tr>
                 </thead>
                 <tbody>
@@ -494,6 +494,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                       <th className="py-1 pr-2">Date</th>
                       <th className="py-1 pr-2">Manager</th>
                       <th className="py-1 pr-2">Line</th>
+                      <th className="py-1 pr-2">Result</th>
                       <th className="py-1 pr-2">Game</th>
                     </tr>
                   </thead>
@@ -526,6 +527,18 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                             <td className="py-1 pr-2 tabular-nums">
                               {stat.outsPitched} outs · {stat.strikeoutsDef} K · {stat.earnedRuns}{" "}
                               ER · {wl} vs {oppName}
+                            </td>
+                            <td className="py-1 pr-2">
+                              {game.homeScore != null && game.awayScore != null ? (
+                                <GameMatchupInline
+                                  awayName={teamNames.get(game.awayTeamId) ?? "?"}
+                                  homeName={teamNames.get(game.homeTeamId) ?? "?"}
+                                  awayScore={game.awayScore}
+                                  homeScore={game.homeScore}
+                                />
+                              ) : (
+                                "—"
+                              )}
                             </td>
                             <td className="py-1 pr-2">
                               <Link

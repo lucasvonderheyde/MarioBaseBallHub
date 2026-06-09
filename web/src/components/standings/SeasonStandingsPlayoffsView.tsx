@@ -6,6 +6,7 @@ import { enrichGamesWithSeries } from "@/domain/playoffs/bracket-model";
 import type { PlayoffPicture } from "@/domain/playoffs/build-playoff-picture";
 import type { TeamClinchStatus } from "@/domain/playoffs/compute-clinch-status";
 import type { PlayoffSettings } from "@/domain/playoffs/playoff-settings";
+import { standingsStatHeaders } from "@/components/stats/stat-table-headers";
 import type { TeamStandingRow } from "@/domain/standings/compute-standings";
 
 type Props = {
@@ -84,10 +85,7 @@ export function SeasonStandingsPlayoffsView({
             <tr className="border-b border-zinc-800 text-zinc-500">
               <th className="py-2 pr-2">#</th>
               <th className="py-2 pr-2">Team</th>
-              <th className="py-2 pr-2">W</th>
-              <th className="py-2 pr-2">L</th>
-              <th className="py-2 pr-2">RF</th>
-              <th className="py-2 pr-2">RA</th>
+              {standingsStatHeaders()}
               {!playoffsPhase ? (
                 <>
                   <th className="py-2 pr-2">Status</th>

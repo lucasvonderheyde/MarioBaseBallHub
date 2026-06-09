@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GameMatchupInline } from "@/components/games/GameMatchupScore";
 import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
 
 type GameRow = {
@@ -56,9 +57,12 @@ export function SeasonHubRecentGames({
                 <span className="text-zinc-500">
                   {game.playedAt?.toLocaleDateString() ?? "—"}
                 </span>
-                <span className="font-medium">
-                  {away} {game.awayScore}–{game.homeScore} {home}
-                </span>
+                <GameMatchupInline
+                  awayName={away}
+                  homeName={home}
+                  awayScore={game.awayScore!}
+                  homeScore={game.homeScore!}
+                />
                 <span className="text-xs text-zinc-600">
                   {scheduleRoundShortLabel(round.phase, round.roundNumber)}
                 </span>

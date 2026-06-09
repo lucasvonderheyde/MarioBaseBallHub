@@ -5,8 +5,10 @@ import { db } from "@/db";
 import { characters, rosterInstances, teams, users } from "@/db/schema";
 import { BattingStatCells } from "@/components/BattingStatCells";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { GameMatchupInline } from "@/components/games/GameMatchupScore";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
-import { PitchingTableRow, pitchingTableHeaders } from "@/components/PitchingStatCells";
+import { battingStatHeaders, pitchingStatHeaders } from "@/components/stats/stat-table-headers";
+import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { StadiumSelect } from "@/components/StadiumSelect";
 import { getCurrentUser } from "@/lib/auth";
 import { formatCharIdDisplay } from "@/lib/character-display";
@@ -137,6 +139,8 @@ export default async function TeamPage({ params, searchParams }: Props) {
   const isManager = team.managerUserId === user.id;
   const canEdit = isAdmin || isManager;
 
+  const teamNames = new Map(dash.teams.map((t) => [t.team.id, t.team.name]));
+
   const teamGames = dash.games
     .filter(
       (g) => g.game.homeTeamId === teamId || g.game.awayTeamId === teamId,
@@ -229,13 +233,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
               <th className="py-2 pr-2">Character</th>
-              <th className="py-2 pr-2">AB</th>
-              <th className="py-2 pr-2">H</th>
-              <th className="py-2 pr-2">HR</th>
-              <th className="py-2 pr-2">RBI</th>
-              <th className="py-2 pr-2">AVG</th>
-              <th className="py-2 pr-2">OBP</th>
-              <th className="py-2 pr-2">SLG</th>
+              {battingStatHeaders({ className: "py-2 pr-2", includeObpSlg: true })}
             </tr>
           </thead>
           <tbody>
@@ -324,23 +322,27 @@ export default async function TeamPage({ params, searchParams }: Props) {
                   {scheduleRoundShortLabel(round.phase, round.roundNumber)} ·{" "}
                   {isHome ? "vs" : "@"}{" "}
                 </span>
-                <span className="font-medium">{opp?.team.name ?? "?"}</span>
                 {played ? (
                   <>
-                    <span className="text-zinc-400">
-                      {isHome ? game.homeScore : game.awayScore}–
-                      {isHome ? game.awayScore : game.homeScore}
-                    </span>
+                    <GameMatchupInline
+                      awayName={teamNames.get(game.awayTeamId) ?? "?"}
+                      homeName={teamNames.get(game.homeTeamId) ?? "?"}
+                      awayScore={game.awayScore!}
+                      homeScore={game.homeScore!}
+                    />
                     <span
                       className={
-                        result === "W" ? "text-green-400" : "text-red-400"
+                        result === "W" ? "font-semibold text-amber-400" : "text-zinc-500"
                       }
                     >
                       {result}
                     </span>
                   </>
                 ) : (
-                  <span className="text-zinc-500">Scheduled</span>
+                  <>
+                    <span className="font-medium">{opp?.team.name ?? "?"}</span>
+                    <span className="text-zinc-500">Scheduled</span>
+                  </>
                 )}
                 {game.statsRawJson ? (
                   <Link
@@ -372,7 +374,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-500">
                 <th className="py-2 pr-2">Character</th>
-                {pitchingTableHeaders}
+                {pitchingStatHeaders({ className: "py-2 pr-2" })}
               </tr>
             </thead>
             <tbody>
@@ -437,13 +439,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
                   <thead>
                     <tr className="border-b border-zinc-800 text-zinc-500">
                       <th className="py-2 pr-2">Character</th>
-                      <th className="py-2 pr-2">AB</th>
-                      <th className="py-2 pr-2">H</th>
-                      <th className="py-2 pr-2">HR</th>
-                      <th className="py-2 pr-2">RBI</th>
-                      <th className="py-2 pr-2">AVG</th>
-                      <th className="py-2 pr-2">OBP</th>
-                      <th className="py-2 pr-2">SLG</th>
+                      {battingStatHeaders({ className: "py-2 pr-2", includeObpSlg: true })}
                     </tr>
                   </thead>
                   <tbody>
@@ -511,7 +507,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
                   <thead>
                     <tr className="border-b border-zinc-800 text-zinc-500">
                       <th className="py-2 pr-2">Character</th>
-                      {pitchingTableHeaders}
+                      {pitchingStatHeaders({ className: "py-2 pr-2" })}
                     </tr>
                   </thead>
                   <tbody>

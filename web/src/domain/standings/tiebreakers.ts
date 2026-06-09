@@ -8,6 +8,24 @@ export const DEFAULT_TIEBREAKER_ORDER = [
 
 export type TiebreakerKey = (typeof DEFAULT_TIEBREAKER_ORDER)[number];
 
+export const TIEBREAKER_LABELS: Record<TiebreakerKey, string> = {
+  h2h_record: "Head-to-head wins",
+  h2h_runs: "Head-to-head runs scored",
+  season_runs: "Total runs scored",
+  one_game: "One-game playoff",
+};
+
+export const TIEBREAKER_DESCRIPTIONS: Record<TiebreakerKey, string> = {
+  h2h_record: "Wins in games played directly against the tied team",
+  h2h_runs: "Total runs scored in head-to-head games vs. the tied team",
+  season_runs: "Total runs scored across the full regular season",
+  one_game: "A scheduled tiebreaker game decides the final order",
+};
+
+export function formatTiebreakerOrder(order: TiebreakerKey[]): string {
+  return order.map((key) => TIEBREAKER_LABELS[key]).join(" → ");
+}
+
 export function parseTiebreakerOrder(json: string): TiebreakerKey[] {
   try {
     const arr = JSON.parse(json) as unknown;

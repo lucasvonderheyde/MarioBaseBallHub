@@ -5,6 +5,11 @@ import { db } from "@/db";
 import { seasons } from "@/db/schema";
 import { STADIUM_CATALOG } from "@/data/character-catalog";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
+import {
+  GameMatchupInline,
+  winnerTeamNameClass,
+  gameWinnerSide,
+} from "@/components/games/GameMatchupScore";
 import { formatRate } from "@/domain/stats/batting-metrics";
 import { getCurrentUser } from "@/lib/auth";
 import { formatCharIdDisplay, slugToCharId } from "@/lib/character-display";
@@ -16,6 +21,10 @@ import {
 import { stadiumIdsMatch } from "@/domain/stats/stadium-id";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { stadiumIconUrl } from "@/lib/asset-urls";
+import {
+  stadiumLeaderBattingHeaders,
+} from "@/components/stats/stat-table-headers";
+import { StatColumnHeader } from "@/components/stats/StatColumnHeader";
 import { PageShell } from "@/components/PageShell";
 
 type Props = {
@@ -119,23 +128,34 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
             <tr className="border-b border-zinc-800 text-zinc-500">
               <th className="py-1 pr-2">Date</th>
               <th className="py-1 pr-2">Matchup</th>
-              <th className="py-1 pr-2">Score</th>
               <th className="py-1 pr-2">Season</th>
             </tr>
           </thead>
           <tbody>
-            {gameList.map((g) => (
+            {gameList.map((g) => {
+              const hasScore = g.awayScore != null && g.homeScore != null;
+              const winner =
+                hasScore ? gameWinnerSide(g.awayScore!, g.homeScore!) : "tie";
+              return (
               <tr key={g.gameId} className="border-b border-zinc-900">
                 <td className="py-1 pr-2 text-zinc-400">
                   {g.playedAt?.toLocaleDateString() ?? "—"}
                 </td>
                 <td className="py-1 pr-2">
-                  {g.awayName} @ {g.homeName}
-                </td>
-                <td className="py-1 pr-2 tabular-nums">
-                  {g.awayScore != null && g.homeScore != null
-                    ? `${g.awayScore}–${g.homeScore}`
-                    : "—"}
+                  {hasScore ? (
+                    <GameMatchupInline
+                      awayName={g.awayName}
+                      homeName={g.homeName}
+                      awayScore={g.awayScore!}
+                      homeScore={g.homeScore!}
+                    />
+                  ) : (
+                    <>
+                      <span className={winnerTeamNameClass("away", winner)}>{g.awayName}</span>
+                      {" @ "}
+                      <span className={winnerTeamNameClass("home", winner)}>{g.homeName}</span>
+                    </>
+                  )}
                 </td>
                 <td className="py-1 pr-2">
                   <Link
@@ -146,7 +166,8 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
                   </Link>
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
         </div>
@@ -162,11 +183,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
               <th className="py-1 pr-2">Character</th>
-              <th className="py-1 pr-2">AB</th>
-              <th className="py-1 pr-2">AVG</th>
-              <th className="py-1 pr-2">HR</th>
-              <th className="py-1 pr-2">RBI</th>
-              <th className="py-1 pr-2">SLG</th>
+              {stadiumLeaderBattingHeaders()}
             </tr>
           </thead>
           <tbody>
@@ -200,10 +217,10 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
               <th className="py-1 pr-2">Manager</th>
-              <th className="py-1 pr-2">G</th>
-              <th className="py-1 pr-2">RF</th>
-              <th className="py-1 pr-2">RA</th>
-              <th className="py-1 pr-2">W-L</th>
+              <StatColumnHeader abbr="G" className="py-1 pr-2" />
+              <StatColumnHeader abbr="RF" className="py-1 pr-2" />
+              <StatColumnHeader abbr="RA" className="py-1 pr-2" />
+              <StatColumnHeader abbr="W-L" className="py-1 pr-2" />
             </tr>
           </thead>
           <tbody>

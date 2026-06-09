@@ -1,4 +1,5 @@
 import { BattingStatCells } from "@/components/BattingStatCells";
+import { battingStatHeaders } from "@/components/stats/stat-table-headers";
 import type { BattingLine } from "@/lib/game-stats-queries";
 import { formatRate } from "@/domain/stats/batting-metrics";
 
@@ -28,14 +29,7 @@ export function CharacterStatSummary({ title, line, compact = false }: Props) {
         <table className="mt-2 w-full text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
-              <th className="py-1 pr-2">G</th>
-              <th className="py-1 pr-2">AB</th>
-              <th className="py-1 pr-2">H</th>
-              <th className="py-1 pr-2">HR</th>
-              <th className="py-1 pr-2">RBI</th>
-              <th className="py-1 pr-2">AVG</th>
-              <th className="py-1 pr-2">OBP</th>
-              <th className="py-1 pr-2">SLG</th>
+              {battingStatHeaders({ includeG: true, includeObpSlg: true })}
             </tr>
           </thead>
           <tbody>
