@@ -38,6 +38,18 @@ describe("parse-character-game-stats", () => {
     expect(isCompletedPlateAppearance("Walk (BB)")).toBe(true);
   });
 
+  it("normalizes DK Jungle JSON stadium id to catalog name", () => {
+    const json = fs.readFileSync(
+      path.join(
+        gameStatisticsSamplesDirectory(),
+        "decoded.20260519T013946_bottomfragger-Vs-Zomsoth_1732548663.json",
+      ),
+      "utf8",
+    );
+    const parsed = parseCharacterGameStats(JSON.parse(json) as unknown);
+    expect(parsed.stadiumId).toBe("Donkey Kong Jungle");
+  });
+
   it("assigns distinct occurrence indexes for duplicate charIds on one team", () => {
     const json = fs.readFileSync(
       path.join(

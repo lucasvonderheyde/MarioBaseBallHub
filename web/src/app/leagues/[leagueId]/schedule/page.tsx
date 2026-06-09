@@ -1,10 +1,13 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
 import {
   SeasonScheduleByRound,
   seasonStatusClass,
   seasonStatusLabel,
 } from "@/components/league-schedule-ui";
+import { PageHero, SeasonSectionHeader } from "@/components/PageHero";
+import { db } from "@/db";
+import { leagues } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole, isLeagueAdmin, leagueExists } from "@/lib/league-access";
 import { groupGamesByRound } from "@/lib/group-games-by-round";
@@ -22,6 +25,13 @@ export default async function LeagueSchedulePage({ params }: Props) {
 
   if (!(await leagueExists(leagueId))) notFound();
 
+  const [league] = await db
+    .select()
+    .from(leagues)
+    .where(eq(leagues.id, leagueId))
+    .limit(1);
+  if (!league) notFound();
+
   const role = await getLeagueRole(leagueId, user);
   if (!role) notFound();
   const isAdmin = isLeagueAdmin(role);
@@ -30,43 +40,37 @@ export default async function LeagueSchedulePage({ params }: Props) {
   if (seasons.length === 0) {
     return (
       <PageShell width="wide">
-        <h1 className="text-2xl font-bold">Schedule</h1>
-        <p className="mt-4 text-sm text-zinc-500">No seasons yet.</p>
+        <PageHero
+          eyebrow={league.name}
+          title="Schedule"
+          subtitle="No seasons yet."
+        />
       </PageShell>
     );
   }
 
   return (
     <PageShell width="wide">
-      <h1 className="text-2xl font-bold">Schedule</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        All games by season. The current season is listed first. Managers can report
-        games they played in directly from this page.
-      </p>
+      <PageHero
+        eyebrow={league.name}
+        title="Schedule"
+        subtitle="All games by season. The current season is listed first. Managers can report games they played in directly from this page."
+      />
 
-      <div className="mt-8 space-y-10">
+      <div className="space-y-10">
         {seasons.map(({ season, dash }) => {
           const gamesByRound = groupGamesByRound(dash.games);
 
           return (
             <section
               key={season.id}
-              className={`rounded-lg border p-4 ${seasonStatusClass(season.status)}`}
+              className={`rounded-lg border p-5 sm:p-6 ${seasonStatusClass(season.status)}`}
             >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div>
-                  <h2 className="text-lg font-semibold">{season.name}</h2>
-                  <p className="text-xs uppercase tracking-wide opacity-80">
-                    {seasonStatusLabel(season.status)}
-                  </p>
-                </div>
-                <Link
-                  href={`/leagues/${leagueId}/seasons/${season.id}`}
-                  className="text-sm text-amber-400 hover:underline"
-                >
-                  Season hub →
-                </Link>
-              </div>
+              <SeasonSectionHeader
+                seasonName={season.name}
+                statusLabel={seasonStatusLabel(season.status)}
+                href={`/leagues/${leagueId}/seasons/${season.id}`}
+              />
 
               <SeasonScheduleByRound
                 leagueId={leagueId}
@@ -77,7 +81,7 @@ export default async function LeagueSchedulePage({ params }: Props) {
                 userId={user.id}
                 role={role}
                 isAdmin={isAdmin}
-                className="mt-4 space-y-8"
+                className="mt-6 space-y-6"
               />
             </section>
           );

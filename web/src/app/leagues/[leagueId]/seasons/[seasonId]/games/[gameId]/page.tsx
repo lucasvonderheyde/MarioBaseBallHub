@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { scheduleGames } from "@/db/schema";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
 import { PageShell } from "@/components/PageShell";
-import { UploadStatsForm } from "@/components/UploadStatsForm";
+import { GameStatsUploader } from "@/components/GameStatsUploader";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { getCurrentUser } from "@/lib/auth";
 import { formatCharIdDisplay } from "@/lib/character-display";
@@ -19,6 +19,7 @@ import {
   inningsPitched,
 } from "@/domain/stats/batting-metrics";
 import { parseCharacterGameStats } from "@/domain/stats/parse-character-game-stats";
+import { normalizeStadiumId } from "@/domain/stats/stadium-id";
 import { saveYoutubeFormAction } from "@/server/actions";
 
 type Props = {
@@ -82,7 +83,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
     return formatCharIdDisplay(row.charId, row.isCaptain, copyNumber);
   }
 
-  const stadiumId = game.statsStadiumId ?? meta?.stadiumId ?? null;
+  const stadiumId = normalizeStadiumId(game.statsStadiumId ?? meta?.stadiumId ?? null);
   const stadiumRow = stadiumId
     ? dash.stadiums.find((s) => s.gameStadiumId === stadiumId)
     : null;
@@ -338,7 +339,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
             from JSON away/home players and roster characters in the file.
           </p>
           <div className="mt-3 max-w-xl">
-            <UploadStatsForm
+            <GameStatsUploader
               gameId={game.id}
               leagueId={leagueId}
               seasonId={seasonId}

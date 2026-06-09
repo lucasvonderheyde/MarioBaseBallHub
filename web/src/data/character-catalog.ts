@@ -60,7 +60,7 @@ export const CHARACTER_CATALOG: {
   { gameCharId: "Noki(B)", displayName: "Noki (Blue)", mugshotFile: "Mugshot_Noki_MSB.png" },
 ];
 
-/** StadiumID from JSON → icon filename */
+/** StadiumID from JSON → icon filename. Aliases (e.g. "DK Jungle") live in domain/stats/stadium-id.ts */
 export const STADIUM_CATALOG: { gameStadiumId: string; iconFile: string }[] = [
   { gameStadiumId: "Bowser Castle", iconFile: "120px-Bowser_Castle_MSB.png" },
   { gameStadiumId: "Mario Stadium", iconFile: "120px-Mario_Stadium_Mario_Superstar_Baseball.png" },

@@ -15,10 +15,11 @@ import { isValidProfilePictureUrl } from "@/lib/manager-profile";
 import { redirectWithFormError } from "@/server/flash-redirect";
 import { newUuid } from "@/server/ids";
 import { isSafeRedirectPath } from "@/lib/team-claims";
+import { resolvePostAuthRedirect } from "@/lib/post-auth-redirect";
 
-function redirectAfterAuth(next: string | null) {
+async function redirectAfterAuth(userId: string, next: string | null) {
   if (isSafeRedirectPath(next)) redirect(next);
-  redirect("/leagues");
+  redirect(await resolvePostAuthRedirect(userId));
 }
 
 export async function registerAction(formData: FormData) {
@@ -49,7 +50,7 @@ export async function registerAction(formData: FormData) {
   const session = await getSession();
   session.userId = id;
   await session.save();
-  redirectAfterAuth(next);
+  redirectAfterAuth(id, next);
 }
 
 export async function loginAction(formData: FormData) {
@@ -68,7 +69,7 @@ export async function loginAction(formData: FormData) {
   const session = await getSession();
   session.userId = u.id;
   await session.save();
-  redirectAfterAuth(next);
+  redirectAfterAuth(u.id, next);
 }
 
 export async function logoutAction() {

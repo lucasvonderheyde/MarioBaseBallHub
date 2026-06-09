@@ -225,3 +225,16 @@ export const characterGameStats = sqliteTable(
   },
   (t) => [uniqueIndex("cgs_game_side_slot").on(t.gameId, t.teamSide, t.rosterSlot)],
 );
+
+export const seasonEvents = sqliteTable("season_events", {
+  id: text("id").primaryKey(),
+  seasonId: text("season_id")
+    .notNull()
+    .references(() => seasons.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(),
+  message: text("message").notNull(),
+  relatedGameId: text("related_game_id"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});

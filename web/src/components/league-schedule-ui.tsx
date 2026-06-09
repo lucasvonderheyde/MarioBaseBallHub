@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { PlayoffGameView } from "@/domain/playoffs/build-playoff-picture";
-import { UploadStatsForm } from "@/components/UploadStatsForm";
+import { GameStatsUploader } from "@/components/GameStatsUploader";
 import { scheduleRoundHeading } from "@/lib/schedule-labels";
 import { canUserReportGame, type LeagueRole } from "@/lib/game-report-access";
 import { clearGameStatsAction } from "@/server/actions";
@@ -39,6 +39,50 @@ type ScheduleGameCardProps = {
   isAdmin: boolean;
 };
 
+function hasFinalScore(game: ScheduleGameDisplay): boolean {
+  return game.homeScore != null && game.awayScore != null;
+}
+
+function GameScoreDisplay({
+  awayName,
+  homeName,
+  awayScore,
+  homeScore,
+}: {
+  awayName: string;
+  homeName: string;
+  awayScore: number;
+  homeScore: number;
+}) {
+  const awayWins = awayScore > homeScore;
+  const homeWins = homeScore > awayScore;
+
+  const awayNameClass = awayWins
+    ? "font-semibold text-amber-400"
+    : homeWins
+      ? "text-zinc-500"
+      : "text-zinc-300";
+  const homeNameClass = homeWins
+    ? "font-semibold text-amber-400"
+    : awayWins
+      ? "text-zinc-500"
+      : "text-zinc-300";
+  const awayScoreClass = awayWins ? "text-amber-400" : "text-zinc-400";
+  const homeScoreClass = homeWins ? "text-amber-400" : "text-zinc-400";
+
+  return (
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 rounded-md border border-zinc-700/80 bg-zinc-950/60 px-3 py-2.5 tabular-nums">
+      <span className={`truncate text-sm ${awayNameClass}`}>{awayName}</span>
+      <span className="flex shrink-0 items-baseline gap-1.5 text-lg font-semibold leading-none">
+        <span className={awayScoreClass}>{awayScore}</span>
+        <span className="text-sm font-normal text-zinc-600">–</span>
+        <span className={homeScoreClass}>{homeScore}</span>
+      </span>
+      <span className={`truncate text-right text-sm ${homeNameClass}`}>{homeName}</span>
+    </div>
+  );
+}
+
 export function ScheduleGameCard({
   leagueId,
   seasonId,
@@ -49,41 +93,65 @@ export function ScheduleGameCard({
   isAdmin,
 }: ScheduleGameCardProps) {
   const gameHref = `/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`;
-  const played = game.playedAt != null;
+  const finalScore = hasFinalScore(game);
+  const viewLabel = game.statsRawJson ? "Box score & video" : "View game";
+  const showReportForm = canReport && !finalScore && !game.statsRawJson;
 
   return (
-    <li className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Link href={gameHref} className="font-medium hover:text-amber-400">
-          {awayName} @ {homeName}
-        </Link>
-        {played ? (
-          <span className="text-zinc-400">
-            {game.awayScore}-{game.homeScore} (away-home)
-          </span>
+    <li className="flex min-h-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
+      <div className="px-4 py-4 sm:px-5 sm:py-5">
+        {finalScore ? (
+          <Link href={gameHref} className="block hover:opacity-90">
+            <GameScoreDisplay
+              awayName={awayName}
+              homeName={homeName}
+              awayScore={game.awayScore!}
+              homeScore={game.homeScore!}
+            />
+          </Link>
         ) : (
-          <span className="text-zinc-500">Not played</span>
-        )}
-        <Link href={gameHref} className="text-amber-400 hover:underline">
-          {game.statsRawJson ? "Box score & video" : "View game"}
-        </Link>
-        {game.youtubeUrl && !game.statsRawJson ? (
-          <span className="text-xs text-zinc-500">Video linked</span>
-        ) : null}
-      </div>
-      <div className="mt-2 text-xs text-zinc-500">
-        Slot {game.slotInRound} · Game ID{" "}
-        <span className="font-mono">{game.id.slice(0, 8)}…</span>
-        {game.statsGameId ? (
           <>
-            {" "}
-            · Stats <span className="font-mono">{game.statsGameId}</span>
+            <h3 className="text-base font-semibold leading-snug sm:text-lg">
+              <Link href={gameHref} className="text-zinc-100 hover:text-amber-400">
+                {awayName}
+                <span className="mx-1.5 font-normal text-zinc-500">@</span>
+                {homeName}
+              </Link>
+            </h3>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              <span className="rounded-md border border-zinc-800 bg-zinc-950/40 px-2.5 py-1 text-zinc-500">
+                Not played
+              </span>
+              {game.youtubeUrl && !game.statsRawJson ? (
+                <span className="text-xs text-zinc-500">Video linked</span>
+              ) : null}
+            </div>
           </>
+        )}
+
+        {finalScore && game.youtubeUrl && !game.statsRawJson ? (
+          <p className="mt-2 text-xs text-zinc-500">Video linked</p>
         ) : null}
+
+        <p className="mt-3 text-xs leading-relaxed text-zinc-500">
+          Slot {game.slotInRound} · Game ID{" "}
+          <span className="font-mono">{game.id.slice(0, 8)}…</span>
+          {game.statsGameId ? (
+            <>
+              {" "}
+              · Stats <span className="font-mono">{game.statsGameId}</span>
+            </>
+          ) : null}
+        </p>
       </div>
-      {canReport ? (
-        <div className="mt-3">
-          <UploadStatsForm
+
+      {showReportForm ? (
+        <div className="border-t border-zinc-800/80 bg-zinc-950/30 px-4 py-4 sm:px-5">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Report result
+          </p>
+          <GameStatsUploader
             gameId={game.id}
             leagueId={leagueId}
             seasonId={seasonId}
@@ -91,16 +159,23 @@ export function ScheduleGameCard({
           />
         </div>
       ) : null}
+
       {isAdmin && game.statsGameId ? (
         <form
           action={clearGameStatsAction.bind(null, game.id, leagueId, seasonId)}
-          className="mt-2"
+          className="border-t border-zinc-800/80 px-4 py-2 sm:px-5"
         >
           <button type="submit" className="text-xs text-red-400 hover:underline">
             Clear stats (admin)
           </button>
         </form>
       ) : null}
+
+      <div className="mt-auto border-t border-zinc-800/80 px-4 py-3 sm:px-5">
+        <Link href={gameHref} className="msb-btn-nav w-full justify-center">
+          {viewLabel}
+        </Link>
+      </div>
     </li>
   );
 }
@@ -141,14 +216,17 @@ export function SeasonScheduleByRound({
       {rounds.map((round) => {
         const roundGames = gamesByRound.get(round.id) ?? [];
         return (
-          <div key={round.id}>
+          <section
+            key={round.id}
+            className="rounded-lg border border-zinc-800/70 bg-zinc-950/20 p-4 sm:p-5"
+          >
             <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
               {scheduleRoundHeading(round.phase, round.roundNumber)}
             </h3>
             {roundGames.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-600">No games this week.</p>
+              <p className="mt-3 text-sm text-zinc-600">No games this week.</p>
             ) : (
-              <ul className="msb-card-grid mt-3">
+              <ul className="msb-schedule-grid mt-4">
                 {roundGames.map(({ game }) => {
                   const home = teamEntry(game.homeTeamId);
                   const away = teamEntry(game.awayTeamId);
@@ -173,7 +251,7 @@ export function SeasonScheduleByRound({
                 })}
               </ul>
             )}
-          </div>
+          </section>
         );
       })}
     </div>

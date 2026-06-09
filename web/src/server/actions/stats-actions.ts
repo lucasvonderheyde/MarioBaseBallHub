@@ -7,10 +7,12 @@ import { characters, rosterInstances, scheduleGames, teams, users } from "@/db/s
 import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { canUserReportGame } from "@/lib/game-report-access";
+import { gameIdLinkError, netplayParticipantError } from "@/lib/upload-participant";
 import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
 import { matchNetplayTeams } from "@/domain/stats/match-netplay-teams";
 import { parseCharacterGameStats } from "@/domain/stats/parse-character-game-stats";
 import { charIdsForSide } from "@/domain/stats/roster-team-match";
+import { recordSeasonEvent } from "@/lib/season-events";
 import {
   persistCharacterGameStats,
   backfillCharacterGameStats,
@@ -55,9 +57,13 @@ export async function uploadStatsAction(
     .from(scheduleGames)
     .where(eq(scheduleGames.statsGameId, parsed.statsGameId))
     .limit(1);
-  if (existing && existing.id !== gameId) {
-    return { error: "This stats file (GameID) is already linked to another game." };
-  }
+  const gameIdError = gameIdLinkError(
+    parsed.statsGameId,
+    gameId,
+    existing?.id,
+  );
+  if (gameIdError) return { error: gameIdError };
+
   const [game] = await db
     .select()
     .from(scheduleGames)
@@ -86,6 +92,14 @@ export async function uploadStatsAction(
   ) {
     return { error: "Only league admins or managers in this game can upload stats." };
   }
+
+  const participantError = netplayParticipantError(
+    user,
+    role,
+    parsed.awayPlayer,
+    parsed.homePlayer,
+  );
+  if (participantError) return { error: participantError };
 
   const [hm] = home.managerUserId
     ? await db
@@ -178,6 +192,16 @@ export async function uploadStatsAction(
     homeSideTeamId: match.homeSideTeamId,
     rawJson: parsed.rawJson,
   });
+
+  const awayName = away.name;
+  const homeName = home.name;
+  await recordSeasonEvent({
+    seasonId,
+    eventType: "game_uploaded",
+    message: `Game reported: ${parsed.awayPlayer} (${match.scheduleAwayScore}) @ ${parsed.homePlayer} (${match.scheduleHomeScore}) — ${awayName} vs ${homeName}`,
+    relatedGameId: gameId,
+  });
+
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`);
   revalidatePath(`/leagues/${leagueId}/schedule`);
@@ -186,6 +210,93 @@ export async function uploadStatsAction(
   const out: { ok: true; warnings?: string[] } = { ok: true };
   if (match.warnings.length) out.warnings = match.warnings;
   return out;
+}
+
+export type BatchUploadFileResult = {
+  fileName: string;
+  ok: boolean;
+  error?: string;
+  gameLabel?: string;
+};
+
+export type BatchUploadState =
+  | { ok: true; results: BatchUploadFileResult[] }
+  | { error: string; results?: BatchUploadFileResult[] }
+  | null;
+
+export async function uploadStatsBatchAction(
+  _prev: BatchUploadState,
+  formData: FormData,
+): Promise<BatchUploadState> {
+  const leagueId = String(formData.get("leagueId") ?? "");
+  const seasonId = String(formData.get("seasonId") ?? "");
+  const payload = String(formData.get("batchPayload") ?? "");
+  if (!leagueId || !seasonId || !payload) {
+    return { error: "Missing batch upload context." };
+  }
+
+  let files: { fileName: string; jsonText: string }[];
+  try {
+    files = JSON.parse(payload) as { fileName: string; jsonText: string }[];
+  } catch {
+    return { error: "Invalid batch payload." };
+  }
+
+  if (files.length === 0) return { error: "No files selected." };
+  if (files.length > 20) return { error: "Maximum 20 files per batch." };
+
+  const user = await requireUser();
+  const role = await getLeagueRole(leagueId, user);
+  if (!role) return { error: "Forbidden" };
+
+  const { findGameForStatsFile } = await import("@/lib/manager-upload-games");
+  const { parseDecodedGameFile } = await import("@/domain/stats/decode-game-file");
+
+  const results: BatchUploadFileResult[] = [];
+  for (const file of files) {
+    let parsed;
+    try {
+      parsed = parseDecodedGameFile(file.jsonText);
+    } catch (e) {
+      results.push({
+        fileName: file.fileName,
+        ok: false,
+        error: e instanceof Error ? e.message : "Parse error",
+      });
+      continue;
+    }
+
+    const match = await findGameForStatsFile(user, role, leagueId, seasonId, parsed);
+    if ("error" in match) {
+      results.push({ fileName: file.fileName, ok: false, error: match.error });
+      continue;
+    }
+
+    const upload = await uploadStatsAction(
+      match.gameId,
+      leagueId,
+      seasonId,
+      file.jsonText,
+    );
+    if (upload && "error" in upload) {
+      results.push({
+        fileName: file.fileName,
+        ok: false,
+        error: upload.error,
+      });
+      continue;
+    }
+
+    results.push({
+      fileName: file.fileName,
+      ok: true,
+      gameLabel: `${parsed.awayPlayer} @ ${parsed.homePlayer}`,
+    });
+  }
+
+  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath("/account");
+  return { ok: true, results };
 }
 
 export async function backfillStatsAction(

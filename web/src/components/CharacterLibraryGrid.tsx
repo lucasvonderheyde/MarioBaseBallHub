@@ -46,8 +46,8 @@ export function CharacterLibraryGrid({
               ) : null}
               <p className="mt-1 text-xs text-zinc-400">
                 {line
-                  ? `${line.games}G · ${formatRate(line.ba)} · ${line.hr} HR · ${line.rbi} RBI`
-                  : "0G · — · 0 HR · 0 RBI"}
+                  ? `${line.games}G · ${formatRate(line.obp)} OBP · ${line.hr} HR · ${line.rbi} RBI`
+                  : "0G · — OBP · 0 HR · 0 RBI"}
               </p>
             </div>
           </Link>

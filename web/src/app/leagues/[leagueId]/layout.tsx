@@ -10,6 +10,7 @@ import {
   sortSeasonsForDisplay,
 } from "@/lib/league-season-sort";
 import { getManagedTeamInSeason } from "@/lib/manager-team";
+import { getClaimableTeamsForLeague } from "@/lib/team-claims";
 
 type Props = {
   children: React.ReactNode;
@@ -41,30 +42,30 @@ export default async function LeagueLayout({ children, params }: Props) {
 
   const sortedSeasons = sortSeasonsForDisplay(seasonRows);
   const activeSeasonId = pickDefaultSeasonId(sortedSeasons);
-  const activeSeason = activeSeasonId
-    ? sortedSeasons.find((season) => season.id === activeSeasonId) ?? null
-    : null;
 
   const managedTeam =
     user && activeSeasonId
       ? await getManagedTeamInSeason(user.id, activeSeasonId)
       : null;
 
+  const claimableCount =
+    user && !isAdmin
+      ? (await getClaimableTeamsForLeague(leagueId, user)).length
+      : 0;
+
   return (
     <>
       <LeagueNav
         leagueId={leagueId}
-        leagueName={league.name}
         activeSeasonId={activeSeasonId}
-        activeSeasonName={activeSeason?.name ?? null}
         isMember={isMember}
-        showClaim={!isAdmin}
+        isAdmin={isAdmin}
+        showClaim={claimableCount > 0}
         myTeamHref={
-          managedTeam
+          managedTeam && activeSeasonId
             ? `/leagues/${leagueId}/seasons/${activeSeasonId}/teams/${managedTeam.id}`
             : null
         }
-        myTeamName={managedTeam?.name ?? null}
       />
       {children}
     </>

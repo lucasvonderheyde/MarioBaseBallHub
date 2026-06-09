@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { seasons } from "@/db/schema";
+import { leagues, seasons } from "@/db/schema";
 import { STADIUM_CATALOG } from "@/data/character-catalog";
+import { PageHero } from "@/components/PageHero";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { getStadiumGameCounts } from "@/lib/game-stats-queries";
@@ -24,6 +25,13 @@ export default async function StadiumLibraryPage({ params, searchParams }: Props
   const role = await getLeagueRole(leagueId, user);
   if (!role) notFound();
 
+  const [league] = await db
+    .select()
+    .from(leagues)
+    .where(eq(leagues.id, leagueId))
+    .limit(1);
+  if (!league) notFound();
+
   const seasonRows = await db
     .select()
     .from(seasons)
@@ -33,11 +41,17 @@ export default async function StadiumLibraryPage({ params, searchParams }: Props
 
   return (
     <PageShell width="wide">
-      <h1 className="text-2xl font-bold">Stadium library</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        Game counts and stats use the <span className="font-mono text-zinc-400">StadiumID</span>{" "}
-        field from each uploaded game JSON.
-      </p>
+      <PageHero
+        eyebrow={league.name}
+        title="Stadium library"
+        subtitle={
+          <>
+            Game counts and stats use the{" "}
+            <span className="font-mono text-zinc-400">StadiumID</span> field from each
+            uploaded game JSON.
+          </>
+        }
+      />
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <Link

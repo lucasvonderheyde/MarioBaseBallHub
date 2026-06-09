@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeStadiumId } from "./stadium-id";
 
 const decodedSchema = z.object({
   GameID: z.string(),
@@ -40,7 +41,7 @@ export function parseDecodedGameFile(jsonText: string): DecodedGameSummary {
     homePlayer: d["Home Player"].trim(),
     awayScore: d["Away Score"],
     homeScore: d["Home Score"],
-    stadiumId: d["StadiumID"],
+    stadiumId: normalizeStadiumId(d["StadiumID"]) ?? undefined,
     rawJson: jsonText,
   };
 }

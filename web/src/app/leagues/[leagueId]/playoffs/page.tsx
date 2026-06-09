@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
 import { PlayoffGameCard } from "@/components/league-schedule-ui";
+import { PageHero } from "@/components/PageHero";
 import { buildPlayoffPicture } from "@/domain/playoffs/build-playoff-picture";
+import { db } from "@/db";
+import { leagues } from "@/db/schema";
 import {
   parsePlayoffSettings,
   playInEnabled,
@@ -40,6 +44,13 @@ export default async function LeaguePlayoffsPage({ params, searchParams }: Props
 
   if (!(await leagueExists(leagueId))) notFound();
 
+  const [league] = await db
+    .select()
+    .from(leagues)
+    .where(eq(leagues.id, leagueId))
+    .limit(1);
+  if (!league) notFound();
+
   const role = await getLeagueRole(leagueId, user);
 
   const seasons = await getLeagueSeasons(leagueId);
@@ -71,13 +82,11 @@ export default async function LeaguePlayoffsPage({ params, searchParams }: Props
 
   return (
     <PageShell width="wide">
-      <h1 className="text-2xl font-bold">Playoff picture</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        Seeding from regular-season standings. Play-in and bracket games come from
-        the playoff schedule.
-      </p>
-
-      <div className="mt-4 flex flex-wrap gap-2">
+      <PageHero
+        eyebrow={league.name}
+        title="Playoffs"
+        subtitle="Seeding from regular-season standings. Play-in and bracket games come from the playoff schedule."
+      >
         {seasons.map((s) => (
           <Link
             key={s.id}
@@ -92,7 +101,7 @@ export default async function LeaguePlayoffsPage({ params, searchParams }: Props
             {s.status === "active" ? " · current" : ""}
           </Link>
         ))}
-      </div>
+      </PageHero>
 
       {isLeagueAdmin(role) ? (
         <p className="mt-3 text-xs text-zinc-500">
@@ -108,7 +117,7 @@ export default async function LeaguePlayoffsPage({ params, searchParams }: Props
       ) : null}
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-center text-lg font-semibold">
           {selectedSeason.name} — Seeding
         </h2>
         <p className="text-sm text-zinc-500">

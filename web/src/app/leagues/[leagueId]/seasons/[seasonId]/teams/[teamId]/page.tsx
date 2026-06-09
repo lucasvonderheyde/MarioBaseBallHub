@@ -24,11 +24,13 @@ import {
   resolveBattingLineForRosterCopy,
   resolvePitchingLineForRosterCopy,
 } from "@/lib/team-roster-stats";
+import { normalizeStadiumId } from "@/domain/stats/stadium-id";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { characterMugshotUrl, stadiumIconUrl } from "@/lib/asset-urls";
 import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
 import { updateTeamAction, updateProfileAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
+import { PageHero } from "@/components/PageHero";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string; teamId: string }>;
@@ -155,13 +157,12 @@ export default async function TeamPage({ params, searchParams }: Props) {
 
   return (
     <PageShell width="wide">
-      <Link
-        href={`/leagues/${leagueId}/seasons/${seasonId}`}
-        className="text-sm text-zinc-500 hover:text-zinc-300"
-      >
-        ← Season
-      </Link>
-      <h1 className="mt-2 text-2xl font-bold">{team.name}</h1>
+      <PageHero
+        eyebrow={`${dash.league.name} · ${dash.season.name}`}
+        title={team.name}
+        backHref={`/leagues/${leagueId}/seasons/${seasonId}`}
+        backLabel="Season"
+      />
       {m === "claimed" ? (
         <p className="mt-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Team claimed — you&apos;re the manager now.
@@ -351,7 +352,9 @@ export default async function TeamPage({ params, searchParams }: Props) {
                 ) : null}
               </div>
               {game.statsStadiumId ? (
-                <p className="mt-1 text-xs text-zinc-600">{game.statsStadiumId}</p>
+                <p className="mt-1 text-xs text-zinc-600">
+                  {normalizeStadiumId(game.statsStadiumId)}
+                </p>
               ) : null}
             </li>
           ))}

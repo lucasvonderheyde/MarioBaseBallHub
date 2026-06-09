@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { resolvePostAuthRedirect } from "@/lib/post-auth-redirect";
 import { isSafeRedirectPath } from "@/lib/team-claims";
 import { loginAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
@@ -13,7 +14,9 @@ export default async function LoginPage({
   const user = await getCurrentUser();
   const { e, next } = await searchParams;
   if (user) {
-    redirect(isSafeRedirectPath(next) ? next : "/leagues");
+    redirect(
+      isSafeRedirectPath(next) ? next : await resolvePostAuthRedirect(user.id),
+    );
   }
   return (
     <PageShell width="narrow" className="py-12">

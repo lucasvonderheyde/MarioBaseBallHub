@@ -5,13 +5,11 @@ import { usePathname } from "next/navigation";
 
 type Props = {
   leagueId: string;
-  leagueName: string;
   activeSeasonId: string | null;
-  activeSeasonName: string | null;
   isMember: boolean;
+  isAdmin: boolean;
   showClaim: boolean;
   myTeamHref: string | null;
-  myTeamName: string | null;
 };
 
 type NavItem = {
@@ -26,17 +24,21 @@ function navClass(active: boolean): string {
 
 export function LeagueNav({
   leagueId,
-  leagueName,
   activeSeasonId,
-  activeSeasonName,
   isMember,
+  isAdmin,
   showClaim,
   myTeamHref,
-  myTeamName,
 }: Props) {
   const pathname = usePathname();
   const seasonMatch = pathname.match(/\/seasons\/([^/]+)/);
   const contextSeasonId = seasonMatch?.[1] ?? activeSeasonId;
+
+  const leagueHome = `/leagues/${leagueId}`;
+  const seasonHub = activeSeasonId
+    ? `/leagues/${leagueId}/seasons/${activeSeasonId}`
+    : null;
+  const standingsHref = seasonHub ? `${seasonHub}#standings` : leagueHome;
 
   const playoffsHref = contextSeasonId
     ? `/leagues/${leagueId}/playoffs?season=${contextSeasonId}`
@@ -48,21 +50,46 @@ export function LeagueNav({
     ? `/leagues/${leagueId}/stadiums?season=${contextSeasonId}`
     : `/leagues/${leagueId}/stadiums`;
 
-  const leagueHome = `/leagues/${leagueId}`;
-  const items: NavItem[] = [
-    {
-      href: leagueHome,
-      label: leagueName,
-      match: (path) => path === leagueHome,
-    },
-  ];
+  const items: NavItem[] = [];
 
-  if (isMember) {
+  if (isMember || isAdmin) {
+    if (seasonHub) {
+      items.push({
+        href: seasonHub,
+        label: "Home",
+        match: (path) =>
+          path.startsWith(`${leagueHome}/seasons/${activeSeasonId}`) &&
+          !path.includes("/admin") &&
+          !path.includes("/rosters"),
+      });
+    }
+
+    if (myTeamHref) {
+      items.push({
+        href: myTeamHref,
+        label: "My Team",
+        match: (path) => path === myTeamHref,
+      });
+    }
+
+    if (isAdmin) {
+      items.push({
+        href: leagueHome,
+        label: "Commissioner",
+        match: (path) => path === leagueHome,
+      });
+    }
+
     items.push(
       {
         href: `/leagues/${leagueId}/schedule`,
         label: "Schedule",
         match: (path) => path.startsWith(`${leagueHome}/schedule`),
+      },
+      {
+        href: standingsHref,
+        label: "Standings",
+        match: (path) => seasonHub != null && path === seasonHub,
       },
       {
         href: playoffsHref,
@@ -80,22 +107,6 @@ export function LeagueNav({
         match: (path) => path.startsWith(`${leagueHome}/stadiums`),
       },
     );
-
-    if (activeSeasonId && activeSeasonName) {
-      items.push({
-        href: `/leagues/${leagueId}/seasons/${activeSeasonId}`,
-        label: activeSeasonName,
-        match: (path) => path.startsWith(`${leagueHome}/seasons/${activeSeasonId}`),
-      });
-    }
-
-    if (myTeamHref && myTeamName) {
-      items.push({
-        href: myTeamHref,
-        label: "My team",
-        match: (path) => path === myTeamHref,
-      });
-    }
   }
 
   if (showClaim) {
@@ -108,19 +119,16 @@ export function LeagueNav({
 
   return (
     <div className="border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-2.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-x-3 sm:px-6 lg:px-8">
         <Link
           href="/leagues"
-          className="shrink-0 text-xs text-zinc-500 hover:text-zinc-300 sm:text-sm"
+          className="shrink-0 self-start text-xs text-zinc-500 hover:text-zinc-300 sm:justify-self-start sm:text-sm"
         >
           All leagues
         </Link>
-        <span className="hidden text-zinc-700 sm:inline" aria-hidden>
-          /
-        </span>
         <nav
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
-          aria-label={`${leagueName} navigation`}
+          className="msb-scroll-x flex w-full items-center justify-center gap-2 pb-0.5 sm:w-auto sm:justify-self-center sm:pb-0 md:flex-wrap md:overflow-x-visible"
+          aria-label="League navigation"
         >
           {items.map((item) => (
             <Link
@@ -132,6 +140,7 @@ export function LeagueNav({
             </Link>
           ))}
         </nav>
+        <div className="hidden sm:block" aria-hidden />
       </div>
     </div>
   );

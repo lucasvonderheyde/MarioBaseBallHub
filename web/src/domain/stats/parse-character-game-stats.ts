@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeStadiumId } from "./stadium-id";
 
 const offensiveSchema = z.object({
   "At Bats": z.coerce.number(),
@@ -206,7 +207,7 @@ export function parseCharacterGameStats(data: unknown): ParsedGameStats {
   );
 
   return {
-    stadiumId: typeof stadiumRaw === "string" ? stadiumRaw : null,
+    stadiumId: normalizeStadiumId(typeof stadiumRaw === "string" ? stadiumRaw : null),
     inningsPlayed:
       typeof inningsRaw === "number"
         ? inningsRaw

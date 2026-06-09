@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { resolvePostAuthRedirect } from "@/lib/post-auth-redirect";
 import { PageShell } from "@/components/PageShell";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
-  if (user) redirect("/leagues");
+  if (user) redirect(await resolvePostAuthRedirect(user.id));
   return (
     <PageShell width="narrow" className="py-16">
       <h1 className="text-3xl font-bold tracking-tight">
@@ -16,7 +17,7 @@ export default async function HomePage() {
         League schedule, rosters, stats uploads, and standings for your friend
         group.
       </p>
-      <div className="mt-8 flex gap-3">
+      <div className="mt-8 flex flex-wrap gap-3">
         <Link href="/register" className="msb-btn-primary px-4 py-2">
           Get started
         </Link>

@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
@@ -54,7 +54,9 @@ export async function createSeasonAction(leagueId: string, formData: FormData) {
 export async function addMemberAction(leagueId: string, formData: FormData) {
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
-  if (role !== "admin") redirectWithFormError(`/leagues/${leagueId}`, "Forbidden.");
+  if (role !== "admin") {
+    redirectWithFormError(`/leagues/${leagueId}?tab=members`, "Forbidden.");
+  }
   const username = String(formData.get("username") ?? "").trim();
   const [target] = await db
     .select()
@@ -63,7 +65,7 @@ export async function addMemberAction(leagueId: string, formData: FormData) {
     .limit(1);
   if (!target)
     redirectWithFormError(
-      `/leagues/${leagueId}`,
+      `/leagues/${leagueId}?tab=members`,
       "User not found. They must register first.",
     );
   await db
@@ -71,7 +73,54 @@ export async function addMemberAction(leagueId: string, formData: FormData) {
     .values({ leagueId, userId: target.id, role: "manager" })
     .onConflictDoNothing();
   revalidatePath(`/leagues/${leagueId}`);
-  redirect(`/leagues/${leagueId}?m=member`);
+  redirect(`/leagues/${leagueId}?tab=members&m=member`);
+}
+
+export async function removeMemberAction(leagueId: string, targetUserId: string) {
+  const user = await requireUser();
+  const role = await getLeagueRole(leagueId, user);
+  if (role !== "admin") {
+    redirectWithFormError(`/leagues/${leagueId}?tab=members`, "Forbidden.");
+  }
+  if (targetUserId === user.id) {
+    redirectWithFormError(
+      `/leagues/${leagueId}?tab=members`,
+      "You cannot remove yourself.",
+    );
+  }
+
+  const [membership] = await db
+    .select({ role: leagueMembers.role })
+    .from(leagueMembers)
+    .where(
+      and(
+        eq(leagueMembers.leagueId, leagueId),
+        eq(leagueMembers.userId, targetUserId),
+      ),
+    )
+    .limit(1);
+
+  if (!membership) {
+    redirectWithFormError(`/leagues/${leagueId}?tab=members`, "Member not found.");
+  }
+  if (membership.role !== "manager") {
+    redirectWithFormError(
+      `/leagues/${leagueId}?tab=members`,
+      "Only managers can be removed here.",
+    );
+  }
+
+  await db
+    .delete(leagueMembers)
+    .where(
+      and(
+        eq(leagueMembers.leagueId, leagueId),
+        eq(leagueMembers.userId, targetUserId),
+      ),
+    );
+
+  revalidatePath(`/leagues/${leagueId}`);
+  redirect(`/leagues/${leagueId}?tab=members&m=member-removed`);
 }
 
 export async function renameLeagueAction(leagueId: string, formData: FormData) {
@@ -89,7 +138,9 @@ export async function renameLeagueAction(leagueId: string, formData: FormData) {
   await db.update(leagues).set({ name }).where(eq(leagues.id, leagueId));
   revalidatePath(`/leagues/${leagueId}`);
   revalidatePath("/admin");
-  redirect(`/leagues/${leagueId}?m=renamed`);
+  const returnTab = String(formData.get("returnTab") ?? "").trim();
+  const tabQuery = returnTab ? `?tab=${encodeURIComponent(returnTab)}&m=renamed` : "?m=renamed";
+  redirect(`/leagues/${leagueId}${tabQuery}`);
 }
 
 export async function renameSeasonAction(

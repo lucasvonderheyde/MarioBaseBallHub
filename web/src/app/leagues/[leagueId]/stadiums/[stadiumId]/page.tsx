@@ -13,6 +13,7 @@ import {
   getPlayerStadiumRecords,
   getTopCharsAtStadium,
 } from "@/lib/game-stats-queries";
+import { stadiumIdsMatch } from "@/domain/stats/stadium-id";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { stadiumIconUrl } from "@/lib/asset-urls";
 import { PageShell } from "@/components/PageShell";
@@ -62,7 +63,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
     if (!dash) continue;
     const teamNames = new Map(dash.teams.map((t) => [t.team.id, t.team.name]));
     for (const { game } of dash.games) {
-      if (game.statsStadiumId !== stadiumId || !game.statsRawJson) continue;
+      if (!stadiumIdsMatch(game.statsStadiumId, stadiumId) || !game.statsRawJson) continue;
       gameList.push({
         gameId: game.id,
         seasonId: season.id,

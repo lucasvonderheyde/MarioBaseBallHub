@@ -15,6 +15,7 @@ import {
   sluggingPercentage,
   sumBattingTotals,
 } from "@/domain/stats/batting-metrics";
+import { normalizeStadiumId, stadiumIdVariants } from "@/domain/stats/stadium-id";
 
 export type BattingLine = BattingTotals & {
   charId: string;
@@ -128,7 +129,9 @@ export async function aggregateBattingByCharId(
     conditions.push(eq(teams.managerUserId, filter.managerUserId));
   }
   if (filter.stadiumId) {
-    conditions.push(eq(scheduleGames.statsStadiumId, filter.stadiumId));
+    conditions.push(
+      inArray(scheduleGames.statsStadiumId, stadiumIdVariants(filter.stadiumId)),
+    );
   }
 
   let seasonIds: string[] | null = null;
@@ -177,7 +180,9 @@ export async function aggregateBattingByCharOccurrence(
     conditions.push(eq(teams.managerUserId, filter.managerUserId));
   }
   if (filter.stadiumId) {
-    conditions.push(eq(scheduleGames.statsStadiumId, filter.stadiumId));
+    conditions.push(
+      inArray(scheduleGames.statsStadiumId, stadiumIdVariants(filter.stadiumId)),
+    );
   }
 
   if (filter.leagueId && !filter.seasonId) {
@@ -279,7 +284,9 @@ async function buildStatConditions(filter: StatFilter) {
     conditions.push(eq(teams.managerUserId, filter.managerUserId));
   }
   if (filter.stadiumId) {
-    conditions.push(eq(scheduleGames.statsStadiumId, filter.stadiumId));
+    conditions.push(
+      inArray(scheduleGames.statsStadiumId, stadiumIdVariants(filter.stadiumId)),
+    );
   }
   if (filter.leagueId && !filter.seasonId) {
     const seasonIds = await getSeasonIdsForLeague(filter.leagueId);
@@ -607,12 +614,35 @@ export async function aggregateBattingByCharAndStadium(
     .where(and(...conditions))
     .groupBy(scheduleGames.statsStadiumId);
 
-  return rows
+  const merged = rows
     .filter((r): r is typeof r & { stadiumId: string } => r.stadiumId != null)
-    .map((r) => ({
-      stadiumId: r.stadiumId,
-      line: toBattingLine(charId, 0, r),
-    }));
+    .reduce(
+      (acc, row) => {
+        const canonicalId = normalizeStadiumId(row.stadiumId)!;
+        const totals: BattingTotals = {
+          games: row.games,
+          ab: row.ab,
+          hits: row.hits,
+          singles: row.singles,
+          doubles: row.doubles,
+          triples: row.triples,
+          hr: row.hr,
+          walks4ball: row.walks4ball,
+          walksHbp: row.walksHbp,
+          sacFly: row.sacFly,
+          rbi: row.rbi,
+        };
+        const existing = acc.get(canonicalId);
+        acc.set(canonicalId, existing ? sumBattingTotals([existing, totals]) : totals);
+        return acc;
+      },
+      new Map<string, BattingTotals>(),
+    );
+
+  return [...merged.entries()].map(([stadiumId, totals]) => ({
+    stadiumId,
+    line: toBattingLine(charId, 0, totals),
+  }));
 }
 
 export async function getGameCharacterStats(gameId: string) {
@@ -685,7 +715,9 @@ export async function getStadiumGameCounts(
 
   const map = new Map<string, number>();
   for (const r of rows) {
-    if (r.stadiumId) map.set(r.stadiumId, r.count);
+    if (!r.stadiumId) continue;
+    const canonicalId = normalizeStadiumId(r.stadiumId)!;
+    map.set(canonicalId, (map.get(canonicalId) ?? 0) + r.count);
   }
   return map;
 }
@@ -697,7 +729,7 @@ export async function getTopCharsAtStadium(
   minAb = 5,
 ) {
   const conditions = [
-    eq(scheduleGames.statsStadiumId, stadiumGameId),
+    inArray(scheduleGames.statsStadiumId, stadiumIdVariants(stadiumGameId)),
     eq(seasons.leagueId, leagueId),
     sql`${scheduleGames.statsRawJson} IS NOT NULL`,
   ];
@@ -739,7 +771,7 @@ export async function getPlayerStadiumRecords(
   seasonId?: string,
 ) {
   const conditions = [
-    eq(scheduleGames.statsStadiumId, stadiumGameId),
+    inArray(scheduleGames.statsStadiumId, stadiumIdVariants(stadiumGameId)),
     eq(seasons.leagueId, leagueId),
     sql`${scheduleGames.playedAt} IS NOT NULL`,
     sql`${scheduleGames.statsRawJson} IS NOT NULL`,

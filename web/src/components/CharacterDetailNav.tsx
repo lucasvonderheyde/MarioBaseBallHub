@@ -24,9 +24,11 @@ function tabHref(
 }
 
 function tabClass(active: boolean): string {
-  return active
-    ? "border-b-2 border-amber-400 px-3 py-2 text-sm font-medium text-amber-400"
-    : "border-b-2 border-transparent px-3 py-2 text-sm text-zinc-500 hover:text-zinc-300";
+  return `${
+    active
+      ? "border-b-2 border-amber-400 text-sm font-medium text-amber-400"
+      : "border-b-2 border-transparent text-sm text-zinc-500 hover:text-zinc-300"
+  } shrink-0 px-3 py-2`;
 }
 
 export function CharacterDetailNav({
@@ -44,7 +46,7 @@ export function CharacterDetailNav({
 
   return (
     <nav
-      className="mt-8 flex gap-1 border-b border-zinc-800"
+      className="msb-scroll-x mt-8 flex gap-1 border-b border-zinc-800"
       aria-label="Character sections"
     >
       {tabs

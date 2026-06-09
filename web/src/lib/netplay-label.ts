@@ -1,4 +1,4 @@
-type NetplayUserLike = {
+export type NetplayUserLike = {
   username: string;
   displayName?: string | null;
   netplayUsername?: string | null;
