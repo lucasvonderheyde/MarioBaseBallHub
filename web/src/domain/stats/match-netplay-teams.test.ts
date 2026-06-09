@@ -22,7 +22,7 @@ const awayTeam = {
 };
 
 describe("matchNetplayTeams", () => {
-  it("accepts direct alignment", () => {
+  it("accepts direct alignment when both managers match JSON home/away players", () => {
     const result = matchNetplayTeams(
       {
         homePlayer: "Zomsoth",
@@ -37,11 +37,11 @@ describe("matchNetplayTeams", () => {
     expect(result.blockingError).toBeNull();
     expect(result.scheduleHomeScore).toBe(12);
     expect(result.scheduleAwayScore).toBe(14);
-    expect(result.awaySideTeamId).toBe("away-id");
     expect(result.homeSideTeamId).toBe("home-id");
+    expect(result.awaySideTeamId).toBe("away-id");
   });
 
-  it("auto-corrects swapped schedule home/away", () => {
+  it("auto-corrects when schedule home/away is reversed vs JSON", () => {
     const result = matchNetplayTeams(
       {
         homePlayer: "Zomsoth",
@@ -56,26 +56,11 @@ describe("matchNetplayTeams", () => {
     expect(result.blockingError).toBeNull();
     expect(result.scheduleHomeScore).toBe(14);
     expect(result.scheduleAwayScore).toBe(12);
-    expect(result.awaySideTeamId).toBe("away-id");
     expect(result.homeSideTeamId).toBe("home-id");
+    expect(result.awaySideTeamId).toBe("away-id");
   });
 
-  it("blocks when names do not match either manager", () => {
-    const result = matchNetplayTeams(
-      {
-        homePlayer: "SomeoneElse",
-        awayPlayer: "AnotherPerson",
-        homeScore: 3,
-        awayScore: 2,
-      },
-      homeTeam,
-      awayTeam,
-    );
-    expect(result.alignment).toBe("partial");
-    expect(result.blockingError).not.toBeNull();
-  });
-
-  it("allows upload when only the home manager matches", () => {
+  it("uses JSON away player for the other team when only home player matches an account", () => {
     const result = matchNetplayTeams(
       {
         homePlayer: "Zomsoth",
@@ -91,24 +76,45 @@ describe("matchNetplayTeams", () => {
     );
     expect(result.blockingError).toBeNull();
     expect(result.alignment).toBe("partial");
+    expect(result.homeSideTeamId).toBe("home-id");
+    expect(result.awaySideTeamId).toBe("away-id");
     expect(result.scheduleHomeScore).toBe(5);
     expect(result.scheduleAwayScore).toBe(3);
   });
 
-  it("allows upload when only one manager matches via swapped sides", () => {
+  it("uses JSON home player when only away manager matches an account", () => {
     const result = matchNetplayTeams(
       {
-        homePlayer: "Zomsoth",
-        awayPlayer: "NotRegisteredYet",
+        homePlayer: "NotRegisteredYet",
+        awayPlayer: "bottomfragger",
         homeScore: 5,
         awayScore: 3,
       },
+      {
+        ...homeTeam,
+        manager: null,
+      },
       awayTeam,
-      homeTeam,
     );
     expect(result.blockingError).toBeNull();
+    expect(result.homeSideTeamId).toBe("home-id");
+    expect(result.awaySideTeamId).toBe("away-id");
+    expect(result.scheduleHomeScore).toBe(5);
+    expect(result.scheduleAwayScore).toBe(3);
+  });
+
+  it("blocks when names do not match either manager", () => {
+    const result = matchNetplayTeams(
+      {
+        homePlayer: "SomeoneElse",
+        awayPlayer: "AnotherPerson",
+        homeScore: 3,
+        awayScore: 2,
+      },
+      homeTeam,
+      awayTeam,
+    );
     expect(result.alignment).toBe("partial");
-    expect(result.scheduleHomeScore).toBe(3);
-    expect(result.scheduleAwayScore).toBe(5);
+    expect(result.blockingError).not.toBeNull();
   });
 });

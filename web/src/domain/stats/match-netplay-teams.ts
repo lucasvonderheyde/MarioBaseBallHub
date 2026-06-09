@@ -43,29 +43,42 @@ function winnerLabel(
   return `Tie (${homeScore}-${awayScore})`;
 }
 
-function applyDirectMapping(
-  parsed: Pick<DecodedGameSummary, "homeScore" | "awayScore">,
+function resolveTeamForFilePlayer(
+  filePlayer: string,
   scheduleHome: NetplayManagerContext,
   scheduleAway: NetplayManagerContext,
-) {
-  return {
-    scheduleHomeScore: parsed.homeScore,
-    scheduleAwayScore: parsed.awayScore,
-    awaySideTeamId: scheduleAway.teamId,
-    homeSideTeamId: scheduleHome.teamId,
-  };
+): string | null {
+  if (netplayLabelMatches(managerNetplayLabels(scheduleHome.manager), filePlayer)) {
+    return scheduleHome.teamId;
+  }
+  if (netplayLabelMatches(managerNetplayLabels(scheduleAway.manager), filePlayer)) {
+    return scheduleAway.teamId;
+  }
+  return null;
 }
 
-function applySwappedMapping(
+function otherTeamId(
+  teamId: string,
+  scheduleHome: NetplayManagerContext,
+  scheduleAway: NetplayManagerContext,
+): string {
+  return teamId === scheduleHome.teamId ? scheduleAway.teamId : scheduleHome.teamId;
+}
+
+function buildMapping(
   parsed: Pick<DecodedGameSummary, "homeScore" | "awayScore">,
   scheduleHome: NetplayManagerContext,
   scheduleAway: NetplayManagerContext,
+  homeSideTeamId: string,
+  awaySideTeamId: string,
 ) {
   return {
-    scheduleHomeScore: parsed.awayScore,
-    scheduleAwayScore: parsed.homeScore,
-    awaySideTeamId: scheduleHome.teamId,
-    homeSideTeamId: scheduleAway.teamId,
+    scheduleHomeScore:
+      homeSideTeamId === scheduleHome.teamId ? parsed.homeScore : parsed.awayScore,
+    scheduleAwayScore:
+      awaySideTeamId === scheduleAway.teamId ? parsed.awayScore : parsed.homeScore,
+    awaySideTeamId,
+    homeSideTeamId,
   };
 }
 
@@ -77,42 +90,50 @@ export function matchNetplayTeams(
   scheduleHome: NetplayManagerContext,
   scheduleAway: NetplayManagerContext,
 ): NetplayTeamMatch {
-  const homeLabels = managerNetplayLabels(scheduleHome.manager);
-  const awayLabels = managerNetplayLabels(scheduleAway.manager);
   const hasHomeManager = scheduleHome.manager != null;
   const hasAwayManager = scheduleAway.manager != null;
 
-  const directHome = netplayLabelMatches(homeLabels, parsed.homePlayer);
-  const directAway = netplayLabelMatches(awayLabels, parsed.awayPlayer);
-  const swappedHome = netplayLabelMatches(homeLabels, parsed.awayPlayer);
-  const swappedAway = netplayLabelMatches(awayLabels, parsed.homePlayer);
-
-  const directSignals = Number(directHome) + Number(directAway);
-  const swapSignals = Number(swappedHome) + Number(swappedAway);
-  const homeSideKnown = directHome || swappedHome;
-  const awaySideKnown = directAway || swappedAway;
-  const anyKnownSide = homeSideKnown || awaySideKnown;
+  const homePlayerTeamId = resolveTeamForFilePlayer(
+    parsed.homePlayer,
+    scheduleHome,
+    scheduleAway,
+  );
+  const awayPlayerTeamId = resolveTeamForFilePlayer(
+    parsed.awayPlayer,
+    scheduleHome,
+    scheduleAway,
+  );
 
   const warnings: string[] = [];
   let alignment: NetplayAlignment = "unverified";
   let blockingError: string | null = null;
 
-  let mapping = applyDirectMapping(parsed, scheduleHome, scheduleAway);
+  let homeSideTeamId = homePlayerTeamId;
+  let awaySideTeamId = awayPlayerTeamId;
 
-  if (directHome && directAway) {
-    alignment = "direct";
-  } else if (swappedHome && swappedAway) {
-    alignment = "swapped";
-    mapping = applySwappedMapping(parsed, scheduleHome, scheduleAway);
-    warnings.push(
-      `Home and away were swapped on the schedule. Stats file has "${parsed.homePlayer}" at home and "${parsed.awayPlayer}" away — applied scores and rosters to the matching managers.`,
-    );
+  if (homeSideTeamId && !awaySideTeamId) {
+    awaySideTeamId = otherTeamId(homeSideTeamId, scheduleHome, scheduleAway);
+  } else if (awaySideTeamId && !homeSideTeamId) {
+    homeSideTeamId = otherTeamId(awaySideTeamId, scheduleHome, scheduleAway);
+  } else if (!homeSideTeamId && !awaySideTeamId) {
+    homeSideTeamId = scheduleHome.teamId;
+    awaySideTeamId = scheduleAway.teamId;
+  }
+
+  const verifiedHomePlayer = homePlayerTeamId != null;
+  const verifiedAwayPlayer = awayPlayerTeamId != null;
+  const verifiedCount = Number(verifiedHomePlayer) + Number(verifiedAwayPlayer);
+
+  if (homeSideTeamId === awaySideTeamId) {
+    alignment = "partial";
+    blockingError =
+      "Could not map both netplay players in the stats file to different teams for this game.";
   } else if (!hasHomeManager && !hasAwayManager) {
     alignment = "unverified";
     warnings.push(
-      "Neither team has a manager assigned, so netplay names could not be verified. Scores were saved using the schedule home/away order.",
+      `Stats file lists away "${parsed.awayPlayer}" and home "${parsed.homePlayer}". Neither team has a registered manager yet, so scores were saved using the schedule home/away order.`,
     );
-  } else if (!anyKnownSide) {
+  } else if (verifiedCount === 0) {
     alignment = "partial";
     blockingError =
       "Netplay names in the stats file do not match either manager for this game. Confirm you are uploading to the correct matchup and that managers have linked their Rio/netplay username.";
@@ -120,38 +141,50 @@ export function matchNetplayTeams(
       `File players: away "${parsed.awayPlayer}", home "${parsed.homePlayer}". Scheduled: away ${primaryNetplayLabel(scheduleAway.manager) ?? "—"}, home ${primaryNetplayLabel(scheduleHome.manager) ?? "—"}.`,
     );
   } else {
-    alignment = "partial";
-    const useSwap = swapSignals > directSignals;
+    const scheduleMatchesFile =
+      homeSideTeamId === scheduleHome.teamId && awaySideTeamId === scheduleAway.teamId;
 
-    if (useSwap) {
-      mapping = applySwappedMapping(parsed, scheduleHome, scheduleAway);
-      warnings.push(
-        `Only one manager matched and their side looked swapped on the schedule — scores and rosters were flipped to match the stats file.`,
-      );
+    if (verifiedCount === 2) {
+      alignment = scheduleMatchesFile ? "direct" : "swapped";
+      if (!scheduleMatchesFile) {
+        warnings.push(
+          `Schedule home/away was reversed. Stats file has home "${parsed.homePlayer}" and away "${parsed.awayPlayer}" — saved using those JSON sides.`,
+        );
+      }
     } else {
-      mapping = applyDirectMapping(parsed, scheduleHome, scheduleAway);
+      alignment = "partial";
       warnings.push(
-        "Only one manager could be verified from netplay names — saved using schedule home/away for the other team.",
+        `Stats file lists home "${parsed.homePlayer}" and away "${parsed.awayPlayer}". Saved using those JSON sides.`,
       );
-    }
-
-    if (hasHomeManager && !homeSideKnown) {
-      warnings.push(
-        `Scheduled home manager (${primaryNetplayLabel(scheduleHome.manager) ?? scheduleHome.teamName}) did not match file home "${parsed.homePlayer}" or away "${parsed.awayPlayer}".`,
-      );
-    }
-    if (hasAwayManager && !awaySideKnown) {
-      warnings.push(
-        `Scheduled away manager (${primaryNetplayLabel(scheduleAway.manager) ?? scheduleAway.teamName}) did not match file home "${parsed.homePlayer}" or away "${parsed.awayPlayer}".`,
-      );
-    }
-    if (!hasHomeManager) {
-      warnings.push("Scheduled home team has no manager yet — could not verify that side.");
-    }
-    if (!hasAwayManager) {
-      warnings.push("Scheduled away team has no manager yet — could not verify that side.");
+      if (!verifiedHomePlayer) {
+        warnings.push(
+          `Home player "${parsed.homePlayer}" is not linked to an account yet — assigned to ${homeSideTeamId === scheduleHome.teamId ? scheduleHome.teamName : scheduleAway.teamName}.`,
+        );
+      }
+      if (!verifiedAwayPlayer) {
+        warnings.push(
+          `Away player "${parsed.awayPlayer}" is not linked to an account yet — assigned to ${awaySideTeamId === scheduleAway.teamId ? scheduleAway.teamName : scheduleHome.teamName}.`,
+        );
+      }
     }
   }
+
+  const mapping =
+    blockingError == null
+      ? buildMapping(
+          parsed,
+          scheduleHome,
+          scheduleAway,
+          homeSideTeamId,
+          awaySideTeamId,
+        )
+      : buildMapping(
+          parsed,
+          scheduleHome,
+          scheduleAway,
+          scheduleHome.teamId,
+          scheduleAway.teamId,
+        );
 
   const fileWinnerLabel = winnerLabel(
     parsed.homeScore,
