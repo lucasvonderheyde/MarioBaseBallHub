@@ -12,14 +12,14 @@ export function BatchGameStatsUploader() {
   const [state, action, pending] = useActionState(uploadStatsBatchAction, null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [selectedCount, setSelectedCount] = useState(0);
+  const [batchPayload, setBatchPayload] = useState("");
   const [isDragging, setIsDragging] = useState(false);
-  const payloadRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadFiles(fileList: FileList | File[] | null) {
     if (!fileList || fileList.length === 0) {
       setSelectedCount(0);
-      if (payloadRef.current) payloadRef.current.value = "";
+      setBatchPayload("");
       return;
     }
     setFileError(null);
@@ -29,7 +29,7 @@ export function BatchGameStatsUploader() {
     if (files.length === 0) {
       setFileError("Add decoded JSON files only.");
       setSelectedCount(0);
-      if (payloadRef.current) payloadRef.current.value = "";
+      setBatchPayload("");
       return;
     }
     if (files.length > MAX_FILES) {
@@ -43,14 +43,12 @@ export function BatchGameStatsUploader() {
           jsonText: await file.text(),
         })),
       );
-      if (payloadRef.current) {
-        payloadRef.current.value = JSON.stringify(payload);
-      }
+      setBatchPayload(JSON.stringify(payload));
       setSelectedCount(files.length);
     } catch {
       setFileError("Could not read one or more files.");
       setSelectedCount(0);
-      if (payloadRef.current) payloadRef.current.value = "";
+      setBatchPayload("");
     }
   }
 
@@ -73,7 +71,7 @@ export function BatchGameStatsUploader() {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
       <form action={action} className="space-y-3">
-        <input ref={payloadRef} type="hidden" name="batchPayload" defaultValue="" />
+        <input type="hidden" name="batchPayload" value={batchPayload} readOnly />
         <div
           role="button"
           tabIndex={0}
@@ -116,7 +114,7 @@ export function BatchGameStatsUploader() {
 
         <button
           type="submit"
-          disabled={pending || selectedCount === 0}
+          disabled={pending || selectedCount === 0 || !batchPayload}
           className="msb-btn-primary px-3 py-1 text-sm disabled:opacity-50"
         >
           {pending ? "Uploading…" : "Add to lifetime stats"}
