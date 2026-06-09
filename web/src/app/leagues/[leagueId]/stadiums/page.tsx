@@ -34,6 +34,10 @@ export default async function StadiumLibraryPage({ params, searchParams }: Props
   return (
     <PageShell width="wide">
       <h1 className="text-2xl font-bold">Stadium library</h1>
+      <p className="mt-1 text-sm text-zinc-500">
+        Game counts and stats use the <span className="font-mono text-zinc-400">StadiumID</span>{" "}
+        field from each uploaded game JSON.
+      </p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <Link

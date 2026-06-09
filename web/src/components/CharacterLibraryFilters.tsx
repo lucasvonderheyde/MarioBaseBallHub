@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Props = {
   leagueId: string;
   seasonId?: string;
   managerUserId?: string;
+  searchQuery?: string;
   seasons: { id: string; name: string }[];
   managers: { id: string; username: string }[];
 };
@@ -14,29 +16,52 @@ export function CharacterLibraryFilters({
   leagueId,
   seasonId,
   managerUserId,
+  searchQuery,
   seasons,
   managers,
 }: Props) {
   const router = useRouter();
+  const [search, setSearch] = useState(searchQuery ?? "");
 
-  function navigate(nextSeason: string, nextPlayer: string) {
+  useEffect(() => {
+    setSearch(searchQuery ?? "");
+  }, [searchQuery]);
+
+  function navigate(nextSeason: string, nextPlayer: string, nextSearch: string) {
     const params = new URLSearchParams();
     if (nextSeason) params.set("season", nextSeason);
     if (nextPlayer) params.set("player", nextPlayer);
+    if (nextSearch.trim()) params.set("q", nextSearch.trim());
     const q = params.toString();
-    router.push(
-      `/leagues/${leagueId}/characters${q ? `?${q}` : ""}`,
-    );
+    router.push(`/leagues/${leagueId}/characters${q ? `?${q}` : ""}`);
   }
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (search === (searchQuery ?? "")) return;
+      navigate(seasonId ?? "", managerUserId ?? "", search);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [search, searchQuery, seasonId, managerUserId]);
 
   return (
     <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+      <label className="flex min-w-[12rem] flex-1 flex-col gap-1">
+        <span className="text-xs text-zinc-500">Search</span>
+        <input
+          type="search"
+          value={search}
+          placeholder="Name or CharID…"
+          className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </label>
       <label className="flex flex-col gap-1">
         <span className="text-xs text-zinc-500">Season</span>
         <select
           defaultValue={seasonId ?? ""}
           className="min-w-[10rem] rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
-          onChange={(e) => navigate(e.target.value, managerUserId ?? "")}
+          onChange={(e) => navigate(e.target.value, managerUserId ?? "", search)}
         >
           <option value="">All seasons</option>
           {seasons.map((s) => (
@@ -51,7 +76,7 @@ export function CharacterLibraryFilters({
         <select
           defaultValue={managerUserId ?? ""}
           className="min-w-[10rem] rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
-          onChange={(e) => navigate(seasonId ?? "", e.target.value)}
+          onChange={(e) => navigate(seasonId ?? "", e.target.value, search)}
         >
           <option value="">All managers</option>
           {managers.map((m) => (

@@ -152,6 +152,32 @@ export async function backfillCharacterGameStats(seasonId: string): Promise<numb
     await recomputeCharOccurrenceIndexesForGame(g.id);
   }
 
+  await resyncStadiumIdsFromGameJson(seasonId);
+  return count;
+}
+
+/** Re-reads StadiumID from stored game JSON so stadium pages stay aligned with uploads. */
+export async function resyncStadiumIdsFromGameJson(seasonId: string): Promise<number> {
+  const games = await db
+    .select({
+      id: scheduleGames.id,
+      statsRawJson: scheduleGames.statsRawJson,
+    })
+    .from(scheduleGames)
+    .innerJoin(rounds, eq(scheduleGames.roundId, rounds.id))
+    .where(and(eq(rounds.seasonId, seasonId), isNotNull(scheduleGames.statsRawJson)));
+
+  let count = 0;
+  for (const game of games) {
+    if (!game.statsRawJson) continue;
+    const parsed = parseCharacterGameStats(JSON.parse(game.statsRawJson) as unknown);
+    if (!parsed.stadiumId) continue;
+    await db
+      .update(scheduleGames)
+      .set({ statsStadiumId: parsed.stadiumId })
+      .where(eq(scheduleGames.id, game.id));
+    count++;
+  }
   return count;
 }
 

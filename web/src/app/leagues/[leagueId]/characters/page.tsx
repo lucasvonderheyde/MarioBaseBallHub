@@ -12,16 +12,17 @@ import {
   aggregateBattingByCharId,
   getManagersInLeague,
 } from "@/lib/game-stats-queries";
+import { matchesCharacterSearch } from "@/lib/character-search";
 import { PageShell } from "@/components/PageShell";
 
 type Props = {
   params: Promise<{ leagueId: string }>;
-  searchParams: Promise<{ season?: string; player?: string }>;
+  searchParams: Promise<{ season?: string; player?: string; q?: string }>;
 };
 
 export default async function CharacterLibraryPage({ params, searchParams }: Props) {
   const { leagueId } = await params;
-  const { season: seasonId, player: managerUserId } = await searchParams;
+  const { season: seasonId, player: managerUserId, q: searchQuery } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -46,6 +47,14 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
   });
   const managers = await getManagersInLeague(leagueId);
 
+  const query = searchQuery?.trim() ?? "";
+  const filteredActive = query
+    ? active.filter((character) => matchesCharacterSearch(character, query))
+    : active;
+  const filteredInactive = query
+    ? inactive.filter((character) => matchesCharacterSearch(character, query))
+    : inactive;
+
   const seasonLabel = selectedSeason?.name ?? "any season";
 
   return (
@@ -61,6 +70,7 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
         leagueId={leagueId}
         seasonId={seasonId}
         managerUserId={managerUserId}
+        searchQuery={query}
         seasons={seasonRows}
         managers={managers}
       />
@@ -69,17 +79,20 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
         <h2 className="text-lg font-semibold">Active characters</h2>
         <p className="text-sm text-zinc-500">
           In the league pool for {seasonLabel}.
+          {query ? ` Showing matches for “${query}”.` : null}
         </p>
-        {active.length > 0 ? (
+        {filteredActive.length > 0 ? (
           <CharacterLibraryGrid
             leagueId={leagueId}
             seasonId={seasonId}
-            characters={active}
+            characters={filteredActive}
             batting={batting}
           />
         ) : (
           <p className="mt-3 text-sm text-zinc-500">
-            No active characters in the pool yet. Set league copies on the season admin page.
+            {query
+              ? "No active characters match your search."
+              : "No active characters in the pool yet. Set league copies on the season admin page."}
           </p>
         )}
       </section>
@@ -90,13 +103,17 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
           <p className="text-sm text-zinc-600">
             Not in the pool for {seasonLabel}. You can still view their attributes and stats.
           </p>
-          <CharacterLibraryGrid
-            leagueId={leagueId}
-            seasonId={seasonId}
-            characters={inactive}
-            batting={batting}
-            inactive
-          />
+          {filteredInactive.length > 0 ? (
+            <CharacterLibraryGrid
+              leagueId={leagueId}
+              seasonId={seasonId}
+              characters={filteredInactive}
+              batting={batting}
+              inactive
+            />
+          ) : query ? (
+            <p className="mt-3 text-sm text-zinc-500">No inactive characters match your search.</p>
+          ) : null}
         </section>
       ) : null}
     </PageShell>

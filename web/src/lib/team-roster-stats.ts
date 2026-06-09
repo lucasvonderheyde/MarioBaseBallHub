@@ -109,12 +109,8 @@ export function resolvePitchingLineForRosterCopy(
   return byCharId.get(charId);
 }
 
-export function activeRosterStatKeys(
-  roster: { gameCharId: string; copyIndex: number }[],
+export function currentRosterCharIds(
+  roster: { gameCharId: string }[],
 ): Set<string> {
-  const keys = new Set<string>();
-  for (const row of roster) {
-    keys.add(battingStatKey(row.gameCharId, row.copyIndex - 1));
-  }
-  return keys;
+  return new Set(roster.map((row) => row.gameCharId));
 }

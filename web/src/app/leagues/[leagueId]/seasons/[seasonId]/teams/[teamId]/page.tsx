@@ -15,12 +15,12 @@ import { getLeagueRole } from "@/lib/league-access";
 import {
   aggregateBattingByCharId,
   aggregateBattingByCharOccurrence,
-  aggregateOffRosterTeamStats,
+  aggregateFormerRosterTeamStats,
   aggregatePitchingByCharId,
   aggregatePitchingByCharOccurrence,
 } from "@/lib/game-stats-queries";
 import {
-  activeRosterStatKeys,
+  currentRosterCharIds,
   resolveBattingLineForRosterCopy,
   resolvePitchingLineForRosterCopy,
 } from "@/lib/team-roster-stats";
@@ -83,20 +83,18 @@ export default async function TeamPage({ params, searchParams }: Props) {
     );
   }
 
-  const activeKeys = activeRosterStatKeys(
-    roster.map(({ character, instance }) => ({
-      gameCharId: character.gameCharId,
-      copyIndex: instance.copyIndex,
-    })),
+  const rosterCharIds = currentRosterCharIds(
+    roster.map(({ character }) => ({ gameCharId: character.gameCharId })),
   );
-  const offRoster = await aggregateOffRosterTeamStats(seasonId, teamId, activeKeys);
+  const offRoster = await aggregateFormerRosterTeamStats(
+    seasonId,
+    teamId,
+    rosterCharIds,
+  );
 
-  const offRosterCharIds = [
-    ...new Set([
-      ...[...offRoster.batting.values()].map((line) => line.charId),
-      ...[...offRoster.pitching.values()].map((line) => line.charId),
-    ]),
-  ];
+  const offRosterCharIds = [...offRoster.charIds].filter(
+    (charId) => offRoster.batting.has(charId) || offRoster.pitching.has(charId),
+  );
   const offRosterCharacters =
     offRosterCharIds.length > 0
       ? await db
@@ -424,8 +422,8 @@ export default async function TeamPage({ params, searchParams }: Props) {
         <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
           <h2 className="text-lg font-semibold">Former roster</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Characters who appeared in uploaded games for this team but are no longer on
-            the roster (trades, releases, etc.).
+            Characters who played for this team earlier in the season but are not on the
+            current roster and did not appear in the most recent uploaded game.
           </p>
 
           {[...offRoster.batting.entries()].length > 0 ? (
@@ -456,10 +454,10 @@ export default async function TeamPage({ params, searchParams }: Props) {
                           formatCharIdDisplay(b.charId);
                         return nameA.localeCompare(nameB);
                       })
-                      .map(([key, line]) => {
+                      .map(([charId, line]) => {
                         const character = offRosterCharMap.get(line.charId);
                         return (
-                          <tr key={key} className="border-b border-zinc-900">
+                          <tr key={charId} className="border-b border-zinc-900">
                             <td className="py-2 pr-2">
                               <Link
                                 href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}`}
@@ -524,10 +522,10 @@ export default async function TeamPage({ params, searchParams }: Props) {
                           formatCharIdDisplay(b.charId);
                         return nameA.localeCompare(nameB);
                       })
-                      .map(([key, line]) => {
+                      .map(([charId, line]) => {
                         const character = offRosterCharMap.get(line.charId);
                         return (
-                          <tr key={key} className="border-b border-zinc-900">
+                          <tr key={charId} className="border-b border-zinc-900">
                             <td className="py-2 pr-2">
                               <Link
                                 href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}&tab=pitching`}

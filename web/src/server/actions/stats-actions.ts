@@ -182,6 +182,7 @@ export async function uploadStatsAction(
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`);
   revalidatePath(`/leagues/${leagueId}/schedule`);
   revalidatePath(`/leagues/${leagueId}/playoffs`);
+  revalidatePath(`/leagues/${leagueId}/stadiums`);
   const out: { ok: true; warnings?: string[] } = { ok: true };
   if (match.warnings.length) out.warnings = match.warnings;
   return out;
@@ -196,5 +197,6 @@ export async function backfillStatsAction(
   if (role !== "admin") return { error: "Forbidden" };
   const count = await backfillCharacterGameStats(seasonId);
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(`/leagues/${leagueId}/stadiums`);
   return { ok: true, count };
 }

@@ -393,29 +393,109 @@ export async function aggregatePitchingByCharAndSeason(
   }));
 }
 
-/** Stats for characters who appeared in games for this team but are not on the current roster. */
-export async function aggregateOffRosterTeamStats(
+/**
+ * Characters who played for this team in uploaded games but left before the most recent
+ * game and are not on the admin roster. Walks games in chronological order so active
+ * roster members are not misclassified when occurrence indexes differ from copy indexes.
+ */
+export async function getFormerRosterCharIds(
   seasonId: string,
   teamId: string,
-  activeRosterKeys: Set<string>,
+  currentRosterCharIds: ReadonlySet<string>,
+): Promise<Set<string>> {
+  const rows = await db
+    .select({
+      gameId: scheduleGames.id,
+      charId: characterGameStats.charId,
+    })
+    .from(characterGameStats)
+    .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
+    .where(
+      and(
+        eq(characterGameStats.seasonId, seasonId),
+        eq(characterGameStats.teamId, teamId),
+        sql`${scheduleGames.statsRawJson} IS NOT NULL`,
+      ),
+    )
+    .orderBy(asc(scheduleGames.playedAt), asc(scheduleGames.id), asc(characterGameStats.rosterSlot));
+
+  const orderedGameIds: string[] = [];
+  const seenGames = new Set<string>();
+  const charsByGame = new Map<string, Set<string>>();
+  const everAppeared = new Set<string>();
+
+  for (const row of rows) {
+    everAppeared.add(row.charId);
+    let gameChars = charsByGame.get(row.gameId);
+    if (!gameChars) {
+      gameChars = new Set();
+      charsByGame.set(row.gameId, gameChars);
+    }
+    gameChars.add(row.charId);
+    if (!seenGames.has(row.gameId)) {
+      seenGames.add(row.gameId);
+      orderedGameIds.push(row.gameId);
+    }
+  }
+
+  const lastGameId = orderedGameIds[orderedGameIds.length - 1];
+  const lastGameCharIds = lastGameId
+    ? (charsByGame.get(lastGameId) ?? new Set<string>())
+    : new Set<string>();
+
+  const former = new Set<string>();
+  for (const charId of everAppeared) {
+    if (currentRosterCharIds.has(charId)) continue;
+    if (lastGameCharIds.has(charId)) continue;
+    former.add(charId);
+  }
+  return former;
+}
+
+/** Season totals for characters who truly left this team (see getFormerRosterCharIds). */
+export async function aggregateFormerRosterTeamStats(
+  seasonId: string,
+  teamId: string,
+  currentRosterCharIds: ReadonlySet<string>,
 ): Promise<{
+  charIds: Set<string>;
   batting: Map<string, BattingLine>;
   pitching: Map<string, PitchingLine>;
 }> {
-  const battingAll = await aggregateBattingByCharOccurrence({ seasonId, teamId });
-  const pitchingAll = await aggregatePitchingByCharOccurrence({ seasonId, teamId });
+  const formerCharIds = await getFormerRosterCharIds(
+    seasonId,
+    teamId,
+    currentRosterCharIds,
+  );
+  if (formerCharIds.size === 0) {
+    return { charIds: formerCharIds, batting: new Map(), pitching: new Map() };
+  }
+
+  const [battingAll, pitchingAll] = await Promise.all([
+    aggregateBattingByCharId({ seasonId, teamId }),
+    aggregatePitchingByCharId({ seasonId, teamId }),
+  ]);
 
   const batting = new Map<string, BattingLine>();
   const pitching = new Map<string, PitchingLine>();
 
-  for (const [key, line] of battingAll) {
-    if (!activeRosterKeys.has(key)) batting.set(key, line);
-  }
-  for (const [key, line] of pitchingAll) {
-    if (!activeRosterKeys.has(key)) pitching.set(key, line);
+  for (const charId of formerCharIds) {
+    const battingLine = battingAll.get(charId);
+    if (battingLine && (battingLine.ab > 0 || battingLine.games > 0)) {
+      batting.set(charId, battingLine);
+    }
+    const pitchingLine = pitchingAll.get(charId);
+    if (
+      pitchingLine &&
+      (pitchingLine.outsPitched > 0 ||
+        pitchingLine.battersFaced > 0 ||
+        pitchingLine.games > 0)
+    ) {
+      pitching.set(charId, pitchingLine);
+    }
   }
 
-  return { batting, pitching };
+  return { charIds: formerCharIds, batting, pitching };
 }
 
 export async function aggregateBattingByCharAndManager(
@@ -502,6 +582,7 @@ export async function aggregateBattingByCharAndStadium(
     eq(characterGameStats.charId, charId),
     eq(seasons.leagueId, leagueId),
     sql`${scheduleGames.statsStadiumId} IS NOT NULL`,
+    sql`${scheduleGames.statsRawJson} IS NOT NULL`,
   ];
   if (seasonId) conditions.push(eq(characterGameStats.seasonId, seasonId));
 
@@ -618,6 +699,7 @@ export async function getTopCharsAtStadium(
   const conditions = [
     eq(scheduleGames.statsStadiumId, stadiumGameId),
     eq(seasons.leagueId, leagueId),
+    sql`${scheduleGames.statsRawJson} IS NOT NULL`,
   ];
   if (seasonId) conditions.push(eq(characterGameStats.seasonId, seasonId));
 
@@ -660,6 +742,7 @@ export async function getPlayerStadiumRecords(
     eq(scheduleGames.statsStadiumId, stadiumGameId),
     eq(seasons.leagueId, leagueId),
     sql`${scheduleGames.playedAt} IS NOT NULL`,
+    sql`${scheduleGames.statsRawJson} IS NOT NULL`,
   ];
   if (seasonId) conditions.push(eq(seasons.id, seasonId));
 
