@@ -3,13 +3,48 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import path from "path";
 import * as schema from "./schema";
+import { isNextProductionBuild } from "./build-phase";
 import { resolveDbPath } from "./resolve-db-path";
 
-const dbPath = resolveDbPath();
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
 
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
+const globalForDb = globalThis as typeof globalThis & {
+  __msbSqlite?: Database.Database;
+  __msbDrizzle?: DrizzleDb;
+};
 
-export const db = drizzle(sqlite, { schema });
+function connectionPath(): string {
+  if (isNextProductionBuild()) {
+    return ":memory:";
+  }
+  return resolveDbPath();
+}
+
+function openSqlite(): Database.Database {
+  const dbPath = connectionPath();
+  if (dbPath !== ":memory:") {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  }
+
+  const sqlite = new Database(dbPath);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("busy_timeout = 5000");
+  return sqlite;
+}
+
+function getSqlite(): Database.Database {
+  if (!globalForDb.__msbSqlite) {
+    globalForDb.__msbSqlite = openSqlite();
+  }
+  return globalForDb.__msbSqlite;
+}
+
+function getDb(): DrizzleDb {
+  if (!globalForDb.__msbDrizzle) {
+    globalForDb.__msbDrizzle = drizzle(getSqlite(), { schema });
+  }
+  return globalForDb.__msbDrizzle;
+}
+
+export const db = getDb();
 export type Db = typeof db;
