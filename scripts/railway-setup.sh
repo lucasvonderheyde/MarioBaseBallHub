@@ -20,7 +20,8 @@ SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex')
 echo "Setting environment variables…"
 npx @railway/cli variables set \
   "DATABASE_URL=file:/app/data/league.db" \
-  "SESSION_PASSWORD=${SECRET}"
+  "SESSION_PASSWORD=${SECRET}" \
+  "SITE_ADMIN_USERNAME=zomsoth"
 
 echo ""
 echo "IMPORTANT — configure once in the Railway dashboard (Settings):"

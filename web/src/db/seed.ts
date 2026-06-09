@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { db } from "./index";
 import { characters, stadiums } from "./schema";
 import { CHARACTER_CATALOG, STADIUM_CATALOG } from "../data/character-catalog";
+import { grantSiteAdminFromEnv } from "./grant-site-admin";
 
 async function main() {
   await db
@@ -26,6 +27,8 @@ async function main() {
       })),
     )
     .onConflictDoNothing({ target: stadiums.gameStadiumId });
+
+  await grantSiteAdminFromEnv();
 
   console.log("Seed complete (characters + stadiums, idempotent).");
 }
