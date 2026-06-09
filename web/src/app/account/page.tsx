@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
 import { updateProfileAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
 
@@ -33,6 +33,15 @@ export default async function AccountPage({
       {m === "updated" ? (
         <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Profile updated.
+        </p>
+      ) : null}
+
+      {!userIsSiteAdmin(user) ? (
+        <p className="mt-4 text-sm text-zinc-500">
+          Need site admin?{" "}
+          <Link href="/setup-admin" className="text-amber-400 hover:underline">
+            Claim admin access
+          </Link>
         </p>
       ) : null}
 

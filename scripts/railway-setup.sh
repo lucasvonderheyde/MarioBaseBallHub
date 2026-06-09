@@ -16,13 +16,18 @@ if [[ ! -f .railway/project.json ]] && [[ ! -d .railway ]]; then
 fi
 
 SECRET="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+ADMIN_SECRET="$(node -e "console.log(require('crypto').randomBytes(24).toString('hex'))")"
 
 echo "Setting environment variables…"
 npx @railway/cli variables set \
   "DATABASE_URL=file:/app/data/league.db" \
   "SESSION_PASSWORD=${SECRET}" \
-  "SITE_ADMIN_USERNAME=zomsoth"
+  "SITE_ADMIN_USERNAME=zomsoth" \
+  "ADMIN_SETUP_SECRET=${ADMIN_SECRET}"
 
+echo ""
+echo "Save this admin setup secret — use it at /setup-admin after logging in:"
+echo "  ${ADMIN_SECRET}"
 echo ""
 echo "IMPORTANT — configure once in the Railway dashboard (Settings):"
 echo ""

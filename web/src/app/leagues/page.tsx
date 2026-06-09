@@ -11,11 +11,11 @@ import { getLeaguesWithClaimableTeams } from "@/lib/team-claims";
 export default async function LeaguesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ e?: string }>;
+  searchParams: Promise<{ e?: string; m?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const { e } = await searchParams;
+  const { e, m } = await searchParams;
 
   const memberRows = await db
     .select({ league: leagues })
@@ -54,6 +54,11 @@ export default async function LeaguesPage({
       {e ? (
         <p className="mt-2 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {e}
+        </p>
+      ) : null}
+      {m === "site-admin-granted" ? (
+        <p className="mt-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Site admin access granted. You can create leagues and manage seasons.
         </p>
       ) : null}
       {claimableLeagues.length > 0 ? (

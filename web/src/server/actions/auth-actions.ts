@@ -4,6 +4,10 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
+import {
+  isConfiguredSiteAdminUsername,
+  maybeGrantSiteAdminOnAuth,
+} from "@/db/grant-site-admin";
 import { users } from "@/db/schema";
 import { getSession } from "@/lib/session";
 import { redirectWithFormError } from "@/server/flash-redirect";
@@ -34,10 +38,12 @@ export async function registerAction(formData: FormData) {
       username,
       passwordHash: hash,
       displayName: displayName || null,
+      isSiteAdmin: isConfiguredSiteAdminUsername(username),
     });
   } catch {
     redirectWithFormError("/register", "Username already taken.");
   }
+  await maybeGrantSiteAdminOnAuth(id, username);
   const session = await getSession();
   session.userId = id;
   await session.save();
@@ -56,6 +62,7 @@ export async function loginAction(formData: FormData) {
   if (!u || !(await bcrypt.compare(password, u.passwordHash))) {
     redirectWithFormError("/login", "Invalid credentials.");
   }
+  await maybeGrantSiteAdminOnAuth(u.id, u.username);
   const session = await getSession();
   session.userId = u.id;
   await session.save();
