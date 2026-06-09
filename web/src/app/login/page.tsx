@@ -42,6 +42,7 @@ export default async function LoginPage({
             name="password"
             type="password"
             required
+            autoComplete="current-password"
             className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
           />
         </div>

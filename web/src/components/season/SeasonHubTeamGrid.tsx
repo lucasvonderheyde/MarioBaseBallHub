@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { TeamStandingRow } from "@/domain/standings/compute-standings";
+import { Card } from "@/components/ui/Card";
 import {
   MIN_TEAM_ROSTER_SIZE,
   rosterCountMeetsMinimum,
@@ -30,9 +31,8 @@ export function SeasonHubTeamGrid({
   );
 
   return (
-    <section className="mt-8">
-      <h2 className="text-lg font-semibold">Teams</h2>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <Card title="Teams">
+      <div className="grid gap-3 sm:grid-cols-2">
         {teams.map(({ team, manager }) => {
           const record = recordByTeam.get(team.id);
           const rosterCount = rosterCounts.get(team.id) ?? 0;
@@ -41,9 +41,9 @@ export function SeasonHubTeamGrid({
             <Link
               key={team.id}
               href={`/leagues/${leagueId}/seasons/${seasonId}/teams/${team.id}`}
-              className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 hover:border-zinc-600"
+              className="rounded-lg border border-zinc-800/80 bg-zinc-950/30 p-4 transition hover:border-zinc-600/80"
             >
-              <p className="font-medium text-amber-400">{team.name}</p>
+              <p className="font-medium text-msb-gold-bright">{team.name}</p>
               {manager ? (
                 <p className="mt-1 text-sm text-zinc-500">@{manager.username}</p>
               ) : (
@@ -51,7 +51,7 @@ export function SeasonHubTeamGrid({
               )}
               <p
                 className={`mt-2 text-sm tabular-nums ${
-                  rosterOk ? "text-zinc-400" : "text-amber-400"
+                  rosterOk ? "text-zinc-400" : "text-msb-gold-bright"
                 }`}
               >
                 Roster: {rosterCount}/{MIN_TEAM_ROSTER_SIZE}
@@ -68,6 +68,6 @@ export function SeasonHubTeamGrid({
           );
         })}
       </div>
-    </section>
+    </Card>
   );
 }

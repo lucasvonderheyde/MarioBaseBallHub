@@ -11,6 +11,7 @@ import {
   type TradeRequestDisplay,
   type TradeRosterInstance,
 } from "@/lib/trade-request-display";
+import { Card } from "@/components/ui/Card";
 
 type TeamOption = {
   id: string;
@@ -119,19 +120,17 @@ export function SeasonTradePanel({
 
   if (!userTeam) {
     return (
-      <section className="mt-8 msb-panel p-4 sm:p-5">
-        <h2 className="text-lg font-semibold">Trades</h2>
-        <p className="mt-2 text-sm text-zinc-500">
+      <Card title="Trades">
+        <p className="text-sm text-zinc-500">
           Claim a team to propose trades with other managers.
         </p>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <section className="mt-8 msb-panel p-4 sm:p-5">
-      <h2 className="text-lg font-semibold">Trades</h2>
-      <p className="mt-1 text-sm text-zinc-500">
+    <Card title="Trades">
+      <p className="-mt-2 mb-4 text-sm text-zinc-500">
         Propose roster swaps with another manager. Each character copy counts as a
         separate player; both teams must keep at least 9 roster players.
       </p>
@@ -307,6 +306,6 @@ export function SeasonTradePanel({
       </form>
 
       {error ? <p className="mt-2 text-sm text-red-400">{error}</p> : null}
-    </section>
+    </Card>
   );
 }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { resolvePostAuthRedirect } from "@/lib/post-auth-redirect";
 import { isSafeRedirectPath } from "@/lib/team-claims";
+import { passwordPolicyDescription } from "@/lib/password-policy";
 import { registerAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
 
@@ -55,9 +56,13 @@ export default async function RegisterPage({
             name="password"
             type="password"
             required
-            minLength={6}
+            minLength={10}
+            autoComplete="new-password"
             className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
           />
+          <p className="mt-1 text-xs text-zinc-600">
+            {passwordPolicyDescription()}
+          </p>
         </div>
         <button
           type="submit"

@@ -13,6 +13,7 @@ import {
   scheduleStatusLabel,
   type ScheduleGameCardStatus,
 } from "@/lib/schedule-display";
+import { HighlightedMatchupCard } from "@/components/matchups/HighlightedMatchupCard";
 import { clearGameStatsAction } from "@/server/actions";
 
 export type ScheduleRoundDisplay = {
@@ -303,6 +304,8 @@ export function PlayoffGameCard({
   game,
   leagueId,
   seasonId,
+  awayWinPct,
+  homeWinPct,
 }: {
   game: PlayoffGameView & {
     bestOf?: number;
@@ -311,11 +314,10 @@ export function PlayoffGameCard({
   };
   leagueId: string;
   seasonId: string;
+  awayWinPct?: number;
+  homeWinPct?: number;
 }) {
   const gameHref = `/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`;
-  const cardClass = game.played
-    ? "rounded-lg border border-zinc-900 bg-zinc-950/80 px-3 py-2 text-sm"
-    : "rounded-lg border border-msb-grass/45 bg-emerald-950/20 px-3 py-2 text-sm";
 
   const seriesLabel =
     game.bestOf && game.bestOf > 1 && game.seriesGameNumber
@@ -323,37 +325,21 @@ export function PlayoffGameCard({
       : null;
 
   return (
-    <div className={cardClass}>
-      {seriesLabel ? (
-        <div className="text-xs text-zinc-500">{seriesLabel}</div>
-      ) : null}
-      <div className="font-medium">
-        ({game.slotInRound}){" "}
-        {game.played && game.awayScore != null && game.homeScore != null ? (
-          <GameMatchupInline
-            awayName={game.awayName}
-            homeName={game.homeName}
-            awayScore={game.awayScore}
-            homeScore={game.homeScore}
-          />
-        ) : (
-          <>
-            {game.awayName} @ {game.homeName}
-          </>
-        )}
-      </div>
-      {!game.played ? (
-        <div className="mt-1 text-zinc-400">Scheduled</div>
-      ) : null}
-      {game.statsGameId ? (
-        <Link
-          href={gameHref}
-          className="mt-1 inline-block text-xs text-amber-400 hover:underline"
-        >
-          Box score
-        </Link>
-      ) : null}
-    </div>
+    <HighlightedMatchupCard
+      headline="Playoff matchup"
+      subheadline={`Slot ${game.slotInRound}`}
+      seriesLabel={seriesLabel}
+      awayName={game.awayName}
+      homeName={game.homeName}
+      awayWinPct={game.played ? undefined : awayWinPct}
+      homeWinPct={game.played ? undefined : homeWinPct}
+      reasons={game.played ? [] : ["playoff_stakes"]}
+      gameHref={gameHref}
+      awayScore={game.awayScore}
+      homeScore={game.homeScore}
+      played={game.played}
+      variant="playoff"
+    />
   );
 }
 

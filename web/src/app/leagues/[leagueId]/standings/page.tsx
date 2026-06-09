@@ -22,6 +22,9 @@ import {
   pickDefaultSeasonId,
 } from "@/lib/league-seasons";
 import { isRegularSeasonComplete } from "@/lib/regular-season-status";
+import { buildSeasonOddsSnapshot } from "@/lib/season-odds";
+import { pickRivalryOfWeek } from "@/domain/odds/rivalry-of-week";
+import type { FinishedGame } from "@/domain/standings/compute-standings";
 
 type Props = {
   params: Promise<{ leagueId: string }>;
@@ -94,6 +97,46 @@ export default async function LeagueStandingsPage({ params, searchParams }: Prop
   const selectedSeason = seasons.find((s) => s.id === seasonId)!;
   const showPlayIn = playInEnabled(settings);
   const directSpots = getDirectQualifyCount(settings);
+  const oddsSnapshot = buildSeasonOddsSnapshot(dash);
+
+  const finishedGames: FinishedGame[] = [];
+  for (const { game, round } of dash.games) {
+    if (round.phase !== "regular") continue;
+    if (game.homeScore == null || game.awayScore == null || game.playedAt == null) {
+      continue;
+    }
+    finishedGames.push({
+      homeTeamId: game.homeTeamId,
+      awayTeamId: game.awayTeamId,
+      homeScore: game.homeScore,
+      awayScore: game.awayScore,
+    });
+  }
+
+  const playoffFeatured = regularSeasonComplete
+    ? pickRivalryOfWeek({
+        games: dash.games.map(({ game, round }) => ({
+          gameId: game.id,
+          homeTeamId: game.homeTeamId,
+          awayTeamId: game.awayTeamId,
+          roundNumber: round.roundNumber,
+          phase: round.phase,
+          slotInRound: game.slotInRound,
+          homeScore: game.homeScore,
+          awayScore: game.awayScore,
+          statsRawJson: game.statsRawJson,
+        })),
+        standings: dash.standings.map((row, index) => ({
+          teamId: row.teamId,
+          wins: row.wins,
+          losses: row.losses,
+          rank: index + 1,
+        })),
+        finishedGames,
+        teamPowers: oddsSnapshot.teamPowers,
+        preferPlayoffs: true,
+      })
+    : null;
 
   return (
     <PageShell width="wide">
@@ -135,6 +178,9 @@ export default async function LeagueStandingsPage({ params, searchParams }: Prop
         showPlayIn={showPlayIn}
         regularSeasonComplete={regularSeasonComplete}
         isAdmin={isLeagueAdmin(role)}
+        gameOdds={oddsSnapshot.gameOdds}
+        playoffFeatured={playoffFeatured}
+        teamNames={teamNames}
       />
     </PageShell>
   );

@@ -225,8 +225,8 @@ body {
 }
 
 .msb-btn-nav-active {
-  border-color: color-mix(in srgb, var(--msb-sky) 70%, transparent);
-  background: color-mix(in srgb, var(--msb-sky) 12%, var(--zinc-900));
+  border-color: color-mix(in srgb, var(--msb-gold-bright) 25%, transparent);
+  background: color-mix(in srgb, var(--msb-gold-bright) 10%, transparent);
   color: var(--msb-gold-bright);
 }
 
@@ -244,17 +244,108 @@ body {
   color: var(--zinc-400);
 }
 
-/* Cards and panels — frosted stadium glass */
+/* Cards and panels — dashboard glass */
 .msb-panel {
-  border-radius: 0.5rem;
-  border: 1px solid rgb(74 159 232 / 0.35);
-  background: rgb(255 255 255 / 0.72);
-  backdrop-filter: blur(4px);
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--zinc-700) 35%, transparent);
+  background: color-mix(in srgb, var(--zinc-950) 72%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .dark .msb-panel {
-  border: 1px solid rgb(74 159 232 / 0.2);
-  background: rgb(21 53 96 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.07);
+  background: rgb(255 255 255 / 0.04);
+}
+
+.msb-card-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--zinc-400) 85%, transparent);
+}
+
+.msb-link {
+  font-size: 0.875rem;
+  color: var(--msb-gold-bright);
+  transition: color 150ms;
+}
+
+.msb-link:hover {
+  text-decoration: underline;
+}
+
+.msb-row-divider {
+  border-bottom: 1px solid color-mix(in srgb, var(--zinc-800) 80%, transparent);
+}
+
+.dark .msb-row-divider {
+  border-bottom-color: rgb(255 255 255 / 0.05);
+}
+
+.msb-row-divider:last-child {
+  border-bottom: none;
+}
+
+.msb-badge-muted {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--zinc-800) 60%, transparent);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1rem;
+  color: var(--zinc-500);
+}
+
+.msb-badge-win {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--emerald-900) 55%, transparent);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1rem;
+  color: var(--emerald-200);
+}
+
+.msb-badge-loss {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--red-900) 55%, transparent);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1rem;
+  color: var(--red-200);
+}
+
+.msb-btn-outline-gold {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.375rem;
+  border: 1px solid color-mix(in srgb, var(--msb-gold-bright) 30%, transparent);
+  background: transparent;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  color: var(--msb-gold-bright);
+  transition:
+    border-color 150ms,
+    color 150ms;
+}
+
+.msb-btn-outline-gold:hover {
+  border-color: color-mix(in srgb, var(--msb-gold-bright) 60%, transparent);
+}
+
+.msb-empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
 }
 
 /* Horizontal scroll for wide tables and nav pills on small screens */

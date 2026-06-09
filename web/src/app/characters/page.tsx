@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { GlobalCharacterFilters } from "@/components/GlobalCharacterFilters";
+import { GlobalCharactersNav } from "@/components/GlobalCharactersNav";
 import { GlobalCharacterGrid } from "@/components/GlobalCharacterGrid";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
@@ -73,6 +74,8 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
         title="All-time characters"
         subtitle="Lifetime hitting stats for every Mario Superstar Baseball character across all leagues, seasons, and uploaded friendlies."
       />
+
+      <GlobalCharactersNav active="library" />
 
       <GlobalCharacterFilters
         managerUserId={managerUserId}

@@ -1,11 +1,8 @@
 import Link from "next/link";
-import {
-  ScheduleGameCard,
-  type ScheduleGameDisplay,
-  type ScheduleTeamDisplay,
-} from "@/components/league-schedule-ui";
-import { canUserReportGame, type LeagueRole } from "@/lib/game-report-access";
-import { scheduleRoundHeading } from "@/lib/schedule-labels";
+import { Card } from "@/components/ui/Card";
+import type { ScheduleGameDisplay, ScheduleTeamDisplay } from "@/components/league-schedule-ui";
+import { isUserGameParticipant } from "@/lib/game-report-access";
+import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
 import type { ScheduleRoundPhase } from "@/lib/upcoming-schedule-games";
 
 type UpcomingEntry = {
@@ -20,8 +17,6 @@ type Props = {
   upcoming: UpcomingEntry[];
   teams: ScheduleTeamDisplay[];
   userId: string;
-  role: LeagueRole | null;
-  isAdmin: boolean;
 };
 
 export function SeasonHubUpcomingGames({
@@ -31,73 +26,80 @@ export function SeasonHubUpcomingGames({
   upcoming,
   teams,
   userId,
-  role,
-  isAdmin,
 }: Props) {
   function teamEntry(teamId: string) {
     return teams.find((entry) => entry.team.id === teamId);
   }
 
-  const title =
-    phase === "playoffs" ? "Upcoming playoff games" : "Upcoming games";
-  const subtitle =
-    phase === "playoffs"
-      ? "Next playoff matchups on the schedule. Propose times or report results from each card."
-      : "Your next games to play. Propose times from each card — when both managers agree, it is announced in the activity feed.";
+  function teamName(teamId: string): string {
+    return teamEntry(teamId)?.team.name ?? "?";
+  }
+
+  const title = phase === "playoffs" ? "Upcoming playoff games" : "Upcoming games";
 
   return (
-    <section className="mt-8 msb-panel p-4 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
-        </div>
+    <Card
+      title={title}
+      action={
         <Link
           href={`/leagues/${leagueId}/schedule`}
-          className="text-sm text-amber-400 hover:underline"
+          className="msb-link shrink-0 text-xs"
         >
           Full schedule →
         </Link>
-      </div>
-
+      }
+    >
       {upcoming.length > 0 ? (
-        <ul className="msb-schedule-grid mt-4">
+        <ul>
           {upcoming.map(({ game, round }) => {
-            const home = teamEntry(game.homeTeamId);
-            const away = teamEntry(game.awayTeamId);
-            const canReport = canUserReportGame(
-              userId,
-              role,
-              home?.manager?.id,
-              away?.manager?.id,
-            );
-            const roundLabel = `${scheduleRoundHeading(round.phase, round.roundNumber)} · Slot ${game.slotInRound}`;
+            const away = teamName(game.awayTeamId);
+            const home = teamName(game.homeTeamId);
+            const homeEntry = teamEntry(game.homeTeamId);
+            const awayEntry = teamEntry(game.awayTeamId);
+            const gameHref = `/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`;
+            const canProposeTime =
+              !game.agreedPlayAt &&
+              isUserGameParticipant(
+                userId,
+                homeEntry?.manager?.id ?? null,
+                awayEntry?.manager?.id ?? null,
+              );
 
             return (
-              <ScheduleGameCard
+              <li
                 key={game.id}
-                leagueId={leagueId}
-                seasonId={seasonId}
-                game={game}
-                awayName={away?.team.name ?? "?"}
-                homeName={home?.team.name ?? "?"}
-                canReport={canReport}
-                isAdmin={isAdmin}
-                userId={userId}
-                homeManagerUserId={home?.manager?.id ?? null}
-                awayManagerUserId={away?.manager?.id ?? null}
-                roundLabel={roundLabel}
-              />
+                className="msb-row-divider flex flex-wrap items-center gap-x-3 gap-y-2 py-3 text-sm"
+              >
+                <span className="min-w-0 flex-1 text-zinc-200">
+                  {away}
+                  <span className="text-zinc-600"> vs </span>
+                  {home}
+                </span>
+                <span className="msb-badge-muted">
+                  {scheduleRoundShortLabel(round.phase, round.roundNumber)}
+                </span>
+                <span className="msb-badge-muted tabular-nums">50 / 50</span>
+                {canProposeTime ? (
+                  <Link href={gameHref} className="msb-btn-outline-gold">
+                    Propose time
+                  </Link>
+                ) : null}
+              </li>
             );
           })}
         </ul>
       ) : (
-        <p className="mt-4 text-sm text-zinc-500">
-          {phase === "playoffs"
-            ? "No upcoming playoff games scheduled."
-            : "No upcoming regular-season games left."}
-        </p>
+        <div className="msb-empty-state">
+          <p className="text-sm text-zinc-500">
+            {phase === "playoffs"
+              ? "No upcoming playoff games"
+              : "No upcoming games this round"}
+          </p>
+          <p className="mt-1 text-xs text-zinc-600">
+            Check the full schedule for later matchups
+          </p>
+        </div>
       )}
-    </section>
+    </Card>
   );
 }

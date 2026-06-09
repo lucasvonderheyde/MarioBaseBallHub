@@ -14,6 +14,7 @@ import { getSession } from "@/lib/session";
 import { isValidProfilePictureUrl } from "@/lib/manager-profile";
 import { redirectWithFormError } from "@/server/flash-redirect";
 import { newUuid } from "@/server/ids";
+import { BCRYPT_COST, validatePassword } from "@/lib/password-policy";
 import { isSafeRedirectPath } from "@/lib/team-claims";
 import { resolvePostAuthRedirect } from "@/lib/post-auth-redirect";
 
@@ -27,13 +28,14 @@ export async function registerAction(formData: FormData) {
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const displayName = String(formData.get("displayName") ?? "").trim();
-  if (username.length < 2 || password.length < 6) {
-    redirectWithFormError(
-      "/register",
-      "Username (2+) and password (6+) required.",
-    );
+  if (username.length < 2) {
+    redirectWithFormError("/register", "Username must be at least 2 characters.");
   }
-  const hash = await bcrypt.hash(password, 10);
+  const passwordCheck = validatePassword(password);
+  if (!passwordCheck.ok) {
+    redirectWithFormError("/register", passwordCheck.message);
+  }
+  const hash = await bcrypt.hash(password, BCRYPT_COST);
   const id = newUuid();
   try {
     await db.insert(users).values({
@@ -126,4 +128,46 @@ export async function updateProfileAction(formData: FormData) {
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}m=profile-updated`);
   }
   redirect("/account?m=updated");
+}
+
+export async function changePasswordAction(formData: FormData) {
+  const session = await getSession();
+  if (!session.userId) redirectWithFormError("/login", "Not logged in.");
+  const [current] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, session.userId))
+    .limit(1);
+  if (!current) redirectWithFormError("/login", "Not logged in.");
+
+  const currentPassword = String(formData.get("currentPassword") ?? "");
+  const newPassword = String(formData.get("newPassword") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (!(await bcrypt.compare(currentPassword, current.passwordHash))) {
+    redirectWithFormError("/account", "Current password is incorrect.");
+  }
+
+  const passwordCheck = validatePassword(newPassword);
+  if (!passwordCheck.ok) {
+    redirectWithFormError("/account", passwordCheck.message);
+  }
+  if (newPassword !== confirmPassword) {
+    redirectWithFormError("/account", "New passwords do not match.");
+  }
+  if (await bcrypt.compare(newPassword, current.passwordHash)) {
+    redirectWithFormError(
+      "/account",
+      "New password must be different from your current password.",
+    );
+  }
+
+  const hash = await bcrypt.hash(newPassword, BCRYPT_COST);
+  await db
+    .update(users)
+    .set({ passwordHash: hash })
+    .where(eq(users.id, current.id));
+
+  revalidatePath("/account");
+  redirect("/account?tab=profile&m=password-updated");
 }

@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { GameMatchupInline } from "@/components/games/GameMatchupScore";
+import { Card } from "@/components/ui/Card";
+import {
+  gameWinnerSide,
+  GameScoreInline,
+  winnerTeamNameClass,
+} from "@/components/games/GameMatchupScore";
 import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
 
 type GameRow = {
@@ -20,15 +25,33 @@ type Props = {
   seasonId: string;
   games: GameRow[];
   teamNames: Map<string, string>;
+  userTeamId?: string | null;
   limit?: number;
 };
+
+function userResultBadge(
+  userTeamId: string | null | undefined,
+  homeTeamId: string,
+  awayTeamId: string,
+  homeScore: number,
+  awayScore: number,
+): "W" | "L" | null {
+  if (!userTeamId) return null;
+  if (userTeamId !== homeTeamId && userTeamId !== awayTeamId) return null;
+  if (homeScore === awayScore) return null;
+  const userIsHome = userTeamId === homeTeamId;
+  const userWon =
+    (userIsHome && homeScore > awayScore) || (!userIsHome && awayScore > homeScore);
+  return userWon ? "W" : "L";
+}
 
 export function SeasonHubRecentGames({
   leagueId,
   seasonId,
   games,
   teamNames,
-  limit = 10,
+  userTeamId,
+  limit = 6,
 }: Props) {
   const recent = games
     .filter(
@@ -42,33 +65,61 @@ export function SeasonHubRecentGames({
     .slice(0, limit);
 
   return (
-    <section className="mt-8 msb-panel p-4 sm:p-5">
-      <h2 className="text-lg font-semibold">Recent results</h2>
+    <Card
+      title="Recent results"
+      action={
+        <Link
+          href={`/leagues/${leagueId}/schedule`}
+          className="msb-link shrink-0 text-xs"
+        >
+          All games →
+        </Link>
+      }
+    >
       {recent.length > 0 ? (
-        <ul className="mt-3 space-y-2">
+        <ul>
           {recent.map(({ game, round }) => {
             const away = teamNames.get(game.awayTeamId) ?? "?";
             const home = teamNames.get(game.homeTeamId) ?? "?";
+            const awayScore = game.awayScore!;
+            const homeScore = game.homeScore!;
+            const winner = gameWinnerSide(awayScore, homeScore);
+            const result = userResultBadge(
+              userTeamId,
+              game.homeTeamId,
+              game.awayTeamId,
+              homeScore,
+              awayScore,
+            );
+
             return (
               <li
                 key={game.id}
-                className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm"
+                className="msb-row-divider flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm"
               >
-                <span className="text-zinc-500">
-                  {game.playedAt?.toLocaleDateString() ?? "—"}
+                <span className="w-20 shrink-0 text-xs text-zinc-500">
+                  {game.playedAt?.toLocaleDateString(undefined, {
+                    month: "numeric",
+                    day: "numeric",
+                  }) ?? "—"}
                 </span>
-                <GameMatchupInline
-                  awayName={away}
-                  homeName={home}
-                  awayScore={game.awayScore!}
-                  homeScore={game.homeScore!}
-                />
-                <span className="text-xs text-zinc-600">
+                <span className="min-w-0 flex-1 truncate">
+                  <span className={winnerTeamNameClass("away", winner)}>{away}</span>
+                  <span className="text-zinc-600"> vs </span>
+                  <span className={winnerTeamNameClass("home", winner)}>{home}</span>
+                </span>
+                <GameScoreInline awayScore={awayScore} homeScore={homeScore} />
+                {result ? (
+                  <span className={result === "W" ? "msb-badge-win" : "msb-badge-loss"}>
+                    {result}
+                  </span>
+                ) : null}
+                <span className="msb-badge-muted">
                   {scheduleRoundShortLabel(round.phase, round.roundNumber)}
                 </span>
                 <Link
                   href={`/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`}
-                  className="text-amber-400 hover:underline"
+                  className="msb-link text-xs"
                 >
                   Box score
                 </Link>
@@ -77,8 +128,13 @@ export function SeasonHubRecentGames({
           })}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-zinc-500">No completed games with stats yet.</p>
+        <div className="msb-empty-state">
+          <p className="text-sm text-zinc-500">No games played yet</p>
+          <p className="mt-1 text-xs text-zinc-600">
+            Upload a box score to get started
+          </p>
+        </div>
       )}
-    </section>
+    </Card>
   );
 }

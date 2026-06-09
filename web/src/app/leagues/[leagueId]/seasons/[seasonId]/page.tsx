@@ -10,11 +10,16 @@ import { PageHero } from "@/components/PageHero";
 import { SeasonActivityFeed } from "@/components/season/SeasonActivityFeed";
 import { getRecentSeasonEvents } from "@/lib/season-events";
 import { SeasonHubRecentGames } from "@/components/season/SeasonHubRecentGames";
+import { SeasonHubStandings } from "@/components/season/SeasonHubStandings";
 import { SeasonHubTeamGrid } from "@/components/season/SeasonHubTeamGrid";
 import { SeasonHubUpcomingGames } from "@/components/season/SeasonHubUpcomingGames";
-import { SeasonRecordsPanel } from "@/components/season/SeasonRecordsPanel";
+import { SeasonHubFeaturedRecords } from "@/components/season/SeasonHubFeaturedRecords";
+import { SeasonHubRecordsCompact } from "@/components/season/SeasonHubRecordsCompact";
 import { SeasonTradePanel } from "@/components/season/SeasonTradePanel";
+import { ChampionshipOddsPanel } from "@/components/season/ChampionshipOddsPanel";
+import { SeasonRivalryOfWeekPanel } from "@/components/season/SeasonRivalryOfWeekPanel";
 import { getSeasonRecords } from "@/lib/season-records";
+import { buildSeasonOddsSnapshot } from "@/lib/season-odds";
 import { getManagedTeamInSeason } from "@/lib/manager-team";
 import { getTeamRosterCountsForSeason } from "@/lib/roster-rules";
 import {
@@ -63,10 +68,22 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const tradeRoster = await getTradeRosterInstancesForSeason(seasonId);
   const pendingTrades = await getPendingTradeRequestsForSeason(seasonId);
   const seasonRecords = await getSeasonRecords(seasonId);
+  const oddsSnapshot = buildSeasonOddsSnapshot(dash);
+  const gamesPlayed = dash.games.filter(
+    ({ game }) => game.statsRawJson != null,
+  ).length;
+  const rivalry = oddsSnapshot.rivalryOfWeek;
+  const rivalryAwayName = rivalry
+    ? teamNames.get(rivalry.game.awayTeamId) ?? "Away"
+    : null;
+  const rivalryHomeName = rivalry
+    ? teamNames.get(rivalry.game.homeTeamId) ?? "Home"
+    : null;
 
   return (
     <PageShell width="wide">
       <PageHero
+        className="mb-5 border-b-zinc-800/40 pb-4"
         eyebrow={dash.league.name}
         title={season.name}
         badge={season.status}
@@ -78,121 +95,160 @@ export default async function SeasonPage({ params, searchParams }: Props) {
             />
           </>
         }
-      />
-
-      {isAdmin ? (
-        <p className="-mt-4 mb-8 text-center">
+      >
+        {isAdmin ? (
           <Link
             href={`/leagues/${leagueId}/seasons/${seasonId}/admin`}
-            className="text-sm text-amber-400 hover:underline"
+            className="msb-link text-sm"
           >
             Season admin settings →
           </Link>
-        </p>
-      ) : null}
+        ) : null}
+      </PageHero>
 
       {e ? (
-        <p className="mt-3 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
+        <p className="mb-4 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {e}
         </p>
       ) : null}
       {m === "renamed" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+        <p className="mb-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Season renamed.
         </p>
       ) : null}
       {m === "reservation-updated" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+        <p className="mb-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Team reservation updated.
         </p>
       ) : null}
       {m === "status-updated" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+        <p className="mb-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Season status updated.
         </p>
       ) : null}
       {m === "playoff-settings" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+        <p className="mb-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Playoff settings saved.
         </p>
       ) : null}
       {m === "schedule-settings" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+        <p className="mb-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Schedule settings saved.
         </p>
       ) : null}
       {m === "round-robin" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+        <p className="mb-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Added {count ?? "0"} round-robin games across weekly rounds.
         </p>
       ) : null}
       {m === "weekly-matchups" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+        <p className="mb-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Added {count ?? "0"} game(s) to week {week ?? "?"}.
         </p>
       ) : null}
       {m === "organize-weeks" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+        <p className="mb-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Moved {count ?? "0"} game(s) into weekly rounds.
         </p>
       ) : null}
-      <SeasonHubRecentGames
-        leagueId={leagueId}
-        seasonId={seasonId}
-        games={games}
-        teamNames={teamNames}
-      />
 
-      <SeasonRecordsPanel
-        leagueId={leagueId}
-        seasonId={seasonId}
-        records={seasonRecords}
-        compact
-      />
+      {rivalry && rivalryAwayName && rivalryHomeName ? (
+        <SeasonRivalryOfWeekPanel
+          leagueId={leagueId}
+          seasonId={seasonId}
+          rivalry={rivalry}
+          awayName={rivalryAwayName}
+          homeName={rivalryHomeName}
+        />
+      ) : null}
 
-      <SeasonHubTeamGrid
+      <ChampionshipOddsPanel
         leagueId={leagueId}
         seasonId={seasonId}
-        teams={teams}
-        standings={dash.standings}
-        rosterCounts={rosterCounts}
-      />
-
-      <SeasonTradePanel
-        leagueId={leagueId}
-        seasonId={seasonId}
-        userId={user.id}
-        userTeam={userTeam}
-        teams={teams.map(({ team, manager }) => ({
-          id: team.id,
+        gamesPlayed={gamesPlayed}
+        teams={dash.teams.map(({ team }) => ({
+          teamId: team.id,
           name: team.name,
-          managerUserId: manager?.id ?? null,
+          odds: oddsSnapshot.championshipOdds.get(team.id) ?? 0,
         }))}
-        roster={tradeRoster}
-        pendingTrades={pendingTrades}
       />
 
-      <SeasonHubUpcomingGames
-        leagueId={leagueId}
-        seasonId={seasonId}
-        phase={upcomingPhase}
-        upcoming={upcomingGames}
-        teams={teams.map(({ team, manager }) => ({
-          team,
-          manager: manager ? { id: manager.id } : null,
-        }))}
-        userId={user.id}
-        role={role}
-        isAdmin={isAdmin}
-      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <SeasonHubRecentGames
+          leagueId={leagueId}
+          seasonId={seasonId}
+          games={games}
+          teamNames={teamNames}
+          userTeamId={userTeam?.id ?? null}
+        />
+        <SeasonHubStandings
+          leagueId={leagueId}
+          seasonId={seasonId}
+          standings={dash.standings}
+          userTeamId={userTeam?.id ?? null}
+        />
+      </div>
 
-      <SeasonActivityFeed
-        events={recentEvents.map((event) => ({
-          id: event.id,
-          message: event.message,
-          createdAt: event.createdAt,
-        }))}
-      />
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <SeasonHubFeaturedRecords
+          leagueId={leagueId}
+          seasonId={seasonId}
+          records={seasonRecords}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <SeasonHubUpcomingGames
+          leagueId={leagueId}
+          seasonId={seasonId}
+          phase={upcomingPhase}
+          upcoming={upcomingGames}
+          teams={teams.map(({ team, manager }) => ({
+            team,
+            manager: manager ? { id: manager.id } : null,
+          }))}
+          userId={user.id}
+        />
+        <SeasonHubRecordsCompact
+          leagueId={leagueId}
+          seasonId={seasonId}
+          records={seasonRecords}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <SeasonHubTeamGrid
+          leagueId={leagueId}
+          seasonId={seasonId}
+          teams={teams}
+          standings={dash.standings}
+          rosterCounts={rosterCounts}
+        />
+
+        <SeasonTradePanel
+          leagueId={leagueId}
+          seasonId={seasonId}
+          userId={user.id}
+          userTeam={userTeam}
+          teams={teams.map(({ team, manager }) => ({
+            id: team.id,
+            name: team.name,
+            managerUserId: manager?.id ?? null,
+          }))}
+          roster={tradeRoster}
+          pendingTrades={pendingTrades}
+        />
+      </div>
+
+      <div className="mt-4">
+        <SeasonActivityFeed
+          events={recentEvents.map((event) => ({
+            id: event.id,
+            message: event.message,
+            createdAt: event.createdAt,
+          }))}
+        />
+      </div>
     </PageShell>
   );
 }

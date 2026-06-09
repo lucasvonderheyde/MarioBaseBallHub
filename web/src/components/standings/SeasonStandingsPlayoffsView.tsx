@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { PlayoffGameCard } from "@/components/league-schedule-ui";
+import { HighlightedMatchupCard } from "@/components/matchups/HighlightedMatchupCard";
 import { PlayoffBracketSvg } from "@/components/playoffs/PlayoffBracketSvg";
+import {
+  rivalryReasonLabel,
+  type RivalryOfWeekPick,
+} from "@/domain/odds/rivalry-of-week";
 import type { BracketPicture } from "@/domain/playoffs/bracket-model";
 import { enrichGamesWithSeries } from "@/domain/playoffs/bracket-model";
 import type { PlayoffPicture } from "@/domain/playoffs/build-playoff-picture";
@@ -22,6 +27,9 @@ type Props = {
   showPlayIn: boolean;
   regularSeasonComplete: boolean;
   isAdmin: boolean;
+  gameOdds?: Map<string, { homeWinPct: number; awayWinPct: number }>;
+  playoffFeatured?: RivalryOfWeekPick | null;
+  teamNames?: Map<string, string>;
 };
 
 function seedBadge(status: "qualified" | "play-in" | "out"): string {
@@ -62,6 +70,9 @@ export function SeasonStandingsPlayoffsView({
   showPlayIn,
   regularSeasonComplete,
   isAdmin,
+  gameOdds,
+  playoffFeatured,
+  teamNames,
 }: Props) {
   const isLive = bracket.mode === "live";
   const playoffsPhase = regularSeasonComplete;
@@ -169,8 +180,40 @@ export function SeasonStandingsPlayoffsView({
     </section>
   );
 
+  const featuredAway =
+    playoffFeatured && teamNames
+      ? teamNames.get(playoffFeatured.game.awayTeamId) ?? "Away"
+      : null;
+  const featuredHome =
+    playoffFeatured && teamNames
+      ? teamNames.get(playoffFeatured.game.homeTeamId) ?? "Home"
+      : null;
+
   return (
     <>
+      {playoffFeatured && featuredAway && featuredHome ? (
+        <section className="mt-6">
+          <HighlightedMatchupCard
+            headline="Featured playoff matchup"
+            subheadline={`Playoff round ${playoffFeatured.weekNumber}`}
+            awayName={featuredAway}
+            homeName={featuredHome}
+            awayWinPct={playoffFeatured.awayWinPct}
+            homeWinPct={playoffFeatured.homeWinPct}
+            reasons={playoffFeatured.reasons}
+            gameHref={`/leagues/${leagueId}/seasons/${seasonId}/games/${playoffFeatured.game.gameId}`}
+            variant="featured"
+          />
+          <p className="mt-2 text-xs text-zinc-500">
+            Picked for playoff stakes
+            {playoffFeatured.reasons.length > 0
+              ? ` and ${playoffFeatured.reasons.map(rivalryReasonLabel).join(", ").toLowerCase()}`
+              : ""}
+            .
+          </p>
+        </section>
+      ) : null}
+
       {isAdmin ? (
         <p className="mt-3 text-xs text-zinc-500">
           Playoff format and seeding rules are configured in{" "}
@@ -211,6 +254,8 @@ export function SeasonStandingsPlayoffsView({
                     game={game}
                     leagueId={leagueId}
                     seasonId={seasonId}
+                    awayWinPct={gameOdds?.get(game.id)?.awayWinPct}
+                    homeWinPct={gameOdds?.get(game.id)?.homeWinPct}
                   />
                 ),
               )}
@@ -246,6 +291,8 @@ export function SeasonStandingsPlayoffsView({
                           game={game}
                           leagueId={leagueId}
                           seasonId={seasonId}
+                          awayWinPct={gameOdds?.get(game.id)?.awayWinPct}
+                          homeWinPct={gameOdds?.get(game.id)?.homeWinPct}
                         />
                       ))}
                     </div>

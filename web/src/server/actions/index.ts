@@ -3,6 +3,7 @@ export {
   loginAction,
   logoutAction,
   updateProfileAction,
+  changePasswordAction,
 } from "./auth-actions";
 export {
   createLeagueAction,

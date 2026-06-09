@@ -33,7 +33,8 @@ import {
   sortManagerCharacterPitching,
 } from "@/lib/sort-manager-character-stats";
 import { getReportableGamesForUser } from "@/lib/manager-upload-games";
-import { updateProfileAction } from "@/server/actions";
+import { passwordPolicyDescription } from "@/lib/password-policy";
+import { changePasswordAction, updateProfileAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
 
 type Tab = "profile" | "stats" | "upload";
@@ -114,6 +115,11 @@ export default async function AccountPage({
           Profile updated.
         </p>
       ) : null}
+      {m === "password-updated" ? (
+        <p className="mt-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Password updated.
+        </p>
+      ) : null}
 
       {activeTab === "profile" ? (
         <>
@@ -188,6 +194,50 @@ export default async function AccountPage({
               Save changes
             </button>
           </form>
+
+          <section className="mt-10 border-t border-zinc-800 pt-8">
+            <h2 className="text-lg font-semibold">Change password</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              {passwordPolicyDescription()}
+            </p>
+            <form action={changePasswordAction} className="mt-4 space-y-4">
+              <div>
+                <label className="text-sm text-zinc-400">Current password</label>
+                <input
+                  name="currentPassword"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-zinc-400">New password</label>
+                <input
+                  name="newPassword"
+                  type="password"
+                  required
+                  minLength={10}
+                  autoComplete="new-password"
+                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-zinc-400">Confirm new password</label>
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  minLength={10}
+                  autoComplete="new-password"
+                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+                />
+              </div>
+              <button type="submit" className="msb-btn-primary w-full py-2">
+                Update password
+              </button>
+            </form>
+          </section>
         </>
       ) : null}
 

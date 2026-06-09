@@ -5,6 +5,7 @@ import {
   proposeGameTimeAction,
   respondGameScheduleAction,
 } from "@/server/actions/manager-requests-actions";
+import { isUserGameParticipant } from "@/lib/game-report-access";
 
 type PendingProposal = {
   id: string;
@@ -36,8 +37,11 @@ export function ScheduleGameRequestActions({
 }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const isManager =
-    userId === homeManagerUserId || userId === awayManagerUserId;
+  const isManager = isUserGameParticipant(
+    userId,
+    homeManagerUserId,
+    awayManagerUserId,
+  );
 
   if (!isManager || agreedPlayAt) return null;
 

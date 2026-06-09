@@ -2,8 +2,8 @@ type PageWidth = "narrow" | "default" | "wide";
 
 const widthClasses: Record<PageWidth, string> = {
   narrow: "max-w-lg",
-  default: "max-w-3xl lg:max-w-4xl",
-  wide: "max-w-4xl lg:max-w-6xl xl:max-w-7xl",
+  default: "max-w-4xl lg:max-w-5xl",
+  wide: "max-w-6xl xl:max-w-7xl 2xl:max-w-[90rem]",
 };
 
 type Props = {
