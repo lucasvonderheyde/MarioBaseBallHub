@@ -14,6 +14,7 @@ import {
   boxScoreBattingHeaders,
   pitchingStatHeaders,
 } from "@/components/stats/stat-table-headers";
+import { Card } from "@/components/ui/Card";
 import { PageShell } from "@/components/PageShell";
 import { GameStatsUploader } from "@/components/GameStatsUploader";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
@@ -131,17 +132,10 @@ export default async function GameReportPage({ params, searchParams }: Props) {
     ? dash.stadiums.find((s) => s.gameStadiumId === stadiumId)
     : null;
 
-  function BoxTable({
-    rows,
-    label,
-  }: {
-    rows: typeof stats;
-    label: string;
-  }) {
+  function BoxTable({ rows }: { rows: typeof stats }) {
     return (
       <div>
-        <h3 className="text-sm font-semibold text-zinc-300">{label}</h3>
-        <div className="msb-table-wrap mt-2">
+        <div className="msb-table-wrap">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-500">
@@ -189,21 +183,14 @@ export default async function GameReportPage({ params, searchParams }: Props) {
     );
   }
 
-  function PitchingBoxTable({
-    rows,
-    label,
-  }: {
-    rows: typeof stats;
-    label: string;
-  }) {
+  function PitchingBoxTable({ rows }: { rows: typeof stats }) {
     const pitchingRows = rows.filter(
       (row) => row.wasPitcher || row.outsPitched > 0 || row.battersFaced > 0,
     );
 
     return (
       <div>
-        <h3 className="text-sm font-semibold text-zinc-300">{label}</h3>
-        <div className="msb-table-wrap mt-2">
+        <div className="msb-table-wrap">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-500">
@@ -259,185 +246,197 @@ export default async function GameReportPage({ params, searchParams }: Props) {
         ← Schedule
       </Link>
 
-      <header className="mt-4 flex flex-col items-center text-center">
-        {stadiumId && stadiumRow?.iconFile ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={stadiumIconUrl(stadiumRow.iconFile)}
-            alt=""
-            width={192}
-            height={192}
-            className="mb-4 h-48 w-48 rounded-lg object-contain"
-          />
-        ) : null}
-        <h1 className="text-2xl font-bold sm:text-3xl">
-          <span className={winnerTeamNameClass("away", winner)}>{away.team.name}</span>
-          <span className="mx-2 font-normal text-zinc-500">@</span>
-          <span className={winnerTeamNameClass("home", winner)}>{home.team.name}</span>
-        </h1>
-        {stadiumId ? (
-          <p className="mt-1 text-sm text-zinc-500">{stadiumId}</p>
-        ) : null}
-        {played ? (
-          <p className="mt-3 text-3xl font-semibold tabular-nums sm:text-4xl">
-            <span className={winnerScoreClass("away", winner)}>{game.awayScore}</span>
-            <span className="mx-2 text-zinc-600">–</span>
-            <span className={winnerScoreClass("home", winner)}>{game.homeScore}</span>
+      <div className="mt-4 space-y-4">
+        <Card>
+          <div className="flex flex-col items-center text-center">
+            {stadiumId && stadiumRow?.iconFile ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={stadiumIconUrl(stadiumRow.iconFile)}
+                alt=""
+                width={192}
+                height={192}
+                className="mb-4 h-32 w-32 rounded-lg object-contain sm:h-48 sm:w-48"
+              />
+            ) : null}
+            <h1 className="text-2xl font-bold sm:text-3xl">
+              <span className={winnerTeamNameClass("away", winner)}>{away.team.name}</span>
+              <span className="mx-2 font-normal text-zinc-500">@</span>
+              <span className={winnerTeamNameClass("home", winner)}>{home.team.name}</span>
+            </h1>
+            {stadiumId ? (
+              <p className="mt-1 text-sm text-zinc-500">{stadiumId}</p>
+            ) : null}
+            {played ? (
+              <p className="mt-3 text-3xl font-semibold tabular-nums sm:text-4xl">
+                <span className={winnerScoreClass("away", winner)}>{game.awayScore}</span>
+                <span className="mx-2 text-zinc-600">–</span>
+                <span className={winnerScoreClass("home", winner)}>{game.homeScore}</span>
+              </p>
+            ) : (
+              <p className="mt-2 text-zinc-500">Scheduled — stats not reported yet</p>
+            )}
+          </div>
+        </Card>
+
+        {e ? (
+          <p className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
+            {e}
           </p>
-        ) : (
-          <p className="mt-2 text-zinc-500">Scheduled — stats not reported yet</p>
-        )}
-      </header>
+        ) : null}
+        {m === "video-saved" ? (
+          <p className="rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+            Video link saved.
+          </p>
+        ) : null}
 
-      {e ? (
-        <p className="mt-3 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
-          {e}
-        </p>
-      ) : null}
-      {m === "video-saved" ? (
-        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
-          Video link saved.
-        </p>
-      ) : null}
-
-      {played && lineScore ? (
-        <section className="mt-8">
-          <h2 className="text-center text-lg font-semibold">Line score</h2>
-          <div className="mx-auto mt-3 max-w-3xl">
-            <InningLineScoreTable
-              awayTeamName={away.team.name}
-              homeTeamName={home.team.name}
-              lineScore={lineScore}
-              awayScore={game.awayScore!}
-              homeScore={game.homeScore!}
-              awayHits={awayHits}
-              homeHits={homeHits}
-            />
-          </div>
-        </section>
-      ) : null}
-
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold">Video</h2>
-        {game.youtubeUrl ? (
-          <div className="mt-3 max-w-3xl">
-            <YouTubeEmbed
-              url={game.youtubeUrl}
-              title={`${away.team.name} vs ${home.team.name}`}
-            />
-            <a
-              href={game.youtubeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-block text-sm text-amber-400 hover:underline"
-            >
-              Open on YouTube
-            </a>
-          </div>
-        ) : (
-          <p className="mt-2 text-sm text-zinc-500">No video linked yet.</p>
-        )}
-
-        {canEdit ? (
-          <form
-            action={saveYoutubeFormAction}
-            className="mt-4 flex max-w-xl flex-col gap-2 sm:flex-row sm:items-end"
-          >
-            <input type="hidden" name="gameId" value={game.id} />
-            <input type="hidden" name="leagueId" value={leagueId} />
-            <input type="hidden" name="seasonId" value={seasonId} />
-            <div className="min-w-0 flex-1">
-              <label htmlFor="youtube-url" className="text-xs text-zinc-500">
-                YouTube URL (unlisted watch links work)
-              </label>
-              <input
-                id="youtube-url"
-                name="youtube"
-                type="url"
-                defaultValue={game.youtubeUrl ?? ""}
-                placeholder="https://www.youtube.com/watch?v=…"
-                className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+        {played && lineScore ? (
+          <Card title="Line score">
+            <div className="mx-auto max-w-3xl overflow-x-auto">
+              <InningLineScoreTable
+                awayTeamName={away.team.name}
+                homeTeamName={home.team.name}
+                lineScore={lineScore}
+                awayScore={game.awayScore!}
+                homeScore={game.homeScore!}
+                awayHits={awayHits}
+                homeHits={homeHits}
               />
             </div>
-            <button
-              type="submit"
-              className="rounded border border-zinc-600 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
-            >
-              Save video
-            </button>
-          </form>
+          </Card>
         ) : null}
-      </section>
 
-      {hasStats ? (
-        <>
-          <section className="mt-10 grid gap-6 lg:grid-cols-2">
-            <BoxTable rows={awayTeamStats} label={away.team.name} />
-            <BoxTable rows={homeTeamStats} label={home.team.name} />
-          </section>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card title="Video">
+            {game.youtubeUrl ? (
+              <div className="space-y-3">
+                <YouTubeEmbed
+                  url={game.youtubeUrl}
+                  title={`${away.team.name} vs ${home.team.name}`}
+                />
+                <a
+                  href={game.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-sm text-amber-400 hover:underline"
+                >
+                  Open on YouTube
+                </a>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500">No video linked yet.</p>
+            )}
 
-          <section className="mt-10 grid gap-6 lg:grid-cols-2">
-            <PitchingBoxTable rows={awayTeamStats} label={`${away.team.name} pitching`} />
-            <PitchingBoxTable rows={homeTeamStats} label={`${home.team.name} pitching`} />
-          </section>
-        </>
-      ) : canEdit ? (
-        <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-          <h2 className="text-lg font-semibold">Report stats</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Paste the decoded game JSON to populate the box score. Teams are matched
-            from JSON away/home players and roster characters in the file.
-          </p>
-          <div className="mt-3 max-w-xl">
-            <GameStatsUploader
-              gameId={game.id}
-              leagueId={leagueId}
-              seasonId={seasonId}
-            />
-          </div>
-        </section>
-      ) : (
-        <p className="mt-10 text-sm text-zinc-500">
-          Box score will appear here after a manager uploads game stats.
-        </p>
-      )}
+            {canEdit ? (
+              <form
+                action={saveYoutubeFormAction}
+                className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end"
+              >
+                <input type="hidden" name="gameId" value={game.id} />
+                <input type="hidden" name="leagueId" value={leagueId} />
+                <input type="hidden" name="seasonId" value={seasonId} />
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="youtube-url" className="text-xs text-zinc-500">
+                    YouTube URL (unlisted watch links work)
+                  </label>
+                  <input
+                    id="youtube-url"
+                    name="youtube"
+                    type="url"
+                    defaultValue={game.youtubeUrl ?? ""}
+                    placeholder="https://www.youtube.com/watch?v=…"
+                    className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="rounded border border-zinc-600 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+                >
+                  Save video
+                </button>
+              </form>
+            ) : null}
+          </Card>
 
-      <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-400">
-        <h2 className="font-semibold text-zinc-200">Game notes</h2>
-        <ul className="mt-2 space-y-1">
-          {meta?.inningsPlayed != null ? (
-            <li>Innings played: {meta.inningsPlayed}</li>
-          ) : null}
-          {game.playedAt ? (
-            <li>Recorded: {game.playedAt.toLocaleString()}</li>
-          ) : null}
           {hasStats ? (
-            <li>
-              Away: {fieldAwayLabel} · Home: {fieldHomeLabel}
-            </li>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+              <Card title={`${away.team.name} batting`}>
+                <BoxTable rows={awayTeamStats} />
+              </Card>
+              <Card title={`${home.team.name} batting`}>
+                <BoxTable rows={homeTeamStats} />
+              </Card>
+            </div>
+          ) : canEdit ? (
+            <Card title="Upload stats">
+              <p className="text-sm text-zinc-500">
+                Paste the decoded game JSON to populate the box score. Teams are matched
+                from JSON away/home players and roster characters in the file.
+              </p>
+              <div className="mt-3 max-w-xl">
+                <GameStatsUploader
+                  gameId={game.id}
+                  leagueId={leagueId}
+                  seasonId={seasonId}
+                />
+              </div>
+            </Card>
           ) : (
-            <li>
-              Away: {away.manager?.displayName ?? away.manager?.username ?? "—"} ·
-              Home: {home.manager?.displayName ?? home.manager?.username ?? "—"}
-            </li>
+            <Card title="Box score">
+              <p className="text-sm text-zinc-500">
+                Box score will appear here after a manager uploads game stats.
+              </p>
+            </Card>
           )}
-          {hasStats && (fieldSides.fromStats ? fieldHome : fileSummary) ? (
-            <li>
-              Home field:{" "}
-              {fieldSides.fromStats
-                ? fieldHome?.team.name
-                : fileSummary?.homePlayer}
-              {stadiumId ? ` at ${stadiumId}` : null}
-            </li>
-          ) : null}
-          {game.statsGameId ? (
-            <li>
-              Stats GameID:{" "}
-              <span className="font-mono text-zinc-300">{game.statsGameId}</span>
-            </li>
-          ) : null}
-        </ul>
-      </section>
+        </div>
+
+        {hasStats ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card title={`${away.team.name} pitching`}>
+              <PitchingBoxTable rows={awayTeamStats} />
+            </Card>
+            <Card title={`${home.team.name} pitching`}>
+              <PitchingBoxTable rows={homeTeamStats} />
+            </Card>
+          </div>
+        ) : null}
+
+        <Card title="Game notes">
+          <ul className="space-y-1 text-sm text-zinc-400">
+            {meta?.inningsPlayed != null ? (
+              <li>Innings played: {meta.inningsPlayed}</li>
+            ) : null}
+            {game.playedAt ? (
+              <li>Recorded: {game.playedAt.toLocaleString()}</li>
+            ) : null}
+            {hasStats ? (
+              <li>
+                Away: {fieldAwayLabel} · Home: {fieldHomeLabel}
+              </li>
+            ) : (
+              <li>
+                Away: {away.manager?.displayName ?? away.manager?.username ?? "—"} ·
+                Home: {home.manager?.displayName ?? home.manager?.username ?? "—"}
+              </li>
+            )}
+            {hasStats && (fieldSides.fromStats ? fieldHome : fileSummary) ? (
+              <li>
+                Home field:{" "}
+                {fieldSides.fromStats
+                  ? fieldHome?.team.name
+                  : fileSummary?.homePlayer}
+                {stadiumId ? ` at ${stadiumId}` : null}
+              </li>
+            ) : null}
+            {game.statsGameId ? (
+              <li>
+                Stats GameID:{" "}
+                <span className="font-mono text-zinc-300">{game.statsGameId}</span>
+              </li>
+            ) : null}
+          </ul>
+        </Card>
+      </div>
     </PageShell>
   );
 }

@@ -164,96 +164,96 @@ export default async function SeasonPage({ params, searchParams }: Props) {
         </p>
       ) : null}
 
-      {rivalry && rivalryAwayName && rivalryHomeName ? (
-        <SeasonRivalryOfWeekPanel
-          leagueId={leagueId}
-          seasonId={seasonId}
-          rivalry={rivalry}
-          awayName={rivalryAwayName}
-          homeName={rivalryHomeName}
-        />
-      ) : null}
+      <div className="space-y-4">
+        {rivalry && rivalryAwayName && rivalryHomeName ? (
+          <SeasonRivalryOfWeekPanel
+            leagueId={leagueId}
+            seasonId={seasonId}
+            rivalry={rivalry}
+            awayName={rivalryAwayName}
+            homeName={rivalryHomeName}
+          />
+        ) : null}
 
-      <ChampionshipOddsPanel
-        leagueId={leagueId}
-        seasonId={seasonId}
-        gamesPlayed={gamesPlayed}
-        teams={dash.teams.map(({ team }) => ({
-          teamId: team.id,
-          name: team.name,
-          odds: oddsSnapshot.championshipOdds.get(team.id) ?? 0,
-        }))}
-      />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <SeasonHubRecentGames
+        <ChampionshipOddsPanel
           leagueId={leagueId}
           seasonId={seasonId}
-          games={games}
-          teamNames={teamNames}
-          userTeamId={userTeam?.id ?? null}
-        />
-        <SeasonHubStandings
-          leagueId={leagueId}
-          seasonId={seasonId}
-          standings={dash.standings}
-          userTeamId={userTeam?.id ?? null}
-        />
-      </div>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
-        <SeasonHubFeaturedRecords
-          leagueId={leagueId}
-          seasonId={seasonId}
-          records={seasonRecords}
-        />
-      </div>
-
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <SeasonHubUpcomingGames
-          leagueId={leagueId}
-          seasonId={seasonId}
-          phase={upcomingPhase}
-          upcoming={upcomingGames}
-          teams={teams.map(({ team, manager }) => ({
-            team,
-            manager: manager ? { id: manager.id } : null,
-          }))}
-          userId={user.id}
-          gameOdds={oddsSnapshot.gameOdds}
-        />
-        <SeasonHubRecordsCompact
-          leagueId={leagueId}
-          seasonId={seasonId}
-          records={seasonRecords}
-        />
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <SeasonHubTeamGrid
-          leagueId={leagueId}
-          seasonId={seasonId}
-          teams={teams}
-          standings={dash.standings}
-          rosterCounts={rosterCounts}
-        />
-
-        <SeasonTradePanel
-          leagueId={leagueId}
-          seasonId={seasonId}
-          userId={user.id}
-          userTeam={userTeam}
-          teams={teams.map(({ team, manager }) => ({
-            id: team.id,
+          gamesPlayed={gamesPlayed}
+          teams={dash.teams.map(({ team }) => ({
+            teamId: team.id,
             name: team.name,
-            managerUserId: manager?.id ?? null,
+            odds: oddsSnapshot.championshipOdds.get(team.id) ?? 0,
           }))}
-          roster={tradeRoster}
-          pendingTrades={pendingTrades}
         />
-      </div>
 
-      <div className="mt-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <SeasonHubRecentGames
+            leagueId={leagueId}
+            seasonId={seasonId}
+            games={games}
+            teamNames={teamNames}
+            userTeamId={userTeam?.id ?? null}
+          />
+          <SeasonHubStandings
+            leagueId={leagueId}
+            seasonId={seasonId}
+            standings={dash.standings}
+            userTeamId={userTeam?.id ?? null}
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <SeasonHubFeaturedRecords
+            leagueId={leagueId}
+            seasonId={seasonId}
+            records={seasonRecords}
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <SeasonHubUpcomingGames
+            leagueId={leagueId}
+            seasonId={seasonId}
+            phase={upcomingPhase}
+            upcoming={upcomingGames}
+            teams={teams.map(({ team, manager }) => ({
+              team,
+              manager: manager ? { id: manager.id } : null,
+            }))}
+            userId={user.id}
+            gameOdds={oddsSnapshot.gameOdds}
+          />
+          <SeasonHubRecordsCompact
+            leagueId={leagueId}
+            seasonId={seasonId}
+            records={seasonRecords}
+          />
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <SeasonHubTeamGrid
+            leagueId={leagueId}
+            seasonId={seasonId}
+            teams={teams}
+            standings={dash.standings}
+            rosterCounts={rosterCounts}
+          />
+
+          <SeasonTradePanel
+            leagueId={leagueId}
+            seasonId={seasonId}
+            userId={user.id}
+            userTeam={userTeam}
+            teams={teams.map(({ team, manager }) => ({
+              id: team.id,
+              name: team.name,
+              managerUserId: manager?.id ?? null,
+            }))}
+            roster={tradeRoster}
+            pendingTrades={pendingTrades}
+          />
+        </div>
+
         <SeasonActivityFeed
           events={recentEvents.map((event) => ({
             id: event.id,

@@ -13,6 +13,7 @@ import {
   scheduleStatusLabel,
   type ScheduleGameCardStatus,
 } from "@/lib/schedule-display";
+import { CollapsibleUploadSection } from "@/components/CollapsibleUploadSection";
 import { HighlightedMatchupCard } from "@/components/matchups/HighlightedMatchupCard";
 import { formatWinPct } from "@/domain/odds/game-win-probability";
 import { clearGameStatsAction } from "@/server/actions";
@@ -194,17 +195,14 @@ export function ScheduleGameCard({
       ) : null}
 
       {showReportForm ? (
-        <div className="border-t border-zinc-800/80 bg-zinc-950/40 px-4 py-4 sm:px-5">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
-            Report result
-          </p>
+        <CollapsibleUploadSection>
           <GameStatsUploader
             gameId={game.id}
             leagueId={leagueId}
             seasonId={seasonId}
             compact
           />
-        </div>
+        </CollapsibleUploadSection>
       ) : null}
 
       {isAdmin && game.statsGameId ? (

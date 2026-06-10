@@ -22,8 +22,7 @@ export function SeasonRivalryOfWeekPanel({
       : `Week ${rivalry.weekNumber}`;
 
   return (
-    <section className="mt-8">
-      <HighlightedMatchupCard
+    <HighlightedMatchupCard
         headline="Matchup of the week"
         subheadline={weekLabel}
         awayName={awayName}
@@ -34,6 +33,5 @@ export function SeasonRivalryOfWeekPanel({
         gameHref={`/leagues/${leagueId}/seasons/${seasonId}/games/${rivalry.game.gameId}`}
         variant="featured"
       />
-    </section>
   );
 }

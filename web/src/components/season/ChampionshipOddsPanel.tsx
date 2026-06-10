@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/Card";
 
 type TeamRow = {
   teamId: string;
@@ -23,9 +24,8 @@ export function ChampionshipOddsPanel({
   const leader = sorted[0];
 
   return (
-    <section className="mt-8 msb-panel p-4 sm:p-5">
-      <h2 className="text-lg font-semibold">Championship odds</h2>
-      <p className="mt-1 text-sm text-zinc-500">
+    <Card title="Championship odds">
+      <p className="text-sm text-zinc-500">
         Projected title chances from roster ratings, chemistry, and season results.
         {gamesPlayed === 0
           ? " Preseason projection — updates every week as games are reported."
@@ -66,6 +66,6 @@ export function ChampionshipOddsPanel({
           </div>
         ))}
       </div>
-    </section>
+    </Card>
   );
 }

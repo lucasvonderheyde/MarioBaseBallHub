@@ -163,7 +163,7 @@ function GameStatsUploaderForm({
         disabled={!canSubmit}
         className="msb-btn-primary px-3 py-1 text-sm disabled:opacity-50"
       >
-        {pending ? "Uploading…" : compact ? "Report game" : "Save stats to this game"}
+        {pending ? "Uploading…" : compact ? "Upload game" : "Save stats to this game"}
       </button>
 
       <UploadResult state={state} />
