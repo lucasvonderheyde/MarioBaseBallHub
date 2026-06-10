@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { getDatabaseStatus } from "@/db/database-status";
+import { getDatabaseIntegrityReport } from "@/lib/database-integrity";
 import { leagueMembers, leagues, seasons, users } from "@/db/schema";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
 import {
@@ -15,6 +16,7 @@ import {
   deleteSeasonAction,
   deleteUserAction,
   renameUserAction,
+  repairOrphanedLeaguesAction,
   restoreLeagueBackupAction,
   setSiteAdminAction,
 } from "@/server/actions/site-admin-actions";
@@ -66,6 +68,7 @@ export default async function AdminPage({
 
   const allUsers = await db.select().from(users).orderBy(users.createdAt);
   const databaseStatus = getDatabaseStatus();
+  const integrity = await getDatabaseIntegrityReport();
 
   function formatBytes(bytes: number | null): string {
     if (bytes == null) return "—";
@@ -132,6 +135,11 @@ export default async function AdminPage({
           League backup restored.
         </p>
       ) : null}
+      {m === "leagues-repaired" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Recreated orphaned league record(s). Rename them below and verify seasons still load.
+        </p>
+      ) : null}
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
         <h2 className="text-lg font-semibold">Database persistence</h2>
@@ -140,12 +148,20 @@ export default async function AdminPage({
         </p>
         <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-zinc-500">Database file</dt>
+            <dt className="text-zinc-500">Active database file</dt>
             <dd className="font-mono text-xs text-zinc-300">{databaseStatus.path}</dd>
           </div>
           <div>
             <dt className="text-zinc-500">File size</dt>
             <dd>{formatBytes(databaseStatus.sizeBytes)}</dd>
+          </div>
+          <div>
+            <dt className="text-zinc-500">Working directory</dt>
+            <dd className="font-mono text-xs text-zinc-300">{databaseStatus.cwd}</dd>
+          </div>
+          <div>
+            <dt className="text-zinc-500">Railway</dt>
+            <dd>{databaseStatus.isRailway ? "yes" : "no"}</dd>
           </div>
           <div className="sm:col-span-2">
             <dt className="text-zinc-500">DATABASE_URL</dt>
@@ -153,7 +169,40 @@ export default async function AdminPage({
               {databaseStatus.configuredUrl ?? "(not set — using default ./data/league.db)"}
             </dd>
           </div>
+          {databaseStatus.configuredPath !== databaseStatus.path ? (
+            <div className="sm:col-span-2">
+              <dt className="text-zinc-500">DATABASE_URL resolves to</dt>
+              <dd className="font-mono text-xs text-amber-200">
+                {databaseStatus.configuredPath}
+              </dd>
+            </div>
+          ) : null}
         </dl>
+        {databaseStatus.alternateDbFiles.some((file) => file.exists) ? (
+          <div className="mt-3 overflow-x-auto">
+            <p className="text-xs text-zinc-500">Known database files on disk</p>
+            <table className="mt-2 w-full text-left text-xs text-zinc-300">
+              <thead className="text-zinc-500">
+                <tr>
+                  <th className="pb-1 pr-3 font-medium">Path</th>
+                  <th className="pb-1 pr-3 font-medium">Size</th>
+                  <th className="pb-1 font-medium">Active</th>
+                </tr>
+              </thead>
+              <tbody>
+                {databaseStatus.alternateDbFiles
+                  .filter((file) => file.exists)
+                  .map((file) => (
+                    <tr key={file.path}>
+                      <td className="py-1 pr-3 font-mono">{file.path}</td>
+                      <td className="py-1 pr-3">{formatBytes(file.sizeBytes)}</td>
+                      <td className="py-1">{file.isActive ? "yes" : "—"}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
         {databaseStatus.warnings.length > 0 ? (
           <ul className="mt-3 space-y-2 text-sm text-amber-200">
             {databaseStatus.warnings.map((warning) => (
@@ -179,6 +228,63 @@ export default async function AdminPage({
           <code className="text-zinc-400">DATABASE_URL=file:/app/data/league.db</code>. Redeploy
           after saving.
         </p>
+      </section>
+
+      <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+        <h2 className="text-lg font-semibold">Data integrity</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          Quick counts from the live database. A 404 on a league page means that league id is
+          missing from the leagues table — game stats can still remain.
+        </p>
+        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+          {(
+            [
+              ["Users", integrity.counts.users],
+              ["Leagues", integrity.counts.leagues],
+              ["Memberships", integrity.counts.leagueMembers],
+              ["Seasons", integrity.counts.seasons],
+              ["Teams", integrity.counts.teams],
+              ["Schedule games", integrity.counts.scheduleGames],
+              ["Parsed stat rows", integrity.counts.characterGameStats],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-zinc-500">{label}</dt>
+              <dd className="font-medium text-zinc-200">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        {integrity.warnings.length > 0 ? (
+          <ul className="mt-3 space-y-2 text-sm text-amber-200">
+            {integrity.warnings.map((warning) => (
+              <li
+                key={warning}
+                className="rounded border border-amber-900/50 bg-amber-950/20 px-3 py-2"
+              >
+                {warning}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-emerald-300">
+            League metadata and memberships look consistent.
+          </p>
+        )}
+        {integrity.orphanedSeasonLeagueIds.length > 0 ||
+        integrity.orphanedLeagueMembers > 0 ? (
+          <form action={repairOrphanedLeaguesAction} className="mt-3">
+            <button
+              type="submit"
+              className="rounded border border-amber-700/60 px-3 py-1 text-sm text-amber-200 hover:bg-amber-950/30"
+            >
+              Recreate missing league record(s)
+            </button>
+            <p className="mt-2 text-xs text-zinc-500">
+              Restores the leagues row only (keeps existing seasons, teams, games, and stats).
+              Rename the league afterward. If you have a backup JSON, prefer restore below.
+            </p>
+          </form>
+        ) : null}
       </section>
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">

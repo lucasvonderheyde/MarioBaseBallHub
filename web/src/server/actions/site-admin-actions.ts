@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { leagueMembers, leagues, seasons, users } from "@/db/schema";
 import { requireSiteAdmin } from "@/lib/auth";
+import { getDatabaseIntegrityReport } from "@/lib/database-integrity";
 import { importLeagueBackup, type LeagueBackup } from "@/lib/league-backup";
 import { redirectWithFormError } from "@/server/flash-redirect";
 
@@ -136,6 +137,51 @@ export async function renameUserAction(userId: string, formData: FormData) {
     .where(eq(users.id, userId));
   revalidatePath("/admin");
   redirect("/admin?m=user-renamed");
+}
+
+export async function repairOrphanedLeaguesAction() {
+  await requireSiteAdmin();
+  const report = await getDatabaseIntegrityReport();
+  const orphanedIds = new Set(report.orphanedSeasonLeagueIds);
+
+  if (report.orphanedLeagueMembers > 0) {
+    const leagueIds = await db.select({ id: leagues.id }).from(leagues);
+    const knownLeagueIds = leagueIds.map((row) => row.id);
+    const memberLeagueIds = await db
+      .selectDistinct({ leagueId: leagueMembers.leagueId })
+      .from(leagueMembers);
+    for (const row of memberLeagueIds) {
+      if (!knownLeagueIds.includes(row.leagueId)) {
+        orphanedIds.add(row.leagueId);
+      }
+    }
+  }
+
+  if (orphanedIds.size === 0) {
+    redirectWithFormError("/admin", "No orphaned leagues to repair.");
+  }
+
+  let repaired = 0;
+  for (const leagueId of orphanedIds) {
+    const [existing] = await db
+      .select({ id: leagues.id })
+      .from(leagues)
+      .where(eq(leagues.id, leagueId))
+      .limit(1);
+    if (existing) continue;
+
+    const slug = `restored-${leagueId.slice(0, 8)}`;
+    await db.insert(leagues).values({
+      id: leagueId,
+      name: "Restored league",
+      slug,
+    });
+    repaired += 1;
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/leagues");
+  redirect(`/admin?m=leagues-repaired&n=${repaired}`);
 }
 
 export async function restoreLeagueBackupAction(formData: FormData) {

@@ -28,6 +28,7 @@ function openSqlite(): Database.Database {
   }
 
   const sqlite = new Database(dbPath);
+  sqlite.pragma("foreign_keys = ON");
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("busy_timeout = 5000");
   if (dbPath !== ":memory:") {

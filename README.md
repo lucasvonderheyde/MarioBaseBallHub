@@ -303,6 +303,8 @@ League-level **admins** (per league) manage seasons, rosters, and schedules insi
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | Users/leagues gone after deploy | No Railway volume | Add volume at `/app/data`, set `DATABASE_URL=file:/app/data/league.db`, redeploy |
+| DB errors / empty site after deploy | `DATABASE_URL` is Postgres/MySQL from a Railway DB plugin | Remove plugin variables; use `file:/app/data/league.db` only |
+| Data exists but app looks fresh | Volume mount path ≠ `DATABASE_URL` | Check `/admin` → Database persistence; align mount (`/app/data` or `/app/web/data`) with `DATABASE_URL` |
 | `no such column: …` locally | Schema ahead of local DB | `npm run db:push` or delete `web/data/league.db` and `npm run db:init` |
 | `better-sqlite3` / NODE_MODULE_VERSION error | Node version mismatch | `cd web && npm rebuild better-sqlite3` (use Node 20+ / 22) |
 | Wrong home/away on upload | Netplay name mismatch | Set netplay username on Account page; re-upload JSON |

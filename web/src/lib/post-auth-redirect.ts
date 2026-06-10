@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { leagueMembers, seasons } from "@/db/schema";
+import { leagueMembers, leagues, seasons } from "@/db/schema";
 import {
   pickDefaultSeasonId,
   sortSeasonsForDisplay,
@@ -11,6 +11,7 @@ export async function resolvePostAuthRedirect(userId: string): Promise<string> {
   const memberRows = await db
     .select({ leagueId: leagueMembers.leagueId })
     .from(leagueMembers)
+    .innerJoin(leagues, eq(leagueMembers.leagueId, leagues.id))
     .where(eq(leagueMembers.userId, userId));
 
   if (memberRows.length !== 1) {
