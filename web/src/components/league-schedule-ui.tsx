@@ -14,6 +14,7 @@ import {
   type ScheduleGameCardStatus,
 } from "@/lib/schedule-display";
 import { HighlightedMatchupCard } from "@/components/matchups/HighlightedMatchupCard";
+import { formatWinPct } from "@/domain/odds/game-win-probability";
 import { clearGameStatsAction } from "@/server/actions";
 
 export type ScheduleRoundDisplay = {
@@ -59,6 +60,8 @@ type ScheduleGameCardProps = {
   homeManagerUserId: string | null;
   awayManagerUserId: string | null;
   roundLabel?: string;
+  awayWinPct?: number;
+  homeWinPct?: number;
 };
 
 function hasFinalScore(game: ScheduleGameDisplay): boolean {
@@ -98,6 +101,8 @@ export function ScheduleGameCard({
   homeManagerUserId,
   awayManagerUserId,
   roundLabel,
+  awayWinPct,
+  homeWinPct,
 }: ScheduleGameCardProps) {
   const gameHref = `/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`;
   const finalScore = hasFinalScore(game);
@@ -134,6 +139,11 @@ export function ScheduleGameCard({
             </h3>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              {awayWinPct != null && homeWinPct != null ? (
+                <span className="rounded-md border border-zinc-800 bg-zinc-950/70 px-2.5 py-1 text-xs tabular-nums text-zinc-300">
+                  {formatWinPct(awayWinPct)} · {formatWinPct(homeWinPct)}
+                </span>
+              ) : null}
               <span className={scheduleStatusBadgeClass(cardStatus)}>
                 {scheduleStatusLabel(cardStatus)}
               </span>
@@ -227,6 +237,7 @@ type SeasonScheduleByRoundProps = {
   role: LeagueRole | null;
   isAdmin: boolean;
   className?: string;
+  gameOdds?: Map<string, { homeWinPct: number; awayWinPct: number }>;
 };
 
 export function SeasonScheduleByRound({
@@ -239,6 +250,7 @@ export function SeasonScheduleByRound({
   role,
   isAdmin,
   className = "space-y-8",
+  gameOdds,
 }: SeasonScheduleByRoundProps) {
   function teamEntry(teamId: string) {
     return teams.find((t) => t.team.id === teamId);
@@ -288,6 +300,8 @@ export function SeasonScheduleByRound({
                       userId={userId}
                       homeManagerUserId={home?.manager?.id ?? null}
                       awayManagerUserId={away?.manager?.id ?? null}
+                      awayWinPct={gameOdds?.get(game.id)?.awayWinPct}
+                      homeWinPct={gameOdds?.get(game.id)?.homeWinPct}
                     />
                   );
                 })}

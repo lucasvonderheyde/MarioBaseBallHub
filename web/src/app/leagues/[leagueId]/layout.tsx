@@ -42,6 +42,10 @@ export default async function LeagueLayout({ children, params }: Props) {
 
   const sortedSeasons = sortSeasonsForDisplay(seasonRows);
   const activeSeasonId = pickDefaultSeasonId(sortedSeasons);
+  const activeSeason = activeSeasonId
+    ? sortedSeasons.find((season) => season.id === activeSeasonId)
+    : null;
+  const showDraft = activeSeason?.status === "setup";
 
   const managedTeam =
     user && activeSeasonId
@@ -66,6 +70,7 @@ export default async function LeagueLayout({ children, params }: Props) {
             ? `/leagues/${leagueId}/seasons/${activeSeasonId}/teams/${managedTeam.id}`
             : null
         }
+        showDraft={showDraft}
       />
       {children}
     </>

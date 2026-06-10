@@ -201,7 +201,17 @@ export async function updateSeasonStatusAction(
     redirectWithFormError(`/leagues/${leagueId}`, "Season not found.");
   }
   await db.update(seasons).set({ status }).where(eq(seasons.id, seasonId));
+
+  if (status === "active" || status === "completed") {
+    const { seasonDrafts } = await import("@/db/schema");
+    await db
+      .update(seasonDrafts)
+      .set({ status: "locked", updatedAt: new Date() })
+      .where(eq(seasonDrafts.seasonId, seasonId));
+  }
+
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/draft`);
   revalidatePath(`/leagues/${leagueId}`);
   revalidatePath(`/leagues/${leagueId}/schedule`);
   revalidatePath(`/leagues/${leagueId}/standings`);

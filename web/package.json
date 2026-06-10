@@ -15,7 +15,7 @@
     "start:prod": "tsx src/db/ensure-database.ts && drizzle-kit push --force && tsx src/db/seed.ts && next start",
     "lint": "eslint",
     "test": "vitest run",
-    "db:push": "drizzle-kit push",
+    "db:push": "drizzle-kit push --force",
     "db:seed": "tsx src/db/seed.ts",
     "db:bootstrap": "tsx src/db/dev-bootstrap.ts",
     "db:promote-site-admin": "tsx src/db/promote-site-admin.ts",

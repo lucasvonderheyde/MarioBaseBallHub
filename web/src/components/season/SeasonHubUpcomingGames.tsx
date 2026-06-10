@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
+import { formatWinPct } from "@/domain/odds/game-win-probability";
 import type { ScheduleGameDisplay, ScheduleTeamDisplay } from "@/components/league-schedule-ui";
 import { isUserGameParticipant } from "@/lib/game-report-access";
 import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
@@ -17,6 +18,7 @@ type Props = {
   upcoming: UpcomingEntry[];
   teams: ScheduleTeamDisplay[];
   userId: string;
+  gameOdds?: Map<string, { homeWinPct: number; awayWinPct: number }>;
 };
 
 export function SeasonHubUpcomingGames({
@@ -26,6 +28,7 @@ export function SeasonHubUpcomingGames({
   upcoming,
   teams,
   userId,
+  gameOdds,
 }: Props) {
   function teamEntry(teamId: string) {
     return teams.find((entry) => entry.team.id === teamId);
@@ -78,7 +81,12 @@ export function SeasonHubUpcomingGames({
                 <span className="msb-badge-muted">
                   {scheduleRoundShortLabel(round.phase, round.roundNumber)}
                 </span>
-                <span className="msb-badge-muted tabular-nums">50 / 50</span>
+                {gameOdds?.get(game.id) ? (
+                  <span className="msb-badge-muted tabular-nums">
+                    {formatWinPct(gameOdds.get(game.id)!.awayWinPct)} ·{" "}
+                    {formatWinPct(gameOdds.get(game.id)!.homeWinPct)}
+                  </span>
+                ) : null}
                 {canProposeTime ? (
                   <Link href={gameHref} className="msb-btn-outline-gold">
                     Propose time

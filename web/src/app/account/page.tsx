@@ -460,10 +460,11 @@ export default async function AccountPage({
           {uploadSection === "season" ? (
             <section className="space-y-4">
               <div>
-                <h2 className="text-lg font-semibold">Unreported season games</h2>
+                <h2 className="text-lg font-semibold">Your unreported season games</h2>
                 <p className="mt-1 text-sm text-zinc-500">
-                  Pick the exact matchup below and upload its JSON. This updates
-                  league standings and counts toward your{" "}
+                  Matchups involving your team that still need stats uploaded. Pick
+                  the exact game below and upload its JSON. This updates league
+                  standings and counts toward your{" "}
                   <Link href="/account?tab=stats" className="text-amber-400 hover:underline">
                     lifetime stats
                   </Link>
@@ -496,8 +497,8 @@ export default async function AccountPage({
                 </ul>
               ) : (
                 <p className="text-sm text-zinc-500">
-                  No unreported games right now. Check the schedule when a matchup
-                  is ready.
+                  No unreported games for your team right now. Check the schedule
+                  when your next matchup is ready.
                 </p>
               )}
             </section>

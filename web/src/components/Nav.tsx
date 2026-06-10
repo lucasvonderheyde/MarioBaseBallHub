@@ -38,6 +38,12 @@ export async function Nav() {
               >
                 H2H
               </Link>
+              <Link
+                href="/tier-list"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                Tier list
+              </Link>
               {userIsSiteAdmin(user) ? (
                 <Link
                   href="/admin"

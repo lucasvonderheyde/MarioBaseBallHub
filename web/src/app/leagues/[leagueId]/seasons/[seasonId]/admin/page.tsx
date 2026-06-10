@@ -15,6 +15,8 @@ import {
 } from "@/domain/schedule/season-schedule-settings";
 import { roundRobinGameCount } from "@/domain/schedule/generate-round-robin";
 import { scheduleRoundHeading } from "@/lib/schedule-labels";
+import { isPlayoffsComplete } from "@/lib/playoff-completion";
+import { getSeasonDraftView } from "@/lib/season-draft";
 import { BackfillStatsButton } from "@/components/BackfillStatsButton";
 import { PageShell } from "@/components/PageShell";
 import { PageHero } from "@/components/PageHero";
@@ -32,6 +34,8 @@ import {
   savePoolAction,
   updateSeasonStatusAction,
   updateTeamClaimUsernameAction,
+  openAwardVotingFormAction,
+  closeAwardVotingFormAction,
 } from "@/server/actions";
 import { characterMugshotUrl } from "@/lib/asset-urls";
 
@@ -81,6 +85,9 @@ export default async function SeasonAdminPage({ params, searchParams }: Props) {
       : 1;
   const showOrganizeWeeks =
     regularRounds.length === 1 && regularGameCount >= 2 && teamCount >= 2;
+  const playoffsDone =
+    isPlayoffsComplete(games) || season.status === "completed";
+  const draft = await getSeasonDraftView(seasonId);
 
   return (
     <PageShell width="wide">
@@ -111,6 +118,16 @@ export default async function SeasonAdminPage({ params, searchParams }: Props) {
       {m === "status-updated" ? (
         <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Season status updated.
+        </p>
+      ) : null}
+      {m === "award-voting-open" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Award voting is now open.
+        </p>
+      ) : null}
+      {m === "award-voting-closed" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Award voting closed.
         </p>
       ) : null}
       {m === "playoff-settings" ? (
@@ -690,11 +707,67 @@ export default async function SeasonAdminPage({ params, searchParams }: Props) {
 
           <div className="msb-admin-span-2 flex flex-wrap items-center gap-x-6 gap-y-2">
             <Link
+              href={`/leagues/${leagueId}/seasons/${seasonId}/draft`}
+              className="text-amber-400 hover:underline"
+            >
+              Open live draft →
+            </Link>
+            <span className="text-xs text-zinc-500">
+              Draft: {draft.status}
+              {season.status !== "setup" ? " (locked — season is active)" : ""}
+            </span>
+            <Link
               href={`/leagues/${leagueId}/seasons/${seasonId}/rosters`}
               className="text-amber-400 hover:underline"
             >
-              Open roster assignment →
+              Manual roster assignment →
             </Link>
+          </div>
+
+          <div className="msb-admin-span-2">
+            <h3 className="font-medium">Season awards voting</h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Open voting after playoffs finish so managers can vote on MVP, best
+              pitcher, batting, and fielding.
+            </p>
+            {playoffsDone ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <span className="text-sm text-zinc-400">
+                  {season.awardVotingOpen ? "Voting open" : "Voting closed"}
+                </span>
+                {season.awardVotingOpen ? (
+                  <>
+                    <Link
+                      href={`/leagues/${leagueId}/seasons/${seasonId}/awards`}
+                      className="text-amber-400 hover:underline"
+                    >
+                      View awards page →
+                    </Link>
+                    <form action={closeAwardVotingFormAction.bind(null, seasonId, leagueId)}>
+                      <button
+                        type="submit"
+                        className="rounded border border-zinc-600 px-3 py-1 text-sm text-zinc-200 hover:bg-zinc-800"
+                      >
+                        Close voting
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <form action={openAwardVotingFormAction.bind(null, seasonId, leagueId)}>
+                    <button
+                      type="submit"
+                      className="msb-btn-primary px-3 py-1 text-sm"
+                    >
+                      Open award voting
+                    </button>
+                  </form>
+                )}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-zinc-600">
+                Playoffs must be complete before award voting can open.
+              </p>
+            )}
           </div>
 
           <div>

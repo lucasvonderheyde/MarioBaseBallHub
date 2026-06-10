@@ -1,7 +1,6 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  leagueMembers,
   leagues,
   rounds,
   scheduleGames,
@@ -26,18 +25,8 @@ export type ReportableGame = {
   homeManagerUsername: string | null;
 };
 
-type Membership = { leagueId: string; role: LeagueRole };
-
+/** Unreported scheduled games where the user manages the home or away team. */
 export async function getReportableGamesForUser(userId: string): Promise<ReportableGame[]> {
-  const memberships = await db
-    .select({ leagueId: leagueMembers.leagueId, role: leagueMembers.role })
-    .from(leagueMembers)
-    .where(eq(leagueMembers.userId, userId));
-
-  if (memberships.length === 0) return [];
-
-  const roleByLeague = new Map(memberships.map((m) => [m.leagueId, m.role as LeagueRole]));
-
   const awayTeams = db.select().from(teams).as("away_teams");
   const homeTeams = db.select().from(teams).as("home_teams");
   const awayManagers = db.select().from(users).as("away_managers");
@@ -52,8 +41,6 @@ export async function getReportableGamesForUser(userId: string): Promise<Reporta
       leagueName: leagues.name,
       awayTeamName: awayTeams.name,
       homeTeamName: homeTeams.name,
-      awayManagerUserId: awayTeams.managerUserId,
-      homeManagerUserId: homeTeams.managerUserId,
       awayManagerUsername: awayManagers.username,
       homeManagerUsername: homeManagers.username,
     })
@@ -65,35 +52,27 @@ export async function getReportableGamesForUser(userId: string): Promise<Reporta
     .innerJoin(homeTeams, eq(scheduleGames.homeTeamId, homeTeams.id))
     .leftJoin(awayManagers, eq(awayTeams.managerUserId, awayManagers.id))
     .leftJoin(homeManagers, eq(homeTeams.managerUserId, homeManagers.id))
-    .where(isNull(scheduleGames.statsRawJson));
+    .where(
+      and(
+        isNull(scheduleGames.statsRawJson),
+        or(
+          eq(awayTeams.managerUserId, userId),
+          eq(homeTeams.managerUserId, userId),
+        ),
+      ),
+    );
 
-  const reportable: ReportableGame[] = [];
-  for (const row of rows) {
-    const role = roleByLeague.get(row.leagueId);
-    if (
-      !canUserReportGame(
-        userId,
-        role ?? null,
-        row.awayManagerUserId,
-        row.homeManagerUserId,
-      )
-    ) {
-      continue;
-    }
-    reportable.push({
-      gameId: row.gameId,
-      leagueId: row.leagueId,
-      seasonId: row.seasonId,
-      seasonName: row.seasonName,
-      leagueName: row.leagueName,
-      awayTeamName: row.awayTeamName,
-      homeTeamName: row.homeTeamName,
-      awayManagerUsername: row.awayManagerUsername,
-      homeManagerUsername: row.homeManagerUsername,
-    });
-  }
-
-  return reportable;
+  return rows.map((row) => ({
+    gameId: row.gameId,
+    leagueId: row.leagueId,
+    seasonId: row.seasonId,
+    seasonName: row.seasonName,
+    leagueName: row.leagueName,
+    awayTeamName: row.awayTeamName,
+    homeTeamName: row.homeTeamName,
+    awayManagerUsername: row.awayManagerUsername,
+    homeManagerUsername: row.homeManagerUsername,
+  }));
 }
 
 export async function findGameForStatsFile(

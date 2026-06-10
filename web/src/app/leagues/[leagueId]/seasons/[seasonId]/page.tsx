@@ -152,6 +152,18 @@ export default async function SeasonPage({ params, searchParams }: Props) {
         </p>
       ) : null}
 
+      {season.awardVotingOpen ? (
+        <p className="mb-4 rounded-md border border-amber-900/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+          Season award voting is open.{" "}
+          <Link
+            href={`/leagues/${leagueId}/seasons/${seasonId}/awards`}
+            className="font-medium text-amber-300 hover:underline"
+          >
+            Cast your votes →
+          </Link>
+        </p>
+      ) : null}
+
       {rivalry && rivalryAwayName && rivalryHomeName ? (
         <SeasonRivalryOfWeekPanel
           leagueId={leagueId}
@@ -208,6 +220,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
             manager: manager ? { id: manager.id } : null,
           }))}
           userId={user.id}
+          gameOdds={oddsSnapshot.gameOdds}
         />
         <SeasonHubRecordsCompact
           leagueId={leagueId}

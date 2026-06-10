@@ -60,6 +60,10 @@ export const seasons = sqliteTable("seasons", {
   playoffSettings: text("playoff_settings"),
   /** JSON: regularSeasonFormat (manual | round_robin) */
   scheduleSettings: text("schedule_settings"),
+  /** When true, managers may vote on end-of-season awards (admin opens after playoffs). */
+  awardVotingOpen: integer("award_voting_open", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -359,6 +363,75 @@ export const managerPersonalCharacterStats = sqliteTable(
       t.teamSide,
       t.rosterSlot,
     ),
+  ],
+);
+
+export const seasonDrafts = sqliteTable("season_drafts", {
+  seasonId: text("season_id")
+    .primaryKey()
+    .references(() => seasons.id, { onDelete: "cascade" }),
+  status: text("status", { enum: ["locked", "active", "complete"] })
+    .notNull()
+    .default("locked"),
+  /** JSON string[] of team ids in first-round draft order. */
+  teamOrderJson: text("team_order_json").notNull().default("[]"),
+  currentPickIndex: integer("current_pick_index").notNull().default(0),
+  picksPerTeam: integer("picks_per_team").notNull().default(9),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const draftPicks = sqliteTable("draft_picks", {
+  id: text("id").primaryKey(),
+  seasonId: text("season_id")
+    .notNull()
+    .references(() => seasons.id, { onDelete: "cascade" }),
+  pickNumber: integer("pick_number").notNull(),
+  teamId: text("team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  rosterInstanceId: text("roster_instance_id")
+    .notNull()
+    .references(() => rosterInstances.id, { onDelete: "cascade" }),
+  pickedByUserId: text("picked_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+/** One tier-list ballot per user (global across the site). */
+export const characterTierBallots = sqliteTable("character_tier_ballots", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** JSON map of gameCharId → tier letter (S|A|B|C|D|F). */
+  tiersJson: text("tiers_json").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const seasonAwardVotes = sqliteTable(
+  "season_award_votes",
+  {
+    seasonId: text("season_id")
+      .notNull()
+      .references(() => seasons.id, { onDelete: "cascade" }),
+    voterUserId: text("voter_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    category: text("category", {
+      enum: ["mvp", "best_pitcher", "best_batting", "best_fielding"],
+    }).notNull(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.seasonId, t.voterUserId, t.category] }),
   ],
 );
 

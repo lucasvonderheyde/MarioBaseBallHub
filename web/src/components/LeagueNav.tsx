@@ -10,6 +10,7 @@ type Props = {
   isAdmin: boolean;
   showClaim: boolean;
   myTeamHref: string | null;
+  showDraft?: boolean;
 };
 
 type NavItem = {
@@ -29,6 +30,7 @@ export function LeagueNav({
   isAdmin,
   showClaim,
   myTeamHref,
+  showDraft = false,
 }: Props) {
   const pathname = usePathname();
   const seasonMatch = pathname.match(/\/seasons\/([^/]+)/);
@@ -58,7 +60,8 @@ export function LeagueNav({
         match: (path) =>
           path.startsWith(`${leagueHome}/seasons/${activeSeasonId}`) &&
           !path.includes("/admin") &&
-          !path.includes("/rosters"),
+          !path.includes("/rosters") &&
+          !path.includes("/draft"),
       });
     }
 
@@ -75,6 +78,14 @@ export function LeagueNav({
         href: leagueHome,
         label: "Commissioner",
         match: (path) => path === leagueHome,
+      });
+    }
+
+    if (showDraft && contextSeasonId) {
+      items.push({
+        href: `/leagues/${leagueId}/seasons/${contextSeasonId}/draft`,
+        label: "Draft",
+        match: (path) => path.includes("/draft"),
       });
     }
 

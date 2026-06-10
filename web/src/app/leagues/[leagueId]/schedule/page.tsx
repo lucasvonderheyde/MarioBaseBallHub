@@ -13,6 +13,7 @@ import { getLeagueRole, isLeagueAdmin, leagueExists } from "@/lib/league-access"
 import { buildScheduleGamesByRound } from "@/lib/build-schedule-games-by-round";
 import { getPendingScheduleProposalsForSeason } from "@/lib/schedule-proposals";
 import { getLeagueScheduleData } from "@/lib/league-seasons";
+import { buildSeasonOddsSnapshot } from "@/lib/season-odds";
 import { PageShell } from "@/components/PageShell";
 
 type Props = {
@@ -87,6 +88,7 @@ export default async function LeagueSchedulePage({ params }: Props) {
                 userId={user.id}
                 role={role}
                 isAdmin={isAdmin}
+                gameOdds={buildSeasonOddsSnapshot(dash).gameOdds}
                 className="mt-6 space-y-6"
               />
             </section>
