@@ -245,7 +245,9 @@ export default async function AdminPage({
               ["Seasons", integrity.counts.seasons],
               ["Teams", integrity.counts.teams],
               ["Schedule games", integrity.counts.scheduleGames],
+              ["Games with JSON", integrity.counts.scheduleGamesWithStatsJson],
               ["Parsed stat rows", integrity.counts.characterGameStats],
+              ["Personal uploads", integrity.counts.personalGames],
             ] as const
           ).map(([label, value]) => (
             <div key={label}>
@@ -270,8 +272,9 @@ export default async function AdminPage({
             League metadata and memberships look consistent.
           </p>
         )}
-        {integrity.orphanedSeasonLeagueIds.length > 0 ||
-        integrity.orphanedLeagueMembers > 0 ? (
+        {integrity.counts.seasons > 0 &&
+        (integrity.orphanedSeasonLeagueIds.length > 0 ||
+          integrity.orphanedLeagueMembers > 0) ? (
           <form action={repairOrphanedLeaguesAction} className="mt-3">
             <button
               type="submit"
@@ -285,13 +288,20 @@ export default async function AdminPage({
             </p>
           </form>
         ) : null}
+        {integrity.counts.seasons === 0 && integrity.counts.leagues > 0 ? (
+          <p className="mt-3 text-xs text-zinc-500">
+            Recreate league record will not bring seasons back when the season table is empty.
+            Restore a backup JSON below or rebuild the season manually and re-upload game files.
+          </p>
+        ) : null}
       </section>
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
         <h2 className="text-lg font-semibold">League backups</h2>
         <p className="mt-1 text-sm text-zinc-500">
           Download a JSON snapshot before major changes. Restore recreates a league from backup
-          (teams, pool, rosters, schedule — not uploaded game stats files).
+          (teams, pool, rosters, schedule slots). Schedule rows include saved stats JSON when
+          present; run season backfill after restore if box scores are empty.
         </p>
         {allLeagues.length > 0 ? (
           <ul className="mt-3 space-y-2 text-sm">
@@ -333,7 +343,8 @@ export default async function AdminPage({
       <section className="mt-10">
         <h2 className="text-lg font-semibold">All leagues</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Deleting a league removes all seasons, teams, schedules, and stats.
+          Deleting a league permanently removes all seasons, teams, schedules, parsed stats, and
+          uploaded game JSON for that league. Type the league name to confirm.
         </p>
         <ul className="mt-4 space-y-3">
           {allLeagues.map((league) => (
@@ -355,7 +366,14 @@ export default async function AdminPage({
                     <span className="font-mono">{league.slug}</span>
                   </p>
                 </div>
-                <form action={deleteLeagueAction.bind(null, league.id)}>
+                <form action={deleteLeagueAction} className="flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="leagueId" value={league.id} />
+                  <input
+                    name="confirmName"
+                    required
+                    placeholder={`Type "${league.name}"`}
+                    className="min-w-[160px] rounded border border-red-900/40 bg-zinc-950 px-2 py-1 text-xs"
+                  />
                   <button
                     type="submit"
                     className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-300 hover:bg-red-950/40"

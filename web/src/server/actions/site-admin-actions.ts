@@ -10,14 +10,24 @@ import { getDatabaseIntegrityReport } from "@/lib/database-integrity";
 import { importLeagueBackup, type LeagueBackup } from "@/lib/league-backup";
 import { redirectWithFormError } from "@/server/flash-redirect";
 
-export async function deleteLeagueAction(leagueId: string) {
+export async function deleteLeagueAction(formData: FormData) {
   await requireSiteAdmin();
+  const leagueId = String(formData.get("leagueId") ?? "").trim();
+  const confirmName = String(formData.get("confirmName") ?? "").trim();
+  if (!leagueId) redirectWithFormError("/admin", "Missing league id.");
+
   const [league] = await db
-    .select({ id: leagues.id })
+    .select({ id: leagues.id, name: leagues.name })
     .from(leagues)
     .where(eq(leagues.id, leagueId))
     .limit(1);
   if (!league) redirectWithFormError("/admin", "League not found.");
+  if (confirmName !== league.name) {
+    redirectWithFormError(
+      "/admin",
+      `Type the league name exactly ("${league.name}") to confirm delete.`,
+    );
+  }
   await db.delete(leagues).where(eq(leagues.id, leagueId));
   revalidatePath("/admin");
   revalidatePath("/leagues");

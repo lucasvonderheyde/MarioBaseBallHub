@@ -1,9 +1,10 @@
-import { count, notInArray } from "drizzle-orm";
+import { count, isNotNull, notInArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   characterGameStats,
   leagueMembers,
   leagues,
+  managerPersonalGames,
   scheduleGames,
   seasons,
   teams,
@@ -18,7 +19,9 @@ export type DatabaseIntegrityReport = {
     seasons: number;
     teams: number;
     scheduleGames: number;
+    scheduleGamesWithStatsJson: number;
     characterGameStats: number;
+    personalGames: number;
   };
   orphanedLeagueMembers: number;
   orphanedSeasonLeagueIds: string[];
@@ -33,7 +36,9 @@ export async function getDatabaseIntegrityReport(): Promise<DatabaseIntegrityRep
     seasonsN,
     teamsN,
     gamesN,
+    gamesWithJsonN,
     statsN,
+    personalGamesN,
   ] = await Promise.all([
     db.select({ n: count() }).from(users).then((r) => r[0]?.n ?? 0),
     db.select({ n: count() }).from(leagues).then((r) => r[0]?.n ?? 0),
@@ -41,7 +46,13 @@ export async function getDatabaseIntegrityReport(): Promise<DatabaseIntegrityRep
     db.select({ n: count() }).from(seasons).then((r) => r[0]?.n ?? 0),
     db.select({ n: count() }).from(teams).then((r) => r[0]?.n ?? 0),
     db.select({ n: count() }).from(scheduleGames).then((r) => r[0]?.n ?? 0),
+    db
+      .select({ n: count() })
+      .from(scheduleGames)
+      .where(isNotNull(scheduleGames.statsRawJson))
+      .then((r) => r[0]?.n ?? 0),
     db.select({ n: count() }).from(characterGameStats).then((r) => r[0]?.n ?? 0),
+    db.select({ n: count() }).from(managerPersonalGames).then((r) => r[0]?.n ?? 0),
   ]);
 
   const leagueIds = await db.select({ id: leagues.id }).from(leagues);
@@ -94,6 +105,27 @@ export async function getDatabaseIntegrityReport(): Promise<DatabaseIntegrityRep
     );
   }
 
+  if (seasonsN === 0 && leaguesN > 0) {
+    warnings.push(
+      "League exists but every season row is missing. The league shell may have been recreated after a delete. " +
+        "Use a league backup JSON to restore structure, then re-upload game files or run season backfill.",
+    );
+  }
+
+  if (seasonsN === 0 && gamesN === 0 && statsN === 0 && personalGamesN > 0) {
+    warnings.push(
+      `${personalGamesN} personal game upload(s) still exist on manager accounts (/account). ` +
+        "League schedule stats were wiped, but those JSON files can be re-linked after you rebuild the season.",
+    );
+  }
+
+  if (seasonsN === 0 && gamesN === 0 && statsN === 0 && personalGamesN === 0) {
+    warnings.push(
+      "No league seasons, schedule games, parsed stats, or personal uploads remain. " +
+        "Deleting a league (now cascades with foreign keys) removes all season data permanently unless you have a backup JSON.",
+    );
+  }
+
   return {
     counts: {
       users: usersN,
@@ -102,7 +134,9 @@ export async function getDatabaseIntegrityReport(): Promise<DatabaseIntegrityRep
       seasons: seasonsN,
       teams: teamsN,
       scheduleGames: gamesN,
+      scheduleGamesWithStatsJson: gamesWithJsonN,
       characterGameStats: statsN,
+      personalGames: personalGamesN,
     },
     orphanedLeagueMembers,
     orphanedSeasonLeagueIds,
