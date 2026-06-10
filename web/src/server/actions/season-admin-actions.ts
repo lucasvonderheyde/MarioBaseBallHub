@@ -3,7 +3,7 @@
 import { and, asc, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { db } from "@/db";
+import { backupLiveDatabase, db } from "@/db";
 import {
   characters,
   rosterInstances,
@@ -911,6 +911,7 @@ export async function clearGameStatsAction(
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
     redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
+  await backupLiveDatabase(`pre-clear-game-stats-${gameId.slice(0, 8)}`);
   await deleteCharacterGameStatsForGame(gameId);
   await db
     .update(scheduleGames)

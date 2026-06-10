@@ -71,5 +71,6 @@ export {
   renameUserAction,
   restoreLeagueBackupAction,
   restoreDatabaseBackupAction,
+  createDatabaseBackupNowAction,
   repairOrphanedLeaguesAction,
 } from "./site-admin-actions";

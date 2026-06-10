@@ -212,6 +212,19 @@ export async function repairOrphanedLeaguesAction() {
   redirect(`/admin?m=leagues-repaired&n=${repaired}`);
 }
 
+export async function createDatabaseBackupNowAction() {
+  await requireSiteAdmin();
+  const backupPath = await backupLiveDatabase("manual-snapshot");
+  if (!backupPath) {
+    redirectWithFormError(
+      "/admin",
+      "Could not create backup. Check that the database file exists on the volume.",
+    );
+  }
+  revalidatePath("/admin");
+  redirect("/admin?m=db-backup-created");
+}
+
 export async function restoreDatabaseBackupAction(formData: FormData) {
   await requireSiteAdmin();
   const filename = String(formData.get("filename") ?? "").trim();

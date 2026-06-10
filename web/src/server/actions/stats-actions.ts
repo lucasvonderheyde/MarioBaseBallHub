@@ -2,7 +2,7 @@
 
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { db } from "@/db";
+import { backupLiveDatabase, db } from "@/db";
 import { characters, rosterInstances, scheduleGames, teams, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
@@ -182,6 +182,8 @@ export async function uploadStatsAction(
     return { error: match.blockingError, warnings: match.warnings };
   }
 
+  await backupLiveDatabase("pre-upload-stats");
+
   await db
     .update(scheduleGames)
     .set({
@@ -338,6 +340,7 @@ export async function backfillStatsAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") return { error: "Forbidden" };
+  await backupLiveDatabase(`pre-backfill-stats-${seasonId.slice(0, 8)}`);
   const count = await backfillCharacterGameStats(seasonId);
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
   revalidatePath(`/leagues/${leagueId}/stadiums`);

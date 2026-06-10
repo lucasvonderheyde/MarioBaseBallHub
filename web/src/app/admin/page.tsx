@@ -18,6 +18,7 @@ import {
   deleteUserAction,
   renameUserAction,
   repairOrphanedLeaguesAction,
+  createDatabaseBackupNowAction,
   restoreDatabaseBackupAction,
   restoreLeagueBackupAction,
   setSiteAdminAction,
@@ -147,6 +148,11 @@ export default async function AdminPage({
         <p className="mt-3 rounded-md border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-200">
           Full database restore scheduled. Redeploy or restart the Railway service now — the
           backup will be applied on the next container startup before migrations run.
+        </p>
+      ) : null}
+      {m === "db-backup-created" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Database snapshot created. Download the newest .db file below and store it off-site.
         </p>
       ) : null}
 
@@ -306,12 +312,21 @@ export default async function AdminPage({
       </section>
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        <h2 className="text-lg font-semibold">Automatic database backups</h2>
+        <h2 className="text-lg font-semibold">Database backups</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          SQLite snapshots are stored on the Railway volume before every deploy migration and
-          before destructive admin actions. The last 20 files are kept at{" "}
-          <code className="text-zinc-400">/app/data/backups/</code>.
+          Snapshots live on the Railway volume and are created automatically before deploys,
+          game stat uploads, backfills, and destructive admin actions. The last 50 files are
+          kept at <code className="text-zinc-400">/app/data/backups/</code>. Download copies
+          to your computer regularly — volume data alone is not an off-site backup.
         </p>
+        <form action={createDatabaseBackupNowAction} className="mt-3">
+          <button
+            type="submit"
+            className="rounded border border-emerald-800/60 bg-emerald-950/30 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-950/50"
+          >
+            Create backup now
+          </button>
+        </form>
         {sqliteBackups.length > 0 ? (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-xs text-zinc-300">
@@ -387,9 +402,10 @@ export default async function AdminPage({
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
         <h2 className="text-lg font-semibold">League backups</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Download a JSON snapshot before major changes. Restore recreates a league from backup
-          (teams, pool, rosters, schedule slots). Schedule rows include saved stats JSON when
-          present; run season backfill after restore if box scores are empty.
+          Download a JSON snapshot for each league — especially once managers start uploading
+          games. Restore recreates a league (teams, pool, rosters, schedule). Uploaded game
+          JSON is embedded in schedule rows, so managers do not need to re-upload after a
+          league restore; run season backfill if box scores need rebuilding.
         </p>
         {allLeagues.length > 0 ? (
           <ul className="mt-3 space-y-2 text-sm">

@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 import { resolveDbPath } from "./resolve-db-path";
 
 const MIN_BACKUP_BYTES = 4096;
-const DEFAULT_RETAIN_COUNT = 20;
+const DEFAULT_RETAIN_COUNT = 50;
 
 export type SqliteBackupInfo = {
   filename: string;
