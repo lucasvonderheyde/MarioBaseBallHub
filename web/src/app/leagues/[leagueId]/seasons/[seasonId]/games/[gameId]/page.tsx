@@ -306,100 +306,97 @@ export default async function GameReportPage({ params, searchParams }: Props) {
           </Card>
         ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card title="Video">
-            {game.youtubeUrl ? (
-              <div className="space-y-3">
-                <YouTubeEmbed
-                  url={game.youtubeUrl}
-                  title={`${away.team.name} vs ${home.team.name}`}
-                />
-                <a
-                  href={game.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block text-sm text-amber-400 hover:underline"
-                >
-                  Open on YouTube
-                </a>
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500">No video linked yet.</p>
-            )}
-
-            {canEdit ? (
-              <form
-                action={saveYoutubeFormAction}
-                className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end"
+        <Card title="Video">
+          {game.youtubeUrl ? (
+            <div className="mx-auto max-w-3xl space-y-3">
+              <YouTubeEmbed
+                url={game.youtubeUrl}
+                title={`${away.team.name} vs ${home.team.name}`}
+              />
+              <a
+                href={game.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-sm text-amber-400 hover:underline"
               >
-                <input type="hidden" name="gameId" value={game.id} />
-                <input type="hidden" name="leagueId" value={leagueId} />
-                <input type="hidden" name="seasonId" value={seasonId} />
-                <div className="min-w-0 flex-1">
-                  <label htmlFor="youtube-url" className="text-xs text-zinc-500">
-                    YouTube URL (unlisted watch links work)
-                  </label>
-                  <input
-                    id="youtube-url"
-                    name="youtube"
-                    type="url"
-                    defaultValue={game.youtubeUrl ?? ""}
-                    placeholder="https://www.youtube.com/watch?v=…"
-                    className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="rounded border border-zinc-600 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
-                >
-                  Save video
-                </button>
-              </form>
-            ) : null}
-          </Card>
-
-          {hasStats ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <Card title={`${away.team.name} batting`}>
-                <BoxTable rows={awayTeamStats} />
-              </Card>
-              <Card title={`${home.team.name} batting`}>
-                <BoxTable rows={homeTeamStats} />
-              </Card>
+                Open on YouTube
+              </a>
             </div>
-          ) : canEdit ? (
-            <Card title="Upload stats">
-              <p className="text-sm text-zinc-500">
-                Paste the decoded game JSON to populate the box score. Teams are matched
-                from JSON away/home players and roster characters in the file.
-              </p>
-              <div className="mt-3 max-w-xl">
-                <GameStatsUploader
-                  gameId={game.id}
-                  leagueId={leagueId}
-                  seasonId={seasonId}
+          ) : (
+            <p className="text-sm text-zinc-500">No video linked yet.</p>
+          )}
+
+          {canEdit ? (
+            <form
+              action={saveYoutubeFormAction}
+              className="mt-4 flex max-w-xl flex-col gap-2 sm:flex-row sm:items-end"
+            >
+              <input type="hidden" name="gameId" value={game.id} />
+              <input type="hidden" name="leagueId" value={leagueId} />
+              <input type="hidden" name="seasonId" value={seasonId} />
+              <div className="min-w-0 flex-1">
+                <label htmlFor="youtube-url" className="text-xs text-zinc-500">
+                  YouTube URL (unlisted watch links work)
+                </label>
+                <input
+                  id="youtube-url"
+                  name="youtube"
+                  type="url"
+                  defaultValue={game.youtubeUrl ?? ""}
+                  placeholder="https://www.youtube.com/watch?v=…"
+                  className="mt-1 w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm"
                 />
               </div>
-            </Card>
-          ) : (
-            <Card title="Box score">
-              <p className="text-sm text-zinc-500">
-                Box score will appear here after a manager uploads game stats.
-              </p>
-            </Card>
-          )}
-        </div>
+              <button
+                type="submit"
+                className="rounded border border-zinc-600 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+              >
+                Save video
+              </button>
+            </form>
+          ) : null}
+        </Card>
 
         {hasStats ? (
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card title={`${away.team.name} pitching`}>
-              <PitchingBoxTable rows={awayTeamStats} />
-            </Card>
-            <Card title={`${home.team.name} pitching`}>
-              <PitchingBoxTable rows={homeTeamStats} />
-            </Card>
+            <div className="space-y-4">
+              <Card title={`${away.team.name} batting`}>
+                <BoxTable rows={awayTeamStats} />
+              </Card>
+              <Card title={`${away.team.name} pitching`}>
+                <PitchingBoxTable rows={awayTeamStats} />
+              </Card>
+            </div>
+            <div className="space-y-4">
+              <Card title={`${home.team.name} batting`}>
+                <BoxTable rows={homeTeamStats} />
+              </Card>
+              <Card title={`${home.team.name} pitching`}>
+                <PitchingBoxTable rows={homeTeamStats} />
+              </Card>
+            </div>
           </div>
-        ) : null}
+        ) : canEdit ? (
+          <Card title="Upload stats">
+            <p className="text-sm text-zinc-500">
+              Paste the decoded game JSON to populate the box score. Teams are matched
+              from JSON away/home players and roster characters in the file.
+            </p>
+            <div className="mt-3 max-w-xl">
+              <GameStatsUploader
+                gameId={game.id}
+                leagueId={leagueId}
+                seasonId={seasonId}
+              />
+            </div>
+          </Card>
+        ) : (
+          <Card title="Box score">
+            <p className="text-sm text-zinc-500">
+              Box score will appear here after a manager uploads game stats.
+            </p>
+          </Card>
+        )}
 
         <Card title="Game notes">
           <ul className="space-y-1 text-sm text-zinc-400">
