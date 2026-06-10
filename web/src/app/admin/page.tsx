@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { getDatabaseStatus } from "@/db/database-status";
+import { listSqliteBackups } from "@/db/sqlite-backup";
 import { getDatabaseIntegrityReport } from "@/lib/database-integrity";
 import { leagueMembers, leagues, seasons, users } from "@/db/schema";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
@@ -17,6 +18,7 @@ import {
   deleteUserAction,
   renameUserAction,
   repairOrphanedLeaguesAction,
+  restoreDatabaseBackupAction,
   restoreLeagueBackupAction,
   setSiteAdminAction,
 } from "@/server/actions/site-admin-actions";
@@ -69,6 +71,7 @@ export default async function AdminPage({
   const allUsers = await db.select().from(users).orderBy(users.createdAt);
   const databaseStatus = getDatabaseStatus();
   const integrity = await getDatabaseIntegrityReport();
+  const sqliteBackups = listSqliteBackups(databaseStatus.path);
 
   function formatBytes(bytes: number | null): string {
     if (bytes == null) return "—";
@@ -138,6 +141,12 @@ export default async function AdminPage({
       {m === "leagues-repaired" ? (
         <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Recreated orphaned league record(s). Rename them below and verify seasons still load.
+        </p>
+      ) : null}
+      {m === "db-restore-scheduled" ? (
+        <p className="mt-3 rounded-md border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-200">
+          Full database restore scheduled. Redeploy or restart the Railway service now — the
+          backup will be applied on the next container startup before migrations run.
         </p>
       ) : null}
 
@@ -297,6 +306,85 @@ export default async function AdminPage({
       </section>
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+        <h2 className="text-lg font-semibold">Automatic database backups</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          SQLite snapshots are stored on the Railway volume before every deploy migration and
+          before destructive admin actions. The last 20 files are kept at{" "}
+          <code className="text-zinc-400">/app/data/backups/</code>.
+        </p>
+        {sqliteBackups.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-left text-xs text-zinc-300">
+              <thead className="text-zinc-500">
+                <tr>
+                  <th className="pb-1 pr-3 font-medium">Created</th>
+                  <th className="pb-1 pr-3 font-medium">Reason</th>
+                  <th className="pb-1 pr-3 font-medium">Size</th>
+                  <th className="pb-1 font-medium">Download</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sqliteBackups.map((backup) => (
+                  <tr key={backup.filename} className="border-t border-zinc-800/80">
+                    <td className="py-2 pr-3">{backup.createdAt.toLocaleString()}</td>
+                    <td className="py-2 pr-3">{backup.reason ?? "snapshot"}</td>
+                    <td className="py-2 pr-3">{formatBytes(backup.sizeBytes)}</td>
+                    <td className="py-2">
+                      <a
+                        href={`/api/admin/sqlite-backup/${backup.filename}`}
+                        className="text-amber-400 hover:underline"
+                      >
+                        Download .db
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-zinc-500">
+            No automatic backups yet. The next deploy or delete action will create one.
+          </p>
+        )}
+        {sqliteBackups.length > 0 ? (
+          <form action={restoreDatabaseBackupAction} className="mt-4 space-y-2">
+            <p className="text-xs text-zinc-500">
+              Roll back the entire site database to a snapshot. This replaces{" "}
+              <code className="text-zinc-400">league.db</code> on the next restart — use only
+              when league JSON restore is not enough.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                name="filename"
+                required
+                className="min-w-[240px] rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm"
+                defaultValue={sqliteBackups[0]?.filename}
+              >
+                {sqliteBackups.map((backup) => (
+                  <option key={backup.filename} value={backup.filename}>
+                    {backup.createdAt.toLocaleString()} — {backup.reason ?? "snapshot"}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="confirm"
+                required
+                placeholder='Type "RESTORE"'
+                className="min-w-[120px] rounded border border-amber-900/40 bg-zinc-950 px-2 py-1 text-sm"
+              />
+              <button
+                type="submit"
+                className="rounded border border-amber-700/60 px-3 py-1 text-sm text-amber-200 hover:bg-amber-950/30"
+              >
+                Schedule full DB restore
+              </button>
+            </div>
+          </form>
+        ) : null}
+      </section>
+
+      <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
         <h2 className="text-lg font-semibold">League backups</h2>
         <p className="mt-1 text-sm text-zinc-500">
           Download a JSON snapshot before major changes. Restore recreates a league from backup
@@ -366,21 +454,33 @@ export default async function AdminPage({
                     <span className="font-mono">{league.slug}</span>
                   </p>
                 </div>
-                <form action={deleteLeagueAction} className="flex flex-wrap items-center gap-2">
-                  <input type="hidden" name="leagueId" value={league.id} />
-                  <input
-                    name="confirmName"
-                    required
-                    placeholder={`Type "${league.name}"`}
-                    className="min-w-[160px] rounded border border-red-900/40 bg-zinc-950 px-2 py-1 text-xs"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-300 hover:bg-red-950/40"
+                <div className="flex flex-col items-end gap-2">
+                  <a
+                    href={`/api/admin/league-backup/${league.id}`}
+                    className="text-xs text-amber-400 hover:underline"
                   >
-                    Delete league
-                  </button>
-                </form>
+                    Download JSON backup first
+                  </a>
+                  <form action={deleteLeagueAction} className="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="leagueId" value={league.id} />
+                    <input
+                      name="confirmName"
+                      required
+                      placeholder={`Type "${league.name}"`}
+                      className="min-w-[160px] rounded border border-red-900/40 bg-zinc-950 px-2 py-1 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-300 hover:bg-red-950/40"
+                    >
+                      Delete league
+                    </button>
+                  </form>
+                  <p className="max-w-xs text-right text-[11px] text-zinc-500">
+                    Deletes {seasonCounts.get(league.id) ?? 0} season(s) and all schedule/stats.
+                    Auto .db backup runs first.
+                  </p>
+                </div>
               </div>
               <form
                 action={renameLeagueAction.bind(null, league.id)}
@@ -442,7 +542,14 @@ export default async function AdminPage({
                   <span className="ml-2 text-zinc-500">in {leagueName}</span>
                   <span className="ml-2 capitalize text-zinc-600">{season.status}</span>
                 </div>
-                <form action={deleteSeasonAction.bind(null, season.id)}>
+                <form action={deleteSeasonAction} className="flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="seasonId" value={season.id} />
+                  <input
+                    name="confirmName"
+                    required
+                    placeholder={`Type "${season.name}"`}
+                    className="min-w-[140px] rounded border border-red-900/40 bg-zinc-950 px-2 py-1 text-xs"
+                  />
                   <button
                     type="submit"
                     className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-300 hover:bg-red-950/40"

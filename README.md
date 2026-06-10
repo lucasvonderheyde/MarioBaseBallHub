@@ -305,6 +305,15 @@ League-level **admins** (per league) manage seasons, rosters, and schedules insi
 | Users/leagues gone after deploy | No Railway volume | Add volume at `/app/data`, set `DATABASE_URL=file:/app/data/league.db`, redeploy |
 | DB errors / empty site after deploy | `DATABASE_URL` is Postgres/MySQL from a Railway DB plugin | Remove plugin variables; use `file:/app/data/league.db` only |
 | Data exists but app looks fresh | Volume mount path ≠ `DATABASE_URL` | Check `/admin` → Database persistence; align mount (`/app/data` or `/app/web/data`) with `DATABASE_URL` |
+| League/season data lost | Accidental delete or bad deploy | `/admin` → **Automatic database backups** → download `.db` or schedule restore; redeploy applies rollback |
+
+### Data safeguards (production)
+
+- **Auto SQLite snapshots** — before every deploy migration and before league/season delete (`/app/data/backups/`, last 20 kept)
+- **League JSON export** — download per-league backup from `/admin` before major changes
+- **Delete confirmation** — type exact league/season name; full `.db` backup runs first
+- **Foreign keys ON** — league delete cascades intentionally (no orphaned half-deletes)
+- **Railway volume** — enable volume snapshots in Railway for an extra safety net
 | `no such column: …` locally | Schema ahead of local DB | `npm run db:push` or delete `web/data/league.db` and `npm run db:init` |
 | `better-sqlite3` / NODE_MODULE_VERSION error | Node version mismatch | `cd web && npm rebuild better-sqlite3` (use Node 20+ / 22) |
 | Wrong home/away on upload | Netplay name mismatch | Set netplay username on Account page; re-upload JSON |

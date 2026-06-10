@@ -70,5 +70,6 @@ export {
   addLeagueMemberAsAdminAction,
   renameUserAction,
   restoreLeagueBackupAction,
+  restoreDatabaseBackupAction,
   repairOrphanedLeaguesAction,
 } from "./site-admin-actions";

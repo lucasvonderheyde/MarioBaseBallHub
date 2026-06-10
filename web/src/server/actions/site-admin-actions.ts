@@ -3,7 +3,9 @@
 import { count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
+import { backupLiveDatabase, db } from "@/db";
+import { resolveDbPath } from "@/db/resolve-db-path";
+import { scheduleDatabaseRestore } from "@/db/sqlite-backup";
 import { leagueMembers, leagues, seasons, users } from "@/db/schema";
 import { requireSiteAdmin } from "@/lib/auth";
 import { getDatabaseIntegrityReport } from "@/lib/database-integrity";
@@ -17,7 +19,7 @@ export async function deleteLeagueAction(formData: FormData) {
   if (!leagueId) redirectWithFormError("/admin", "Missing league id.");
 
   const [league] = await db
-    .select({ id: leagues.id, name: leagues.name })
+    .select({ id: leagues.id, name: leagues.name, slug: leagues.slug })
     .from(leagues)
     .where(eq(leagues.id, leagueId))
     .limit(1);
@@ -28,20 +30,36 @@ export async function deleteLeagueAction(formData: FormData) {
       `Type the league name exactly ("${league.name}") to confirm delete.`,
     );
   }
+  await backupLiveDatabase(`pre-delete-league-${league.slug}`);
   await db.delete(leagues).where(eq(leagues.id, leagueId));
   revalidatePath("/admin");
   revalidatePath("/leagues");
   redirect("/admin?m=league-deleted");
 }
 
-export async function deleteSeasonAction(seasonId: string) {
+export async function deleteSeasonAction(formData: FormData) {
   await requireSiteAdmin();
+  const seasonId = String(formData.get("seasonId") ?? "").trim();
+  const confirmName = String(formData.get("confirmName") ?? "").trim();
+  if (!seasonId) redirectWithFormError("/admin", "Missing season id.");
+
   const [season] = await db
-    .select({ id: seasons.id, leagueId: seasons.leagueId })
+    .select({
+      id: seasons.id,
+      leagueId: seasons.leagueId,
+      name: seasons.name,
+    })
     .from(seasons)
     .where(eq(seasons.id, seasonId))
     .limit(1);
   if (!season) redirectWithFormError("/admin", "Season not found.");
+  if (confirmName !== season.name) {
+    redirectWithFormError(
+      "/admin",
+      `Type the season name exactly ("${season.name}") to confirm delete.`,
+    );
+  }
+  await backupLiveDatabase(`pre-delete-season-${season.id.slice(0, 8)}`);
   await db.delete(seasons).where(eq(seasons.id, seasonId));
   revalidatePath("/admin");
   revalidatePath(`/leagues/${season.leagueId}`);
@@ -194,6 +212,31 @@ export async function repairOrphanedLeaguesAction() {
   redirect(`/admin?m=leagues-repaired&n=${repaired}`);
 }
 
+export async function restoreDatabaseBackupAction(formData: FormData) {
+  await requireSiteAdmin();
+  const filename = String(formData.get("filename") ?? "").trim();
+  const confirm = String(formData.get("confirm") ?? "").trim();
+  if (confirm !== "RESTORE") {
+    redirectWithFormError('/admin', 'Type RESTORE to confirm full database rollback.');
+  }
+  if (!filename) {
+    redirectWithFormError("/admin", "Choose a database backup file.");
+  }
+
+  try {
+    scheduleDatabaseRestore(resolveDbPath(), filename);
+  } catch (error) {
+    redirectWithFormError(
+      "/admin",
+      error instanceof Error ? error.message : "Could not schedule restore.",
+    );
+  }
+
+  redirect(
+    "/admin?m=db-restore-scheduled&file=" + encodeURIComponent(filename),
+  );
+}
+
 export async function restoreLeagueBackupAction(formData: FormData) {
   await requireSiteAdmin();
   const jsonText = String(formData.get("backupJson") ?? "").trim();
@@ -209,6 +252,7 @@ export async function restoreLeagueBackupAction(formData: FormData) {
   }
 
   try {
+    await backupLiveDatabase("pre-restore-league-json");
     const leagueId = await importLeagueBackup(backup);
     revalidatePath("/admin");
     revalidatePath("/leagues");

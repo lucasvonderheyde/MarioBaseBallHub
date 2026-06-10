@@ -6,6 +6,7 @@ import * as schema from "./schema";
 import { applySqliteSchemaPatches } from "./apply-schema-patches";
 import { isNextProductionBuild } from "./build-phase";
 import { resolveDbPath } from "./resolve-db-path";
+import { createSqliteBackup } from "./sqlite-backup";
 
 type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -53,3 +54,14 @@ function getDb(): DrizzleDb {
 
 export const db = getDb();
 export type Db = typeof db;
+
+/** Snapshot the live database (safe to call during server actions). */
+export async function backupLiveDatabase(reason: string): Promise<string | null> {
+  const dbPath = connectionPath();
+  if (dbPath === ":memory:") return null;
+  const backupPath = await createSqliteBackup(dbPath, reason, { sqlite: getSqlite() });
+  if (backupPath) {
+    console.log(`[database] Backup created (${reason}): ${backupPath}`);
+  }
+  return backupPath;
+}
