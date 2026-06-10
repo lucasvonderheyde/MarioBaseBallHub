@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CharacterIcon } from "@/components/CharacterIcon";
-import { CharacterIcon } from "@/components/CharacterIcon";
 import { GlobalCharactersNav } from "@/components/GlobalCharactersNav";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";

@@ -16,7 +16,6 @@ import {
 } from "@/components/stats/stat-table-headers";
 import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { CharacterIcon } from "@/components/CharacterIcon";
-import { CharacterIcon } from "@/components/CharacterIcon";
 import { GameStatsUploader } from "@/components/GameStatsUploader";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
