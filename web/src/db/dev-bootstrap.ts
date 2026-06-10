@@ -240,6 +240,10 @@ async function main() {
       statsGameId: parsed.statsGameId,
       statsRawJson: parsed.rawJson,
       statsStadiumId: parsed.stadiumId ?? null,
+      statsAwayTeamId: awayTeamId,
+      statsHomeTeamId: homeTeamId,
+      statsAwayPlayer: parsed.awayPlayer,
+      statsHomePlayer: parsed.homePlayer,
       playedAt: new Date(),
     });
 

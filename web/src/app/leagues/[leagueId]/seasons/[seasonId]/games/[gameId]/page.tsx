@@ -29,8 +29,14 @@ import {
   inningsPitched,
 } from "@/domain/stats/batting-metrics";
 import { parseCharacterGameStats } from "@/domain/stats/parse-character-game-stats";
-import { parseLineScoreFromEvents } from "@/domain/stats/parse-line-score";
+import {
+  alignLineScoreToSchedule,
+  parseLineScoreFromEvents,
+} from "@/domain/stats/parse-line-score";
+import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
+import { resolveGameFieldSides } from "@/domain/stats/resolve-game-field-sides";
 import { normalizeStadiumId } from "@/domain/stats/stadium-id";
+import { managerDisplayName } from "@/lib/manager-profile";
 import { saveYoutubeFormAction } from "@/server/actions";
 
 type Props = {
@@ -79,13 +85,37 @@ export default async function GameReportPage({ params, searchParams }: Props) {
   const stats = hasStats ? await getGameCharacterStats(gameId) : [];
   const statsJson = hasStats ? JSON.parse(game.statsRawJson!) : null;
   const meta = statsJson ? parseCharacterGameStats(statsJson) : null;
-  const lineScore = statsJson ? parseLineScoreFromEvents(statsJson) : null;
+  const rawLineScore = statsJson ? parseLineScoreFromEvents(statsJson) : null;
+  const lineScore =
+    rawLineScore && played
+      ? alignLineScoreToSchedule(
+          rawLineScore,
+          game.awayScore!,
+          game.homeScore!,
+        )
+      : rawLineScore;
 
   const winner = played ? gameWinnerSide(game.awayScore!, game.homeScore!) : "tie";
 
   const awayTeamStats = stats.filter((row) => row.teamId === away.team.id);
   const homeTeamStats = stats.filter((row) => row.teamId === home.team.id);
+  const awayHits = awayTeamStats.reduce((sum, row) => sum + row.hits, 0);
+  const homeHits = homeTeamStats.reduce((sum, row) => sum + row.hits, 0);
 
+  const fieldSides = resolveGameFieldSides(game);
+  const fileSummary = hasStats ? parseDecodedGameFile(game.statsRawJson!) : null;
+  const fieldAway = dash.teams.find((t) => t.team.id === fieldSides.awayTeamId);
+  const fieldHome = dash.teams.find((t) => t.team.id === fieldSides.homeTeamId);
+  const fieldAwayLabel = fieldSides.fromStats
+    ? fieldAway?.manager != null
+      ? managerDisplayName(fieldAway.manager)
+      : fieldSides.awayPlayer ?? "—"
+    : fileSummary?.awayPlayer ?? "—";
+  const fieldHomeLabel = fieldSides.fromStats
+    ? fieldHome?.manager != null
+      ? managerDisplayName(fieldHome.manager)
+      : fieldSides.homePlayer ?? "—"
+    : fileSummary?.homePlayer ?? "—";
   function charDisplayName(
     rows: typeof stats,
     row: (typeof stats)[number],
@@ -280,6 +310,8 @@ export default async function GameReportPage({ params, searchParams }: Props) {
               lineScore={lineScore}
               awayScore={game.awayScore!}
               homeScore={game.homeScore!}
+              awayHits={awayHits}
+              homeHits={homeHits}
             />
           </div>
         </section>
@@ -379,10 +411,25 @@ export default async function GameReportPage({ params, searchParams }: Props) {
           {game.playedAt ? (
             <li>Recorded: {game.playedAt.toLocaleString()}</li>
           ) : null}
-          <li>
-            Away: {away.manager?.displayName ?? away.manager?.username ?? "—"} ·
-            Home: {home.manager?.displayName ?? home.manager?.username ?? "—"}
-          </li>
+          {hasStats ? (
+            <li>
+              Away: {fieldAwayLabel} · Home: {fieldHomeLabel}
+            </li>
+          ) : (
+            <li>
+              Away: {away.manager?.displayName ?? away.manager?.username ?? "—"} ·
+              Home: {home.manager?.displayName ?? home.manager?.username ?? "—"}
+            </li>
+          )}
+          {hasStats && (fieldSides.fromStats ? fieldHome : fileSummary) ? (
+            <li>
+              Home field:{" "}
+              {fieldSides.fromStats
+                ? fieldHome?.team.name
+                : fileSummary?.homePlayer}
+              {stadiumId ? ` at ${stadiumId}` : null}
+            </li>
+          ) : null}
           {game.statsGameId ? (
             <li>
               Stats GameID:{" "}

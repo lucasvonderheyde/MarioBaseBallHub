@@ -6,6 +6,10 @@ import {
   assignCharOccurrenceIndexes,
   parseCharacterGameStats,
 } from "@/domain/stats/parse-character-game-stats";
+import {
+  backfillStatsFieldSides,
+  resolveStatsFieldSidesForGame,
+} from "@/lib/stats-field-sides";
 
 function newId(): string {
   return crypto.randomUUID();
@@ -126,11 +130,18 @@ export async function backfillCharacterGameStats(seasonId: string): Promise<numb
   let count = 0;
   for (const g of unparsed) {
     if (!g.statsRawJson) continue;
+    const sides =
+      (await resolveStatsFieldSidesForGame(g.id, seasonId, g.statsRawJson)) ?? {
+        awayTeamId: g.awayTeamId,
+        homeTeamId: g.homeTeamId,
+        awayPlayer: "",
+        homePlayer: "",
+      };
     await persistCharacterGameStats({
       gameId: g.id,
       seasonId,
-      awaySideTeamId: g.awayTeamId,
-      homeSideTeamId: g.homeTeamId,
+      awaySideTeamId: sides.awayTeamId,
+      homeSideTeamId: sides.homeTeamId,
       rawJson: g.statsRawJson,
     });
     count++;
@@ -153,6 +164,7 @@ export async function backfillCharacterGameStats(seasonId: string): Promise<numb
   }
 
   await resyncStadiumIdsFromGameJson(seasonId);
+  await backfillStatsFieldSides(seasonId);
   return count;
 }
 

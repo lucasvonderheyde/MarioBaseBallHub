@@ -7,6 +7,8 @@ type Props = {
   lineScore: InningLineScore;
   awayScore: number;
   homeScore: number;
+  awayHits: number;
+  homeHits: number;
 };
 
 export function InningLineScoreTable({
@@ -15,6 +17,8 @@ export function InningLineScoreTable({
   lineScore,
   awayScore,
   homeScore,
+  awayHits,
+  homeHits,
 }: Props) {
   const awayWon = awayScore > homeScore;
   const homeWon = homeScore > awayScore;
@@ -35,6 +39,11 @@ export function InningLineScoreTable({
               className="px-2 py-2 text-center tabular-nums"
               description="Runs (total)"
             />
+            <StatColumnHeader
+              abbr="H"
+              className="px-2 py-2 text-center tabular-nums"
+              description="Hits (total)"
+            />
           </tr>
         </thead>
         <tbody>
@@ -52,6 +61,9 @@ export function InningLineScoreTable({
             >
               {awayScore}
             </td>
+            <td className="px-2 py-2 text-center tabular-nums text-zinc-200">
+              {awayHits}
+            </td>
           </tr>
           <tr className="border-b border-zinc-900">
             <td className="py-2 pr-3 font-medium text-zinc-200">{homeTeamName}</td>
@@ -66,6 +78,9 @@ export function InningLineScoreTable({
               }`}
             >
               {homeScore}
+            </td>
+            <td className="px-2 py-2 text-center tabular-nums text-zinc-200">
+              {homeHits}
             </td>
           </tr>
         </tbody>

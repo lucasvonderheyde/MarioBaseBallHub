@@ -21,46 +21,31 @@ export function parseLineScoreFromEvents(data: unknown): InningLineScore | null 
   const events = (data as Record<string, unknown>)["Events"];
   if (!Array.isArray(events) || events.length === 0) return null;
 
-  const startScoreByHalf = new Map<string, { away: number; home: number }>();
-  const endScoreByHalf = new Map<string, { away: number; home: number }>();
+  const endScoreByInning = new Map<number, { away: number; home: number }>();
 
   for (const event of events) {
     if (typeof event !== "object" || event == null) continue;
     const row = event as Record<string, unknown>;
     const inning = readScore(row["Inning"]);
-    const half = readScore(row["Half Inning"]);
     const away = readScore(row["Away Score"]);
     const home = readScore(row["Home Score"]);
-    if (inning == null || half == null || away == null || home == null) continue;
+    if (inning == null || away == null || home == null || inning < 1) continue;
 
-    const key = `${inning}:${half}`;
-    if (!startScoreByHalf.has(key)) {
-      startScoreByHalf.set(key, { away, home });
-    }
-    endScoreByHalf.set(key, { away, home });
+    endScoreByInning.set(inning, { away, home });
   }
 
-  if (endScoreByHalf.size === 0) return null;
+  if (endScoreByInning.size === 0) return null;
 
-  const maxInning = Math.max(
-    ...[...endScoreByHalf.keys()].map((key) => Number(key.split(":")[0])),
-  );
-  const awayRunsByInning = Array.from({ length: maxInning }, () => 0);
-  const homeRunsByInning = Array.from({ length: maxInning }, () => 0);
+  const maxInning = Math.max(...endScoreByInning.keys());
+  const awayRunsByInning: number[] = [];
+  const homeRunsByInning: number[] = [];
+  let previous = { away: 0, home: 0 };
 
-  for (const [key, end] of endScoreByHalf) {
-    const [inningStr, halfStr] = key.split(":");
-    const inning = Number(inningStr);
-    const half = Number(halfStr);
-    const start = startScoreByHalf.get(key);
-    if (!start || !Number.isFinite(inning) || inning < 1) continue;
-
-    const idx = inning - 1;
-    if (half === 0) {
-      awayRunsByInning[idx] = end.away - start.away;
-    } else if (half === 1) {
-      homeRunsByInning[idx] = end.home - start.home;
-    }
+  for (let inning = 1; inning <= maxInning; inning++) {
+    const end = endScoreByInning.get(inning) ?? previous;
+    awayRunsByInning.push(end.away - previous.away);
+    homeRunsByInning.push(end.home - previous.home);
+    previous = end;
   }
 
   const inningNumbers = Array.from({ length: maxInning }, (_, i) => i + 1);
@@ -74,6 +59,37 @@ export function parseLineScoreFromEvents(data: unknown): InningLineScore | null 
     awayTotal,
     homeTotal,
   };
+}
+
+/**
+ * Maps JSON away/home line score rows onto schedule away/home when upload reversed sides.
+ */
+export function alignLineScoreToSchedule(
+  lineScore: InningLineScore,
+  scheduleAwayScore: number,
+  scheduleHomeScore: number,
+): InningLineScore {
+  if (
+    lineScore.awayTotal === scheduleAwayScore &&
+    lineScore.homeTotal === scheduleHomeScore
+  ) {
+    return lineScore;
+  }
+
+  if (
+    lineScore.awayTotal === scheduleHomeScore &&
+    lineScore.homeTotal === scheduleAwayScore
+  ) {
+    return {
+      ...lineScore,
+      awayRunsByInning: lineScore.homeRunsByInning,
+      homeRunsByInning: lineScore.awayRunsByInning,
+      awayTotal: lineScore.homeTotal,
+      homeTotal: lineScore.awayTotal,
+    };
+  }
+
+  return lineScore;
 }
 
 export type HalfInningScoringPeak = {

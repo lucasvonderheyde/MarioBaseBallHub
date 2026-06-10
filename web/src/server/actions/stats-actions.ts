@@ -190,6 +190,10 @@ export async function uploadStatsAction(
       statsGameId: parsed.statsGameId,
       statsRawJson: parsed.rawJson,
       statsStadiumId: parsed.stadiumId ?? null,
+      statsAwayTeamId: match.awaySideTeamId,
+      statsHomeTeamId: match.homeSideTeamId,
+      statsAwayPlayer: parsed.awayPlayer,
+      statsHomePlayer: parsed.homePlayer,
       playedAt: new Date(),
     })
     .where(eq(scheduleGames.id, gameId));
@@ -202,12 +206,14 @@ export async function uploadStatsAction(
     rawJson: parsed.rawJson,
   });
 
-  const awayName = away.name;
-  const homeName = home.name;
+  const fieldAwayName =
+    match.awaySideTeamId === away.id ? away.name : home.name;
+  const fieldHomeName =
+    match.homeSideTeamId === home.id ? home.name : away.name;
   await recordSeasonEvent({
     seasonId,
     eventType: "game_uploaded",
-    message: `Game reported: ${parsed.awayPlayer} (${match.scheduleAwayScore}) @ ${parsed.homePlayer} (${match.scheduleHomeScore}) — ${awayName} vs ${homeName}`,
+    message: `Game reported: ${parsed.awayPlayer} (${parsed.awayScore}) @ ${parsed.homePlayer} (${parsed.homeScore}) — ${fieldAwayName} vs ${fieldHomeName}`,
     relatedGameId: gameId,
   });
 

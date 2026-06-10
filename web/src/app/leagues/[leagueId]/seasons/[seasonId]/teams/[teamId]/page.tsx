@@ -26,6 +26,11 @@ import {
   resolveBattingLineForRosterCopy,
   resolvePitchingLineForRosterCopy,
 } from "@/lib/team-roster-stats";
+import {
+  isTeamHomeInGame,
+  resolveGameFieldSides,
+  teamScoresFromFieldSides,
+} from "@/domain/stats/resolve-game-field-sides";
 import { normalizeStadiumId } from "@/domain/stats/stadium-id";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { stadiumIconUrl } from "@/lib/asset-urls";
@@ -146,17 +151,27 @@ export default async function TeamPage({ params, searchParams }: Props) {
       (g) => g.game.homeTeamId === teamId || g.game.awayTeamId === teamId,
     )
     .map(({ game, round }) => {
-      const isHome = game.homeTeamId === teamId;
-      const oppId = isHome ? game.awayTeamId : game.homeTeamId;
-      const opp = dash.teams.find((t) => t.team.id === oppId);
       const played = game.playedAt != null && game.homeScore != null && game.awayScore != null;
+      const fieldSides = resolveGameFieldSides(game);
+      const isHome = played
+        ? isTeamHomeInGame(teamId, fieldSides)
+        : game.homeTeamId === teamId;
+      const oppId = isHome ? fieldSides.awayTeamId : fieldSides.homeTeamId;
+      const opp = dash.teams.find((t) => t.team.id === oppId);
       let result: "W" | "L" | null = null;
       if (played) {
-        const ours = isHome ? game.homeScore! : game.awayScore!;
-        const theirs = isHome ? game.awayScore! : game.homeScore!;
-        result = ours > theirs ? "W" : "L";
+        const scores = teamScoresFromFieldSides(
+          teamId,
+          fieldSides,
+          game.awayScore!,
+          game.homeScore!,
+        );
+        if (scores) {
+          result = scores.ours > scores.theirs ? "W" : "L";
+        }
       }
-      return { game, round, isHome, opp, played, result };
+      const hadHomeField = played && fieldSides.fromStats && isHome;
+      return { game, round, isHome, opp, played, result, hadHomeField, fieldSides };
     });
 
   return (
@@ -301,7 +316,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
       <section>
         <h2 className="text-lg font-semibold">Schedule</h2>
         <ul className="mt-3 space-y-2">
-          {teamGames.map(({ game, round, isHome, opp, played, result }) => (
+          {teamGames.map(({ game, round, isHome, opp, played, result, hadHomeField }) => (
             <li
               key={game.id}
               className="rounded border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm"
@@ -342,9 +357,13 @@ export default async function TeamPage({ params, searchParams }: Props) {
                   </Link>
                 ) : null}
               </div>
-              {game.statsStadiumId ? (
+              {game.statsStadiumId || hadHomeField ? (
                 <p className="mt-1 text-xs text-zinc-600">
-                  {normalizeStadiumId(game.statsStadiumId)}
+                  {game.statsStadiumId
+                    ? normalizeStadiumId(game.statsStadiumId)
+                    : null}
+                  {game.statsStadiumId && hadHomeField ? " · " : null}
+                  {hadHomeField ? "Home field" : null}
                 </p>
               ) : null}
             </li>

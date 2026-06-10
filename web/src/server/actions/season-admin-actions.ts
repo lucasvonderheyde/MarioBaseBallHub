@@ -920,6 +920,10 @@ export async function clearGameStatsAction(
       statsGameId: null,
       statsRawJson: null,
       statsStadiumId: null,
+      statsAwayTeamId: null,
+      statsHomeTeamId: null,
+      statsAwayPlayer: null,
+      statsHomePlayer: null,
       playedAt: null,
     })
     .where(eq(scheduleGames.id, gameId));

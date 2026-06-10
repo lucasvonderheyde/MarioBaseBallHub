@@ -17,6 +17,10 @@ const baseGame = {
   statsGameId: null,
   statsRawJson: null,
   statsStadiumId: null,
+  statsAwayTeamId: null,
+  statsHomeTeamId: null,
+  statsAwayPlayer: null,
+  statsHomePlayer: null,
   playedAt: null,
   agreedPlayAt: null,
 };

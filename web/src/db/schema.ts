@@ -173,6 +173,16 @@ export const scheduleGames = sqliteTable(
     statsGameId: text("stats_game_id").unique(),
     statsRawJson: text("stats_raw_json"),
     statsStadiumId: text("stats_stadium_id"),
+    /** Team that batted first in the uploaded stats file (JSON away). */
+    statsAwayTeamId: text("stats_away_team_id").references(() => teams.id, {
+      onDelete: "set null",
+    }),
+    /** Team that batted second / had home field in the uploaded stats file (JSON home). */
+    statsHomeTeamId: text("stats_home_team_id").references(() => teams.id, {
+      onDelete: "set null",
+    }),
+    statsAwayPlayer: text("stats_away_player"),
+    statsHomePlayer: text("stats_home_player"),
     playedAt: integer("played_at", { mode: "timestamp" }),
     /** When both managers accept a proposed play time. */
     agreedPlayAt: integer("agreed_play_at", { mode: "timestamp" }),
