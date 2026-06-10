@@ -155,6 +155,31 @@ export default async function SeasonAdminPage({ params, searchParams }: Props) {
           Moved {count ?? "0"} game(s) into weekly rounds.
         </p>
       ) : null}
+      {m === "team-created" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Team added. You can set claim username and home stadium below.
+        </p>
+      ) : null}
+      {m === "pool-saved" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Character pool saved.
+        </p>
+      ) : null}
+      {m === "round-created" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Round created.
+        </p>
+      ) : null}
+      {m === "game-added" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Schedule game added.
+        </p>
+      ) : null}
+      {m === "stats-cleared" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Game stats cleared.
+        </p>
+      ) : null}
         <section className="mt-12 rounded-lg border border-amber-900/40 bg-amber-950/10 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-amber-200">Admin</h2>
 

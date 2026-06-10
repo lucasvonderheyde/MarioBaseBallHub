@@ -36,6 +36,7 @@ import {
   roundRobinGameCount,
 } from "@/domain/schedule/generate-round-robin";
 import { parseWeeklyMatchupsText } from "@/domain/schedule/parse-weekly-matchups";
+import { seasonAdminPath } from "@/lib/season-admin-path";
 import { redirectWithFormError } from "@/server/flash-redirect";
 import { newUuid } from "@/server/ids";
 import { deleteCharacterGameStatsForGame } from "@/server/persist-game-stats";
@@ -46,14 +47,14 @@ export async function createTeamAction(seasonId: string, formData: FormData) {
   if (!leagueId) redirectWithFormError("/leagues", "Season not found.");
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   const name = String(formData.get("name") ?? "").trim();
   const managerUsername = String(formData.get("managerUsername") ?? "").trim();
   const claimUsername = String(formData.get("claimUsername") ?? "").trim();
   const homeStadium = String(formData.get("homeStadium") ?? "").trim();
   if (!name)
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Team name required.",
     );
   let managerUserId: string | null = null;
@@ -65,7 +66,7 @@ export async function createTeamAction(seasonId: string, formData: FormData) {
       .limit(1);
     if (!m)
       redirectWithFormError(
-        `/leagues/${leagueId}/seasons/${seasonId}`,
+        seasonAdminPath(leagueId, seasonId),
         "Manager username not found.",
       );
     managerUserId = m.id;
@@ -79,7 +80,8 @@ export async function createTeamAction(seasonId: string, formData: FormData) {
     homeStadiumGameId: homeStadium || null,
   });
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "team-created" }));
 }
 
 export async function updateTeamAction(
@@ -157,7 +159,7 @@ export async function updateTeamAction(
       })
       .where(eq(teams.id, teamId));
   }
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
   revalidatePath(`/leagues/${leagueId}/claim`, "page");
   redirect(`/leagues/${leagueId}/seasons/${seasonId}/teams/${teamId}?m=updated`);
 }
@@ -171,19 +173,19 @@ export async function updateTeamClaimUsernameAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   }
 
   const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
   if (!team || team.seasonId !== seasonId) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Team not found.",
     );
   }
   if (team.managerUserId) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Cannot change reservation after a manager has claimed the team.",
     );
   }
@@ -194,9 +196,9 @@ export async function updateTeamClaimUsernameAction(
     .set({ claimUsername: claimUsername || null })
     .where(eq(teams.id, teamId));
 
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
   revalidatePath(`/leagues/${leagueId}/claim`, "page");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=reservation-updated`);
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "reservation-updated" }));
 }
 
 export async function savePlayoffSettingsAction(
@@ -207,7 +209,7 @@ export async function savePlayoffSettingsAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   }
 
   const [season] = await db
@@ -216,7 +218,7 @@ export async function savePlayoffSettingsAction(
     .where(eq(seasons.id, seasonId))
     .limit(1);
   if (!season || season.leagueId !== leagueId) {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Season not found.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Season not found.");
   }
 
   const autoQualifyCount = Number(formData.get("autoQualifyCount"));
@@ -269,9 +271,9 @@ export async function savePlayoffSettingsAction(
     .set({ playoffSettings: serializePlayoffSettings(validated) })
     .where(eq(seasons.id, seasonId));
 
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
   revalidatePath(`/leagues/${leagueId}/standings`);
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=playoff-settings`);
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "playoff-settings" }));
 }
 
 export async function saveScheduleSettingsAction(
@@ -282,7 +284,7 @@ export async function saveScheduleSettingsAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   }
 
   const [season] = await db
@@ -291,7 +293,7 @@ export async function saveScheduleSettingsAction(
     .where(eq(seasons.id, seasonId))
     .limit(1);
   if (!season || season.leagueId !== leagueId) {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Season not found.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Season not found.");
   }
 
   const format = String(formData.get("regularSeasonFormat") ?? "manual");
@@ -307,9 +309,9 @@ export async function saveScheduleSettingsAction(
     .set({ scheduleSettings: serializeSeasonScheduleSettings(validated) })
     .where(eq(seasons.id, seasonId));
 
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
   revalidatePath(`/leagues/${leagueId}/schedule`);
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=schedule-settings`);
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "schedule-settings" }));
 }
 
 async function getOrCreateRegularRound(
@@ -371,7 +373,7 @@ export async function generateRoundRobinScheduleAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   }
 
   const teamRows = await db
@@ -382,7 +384,7 @@ export async function generateRoundRobinScheduleAction(
 
   if (teamRows.length < 2) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Need at least 2 teams to generate a schedule.",
     );
   }
@@ -414,7 +416,7 @@ export async function generateRoundRobinScheduleAction(
 
   if (added === 0) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Round robin schedule already includes every pairing.",
     );
   }
@@ -428,10 +430,10 @@ export async function generateRoundRobinScheduleAction(
     })
     .where(eq(seasons.id, seasonId));
 
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
   revalidatePath(`/leagues/${leagueId}/schedule`);
   redirect(
-    `/leagues/${leagueId}/seasons/${seasonId}?m=round-robin&count=${added}`,
+    seasonAdminPath(leagueId, seasonId, { m: "round-robin", count: added }),
   );
 }
 
@@ -443,7 +445,7 @@ export async function addWeeklyMatchupsAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   }
 
   const weekNumber = Number(formData.get("weekNumber") ?? 1);
@@ -451,7 +453,7 @@ export async function addWeeklyMatchupsAction(
 
   if (!Number.isFinite(weekNumber) || weekNumber < 1) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Week number must be at least 1.",
     );
   }
@@ -467,13 +469,13 @@ export async function addWeeklyMatchupsAction(
 
   if (errors.length > 0) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       errors.join(" "),
     );
   }
   if (matchups.length === 0) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Add at least one matchup (one per line).",
     );
   }
@@ -500,15 +502,19 @@ export async function addWeeklyMatchupsAction(
 
   if (added === 0) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "All matchups already exist on the schedule.",
     );
   }
 
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
   revalidatePath(`/leagues/${leagueId}/schedule`);
   redirect(
-    `/leagues/${leagueId}/seasons/${seasonId}?m=weekly-matchups&count=${added}&week=${weekNumber}`,
+    seasonAdminPath(leagueId, seasonId, {
+      m: "weekly-matchups",
+      count: added,
+      week: weekNumber,
+    }),
   );
 }
 
@@ -519,7 +525,7 @@ export async function organizeRoundRobinWeeksAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   }
 
   const teamRows = await db
@@ -530,7 +536,7 @@ export async function organizeRoundRobinWeeksAction(
 
   if (teamRows.length < 2) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Need at least 2 teams.",
     );
   }
@@ -575,15 +581,15 @@ export async function organizeRoundRobinWeeksAction(
 
   if (moved === 0) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "No games could be assigned to weekly rounds.",
     );
   }
 
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
   revalidatePath(`/leagues/${leagueId}/schedule`);
   redirect(
-    `/leagues/${leagueId}/seasons/${seasonId}?m=organize-weeks&count=${moved}`,
+    seasonAdminPath(leagueId, seasonId, { m: "organize-weeks", count: moved }),
   );
 }
 
@@ -592,7 +598,7 @@ export async function savePoolAction(seasonId: string, formData: FormData) {
   const leagueId = (await getSeasonLeagueId(seasonId))!;
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   const allChars = await db.select({ id: characters.id }).from(characters);
   for (const c of allChars) {
     const raw = formData.get(`pool_${c.id}`);
@@ -615,7 +621,7 @@ export async function savePoolAction(seasonId: string, formData: FormData) {
         );
       if (assigned.length > 0) {
         redirectWithFormError(
-          `/leagues/${leagueId}/seasons/${seasonId}`,
+          seasonAdminPath(leagueId, seasonId),
           "Remove characters from team rosters before setting pool count to 0.",
         );
       }
@@ -682,15 +688,16 @@ export async function savePoolAction(seasonId: string, formData: FormData) {
     for (const r of toRemove) {
       if (r.teamId) {
         redirectWithFormError(
-          `/leagues/${leagueId}/seasons/${seasonId}`,
+          seasonAdminPath(leagueId, seasonId),
           "Cannot shrink pool: unassign roster copies above the new count first.",
         );
       }
       await db.delete(rosterInstances).where(eq(rosterInstances.id, r.id));
     }
   }
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "pool-saved" }));
 }
 
 export async function assignRosterFormAction(formData: FormData) {
@@ -760,7 +767,7 @@ export async function assignRosterInstanceAction(input: {
     .set({ teamId })
     .where(eq(rosterInstances.id, instanceId));
 
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/rosters`);
   return {};
 }
@@ -773,19 +780,20 @@ export async function createRoundAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   const phase = String(formData.get("phase") ?? "regular") as "regular" | "playoffs";
   const roundNumber = Number(formData.get("roundNumber") ?? 1);
   if (!Number.isFinite(roundNumber) || roundNumber < 1)
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Invalid round number.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Invalid round number.");
   await db
     .insert(rounds)
     .values({ id: newUuid(), seasonId, phase, roundNumber })
     .onConflictDoNothing({
       target: [rounds.seasonId, rounds.phase, rounds.roundNumber],
     });
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "round-created" }));
 }
 
 export async function addScheduleGameAction(
@@ -796,14 +804,14 @@ export async function addScheduleGameAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   const roundId = String(formData.get("roundId") ?? "");
   const slot = Number(formData.get("slot") ?? 1);
   const homeTeamId = String(formData.get("homeTeamId") ?? "");
   const awayTeamId = String(formData.get("awayTeamId") ?? "");
   if (!roundId || !homeTeamId || !awayTeamId)
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Round and teams required.",
     );
   await db
@@ -818,8 +826,9 @@ export async function addScheduleGameAction(
     .onConflictDoNothing({
       target: [scheduleGames.roundId, scheduleGames.slotInRound],
     });
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "game-added" }));
 }
 
 export async function saveYoutubeFormAction(formData: FormData) {
@@ -844,7 +853,7 @@ export async function saveYoutubeFormAction(formData: FormData) {
     .limit(1);
   if (!game) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Game not found.",
     );
   }
@@ -884,7 +893,7 @@ export async function saveYoutubeFormAction(formData: FormData) {
     .update(scheduleGames)
     .set({ youtubeUrl: url.trim() || null })
     .where(eq(scheduleGames.id, gameId));
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`);
   revalidatePath(`/leagues/${leagueId}/schedule`);
   redirect(
@@ -901,7 +910,7 @@ export async function clearGameStatsAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin")
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   await deleteCharacterGameStatsForGame(gameId);
   await db
     .update(scheduleGames)
@@ -914,6 +923,7 @@ export async function clearGameStatsAction(
       playedAt: null,
     })
     .where(eq(scheduleGames.id, gameId));
-  revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}`);
+  revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "stats-cleared" }));
 }

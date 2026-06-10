@@ -11,6 +11,7 @@ import {
   DEFAULT_TIEBREAKER_ORDER,
   serializeTiebreakerOrder,
 } from "@/domain/standings/tiebreakers";
+import { seasonAdminPath } from "@/lib/season-admin-path";
 import { redirectWithFormError } from "@/server/flash-redirect";
 import { newUuid, slugifyLeagueSegment } from "@/server/ids";
 
@@ -151,12 +152,12 @@ export async function renameSeasonAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   }
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Season name required.",
     );
   }
@@ -169,10 +170,11 @@ export async function renameSeasonAction(
     redirectWithFormError(`/leagues/${leagueId}`, "Season not found.");
   }
   await db.update(seasons).set({ name }).where(eq(seasons.id, seasonId));
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
   revalidatePath(`/leagues/${leagueId}`);
   revalidatePath("/admin");
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=renamed`);
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "renamed" }));
 }
 
 export async function updateSeasonStatusAction(
@@ -183,12 +185,12 @@ export async function updateSeasonStatusAction(
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") {
-    redirectWithFormError(`/leagues/${leagueId}/seasons/${seasonId}`, "Forbidden.");
+    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
   }
   const status = String(formData.get("status") ?? "") as "setup" | "active" | "completed";
   if (!["setup", "active", "completed"].includes(status)) {
     redirectWithFormError(
-      `/leagues/${leagueId}/seasons/${seasonId}`,
+      seasonAdminPath(leagueId, seasonId),
       "Invalid season status.",
     );
   }
@@ -210,10 +212,11 @@ export async function updateSeasonStatusAction(
       .where(eq(seasonDrafts.seasonId, seasonId));
   }
 
+  revalidatePath(seasonAdminPath(leagueId, seasonId));
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/draft`);
   revalidatePath(`/leagues/${leagueId}`);
   revalidatePath(`/leagues/${leagueId}/schedule`);
   revalidatePath(`/leagues/${leagueId}/standings`);
-  redirect(`/leagues/${leagueId}/seasons/${seasonId}?m=status-updated`);
+  redirect(seasonAdminPath(leagueId, seasonId, { m: "status-updated" }));
 }
