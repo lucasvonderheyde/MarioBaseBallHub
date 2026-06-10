@@ -15,7 +15,8 @@ import {
   teamRecordStatHeaders,
 } from "@/components/stats/stat-table-headers";
 import { PitchingTableRow } from "@/components/PitchingStatCells";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { GameStatsUploader } from "@/components/GameStatsUploader";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
@@ -334,7 +335,7 @@ export default async function AccountPage({
                           <tr key={charId} className="border-b border-zinc-900">
                             <td className="py-1 pr-2">
                               <span className="flex items-center gap-2">
-                                <CharacterMugshot charId={charId} size={24} />
+                                <CharacterIcon charId={charId} size={24} />
                                 {formatCharIdDisplay(charId)}
                               </span>
                             </td>
@@ -394,7 +395,7 @@ export default async function AccountPage({
                           <tr key={charId} className="border-b border-zinc-900">
                             <td className="py-1 pr-2">
                               <span className="flex items-center gap-2">
-                                <CharacterMugshot charId={charId} size={24} />
+                                <CharacterIcon charId={charId} size={24} />
                                 {formatCharIdDisplay(charId)}
                               </span>
                             </td>

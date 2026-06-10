@@ -108,7 +108,7 @@ export default async function GlobalCharacterDetailPage({ params }: Props) {
 
       {ratings ? (
         <div className="mt-8">
-          <CharacterAttributesSection ratings={ratings} />
+          <CharacterAttributesSection charId={gameCharId} ratings={ratings} />
         </div>
       ) : null}
 

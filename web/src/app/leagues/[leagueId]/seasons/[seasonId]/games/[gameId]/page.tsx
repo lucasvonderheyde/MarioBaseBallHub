@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { scheduleGames } from "@/db/schema";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { InningLineScoreTable } from "@/components/games/InningLineScoreTable";
 import {
   winnerScoreClass,
@@ -131,7 +131,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
                     <td className="py-1 pr-2 text-zinc-500">{r.rosterSlot}</td>
                     <td className="py-1 pr-2">
                       <span className="flex items-center gap-1.5">
-                        <CharacterMugshot charId={r.charId} size={24} />
+                        <CharacterIcon charId={r.charId} size={24} />
                         {charDisplayName(rows, r)}
                         {r.wasPitcher ? (
                           <span title="Pitcher" className="text-amber-400">
@@ -187,7 +187,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
                   <tr key={row.id} className="border-b border-zinc-900">
                     <td className="py-1 pr-2">
                       <span className="flex items-center gap-1.5">
-                        <CharacterMugshot charId={row.charId} size={24} />
+                        <CharacterIcon charId={row.charId} size={24} />
                         {charDisplayName(rows, row)}
                       </span>
                     </td>

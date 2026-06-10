@@ -6,6 +6,14 @@ export function characterMugshotUrl(filename: string): string {
   return `/assets/characters/${encodeURIComponent(filename)}`;
 }
 
+export function characterIconUrl(filename: string): string {
+  return `/assets/characterIcons/${encodeURIComponent(filename)}`;
+}
+
+export function characterBatUrl(filename: string): string {
+  return `/assets/characterBats/${encodeURIComponent(filename)}`;
+}
+
 export function stadiumIconUrl(filename: string): string {
   return `/assets/stadiums/${encodeURIComponent(filename)}`;
 }

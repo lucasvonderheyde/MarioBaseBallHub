@@ -235,7 +235,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
 
       {activeTab === "attributes" && ratings ? (
         <div className="mt-8">
-          <CharacterAttributesSection ratings={ratings} />
+          <CharacterAttributesSection charId={charId} ratings={ratings} />
         </div>
       ) : null}
 

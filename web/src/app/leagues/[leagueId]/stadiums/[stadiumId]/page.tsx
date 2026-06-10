@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { seasons } from "@/db/schema";
 import { STADIUM_CATALOG } from "@/data/character-catalog";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import {
   GameMatchupInline,
   winnerTeamNameClass,
@@ -194,7 +194,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
                     href={`/leagues/${leagueId}/characters/${encodeURIComponent(charId)}`}
                     className="flex items-center gap-2 hover:text-amber-400"
                   >
-                    <CharacterMugshot charId={charId} size={24} />
+                    <CharacterIcon charId={charId} size={24} />
                     {formatCharIdDisplay(charId)}
                   </Link>
                 </td>

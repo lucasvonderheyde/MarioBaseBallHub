@@ -1,6 +1,9 @@
 import type { CharacterRatings } from "@/data/character-ratings";
+import { characterBatUrl } from "@/lib/asset-urls";
+import { batFileForCharId } from "@/lib/character-assets";
 
 type Props = {
+  charId: string;
   ratings: CharacterRatings;
 };
 
@@ -13,7 +16,9 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function CharacterAttributesSection({ ratings }: Props) {
+export function CharacterAttributesSection({ charId, ratings }: Props) {
+  const batFile = batFileForCharId(charId);
+
   return (
     <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
       <h2 className="text-lg font-semibold">Character attributes</h2>
@@ -65,15 +70,30 @@ export function CharacterAttributesSection({ ratings }: Props) {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
             Batting
           </h3>
-          <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Batting stance" value={ratings.battingStance} />
-            <Field label="Star swing" value={ratings.starSwing} />
-            <Field label="Slap hit power" value={ratings.slapHitPower} />
-            <Field label="Charge hit power" value={ratings.chargeHitPower} />
-            <Field label="Bunting" value={ratings.bunting} />
-            <Field label="Horizontal trajectory" value={ratings.horizontalTrajectory} />
-            <Field label="Vertical trajectory" value={ratings.verticalTrajectory} />
-          </dl>
+          <div className="mt-3 flex flex-col gap-6 sm:flex-row sm:items-start">
+            {batFile ? (
+              <div className="flex shrink-0 flex-col items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={characterBatUrl(batFile)}
+                  alt=""
+                  width={160}
+                  height={48}
+                  className="h-12 w-auto max-w-[10rem] object-contain"
+                />
+                <p className="text-xs text-zinc-500">Bat</p>
+              </div>
+            ) : null}
+            <dl className="grid min-w-0 flex-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Batting stance" value={ratings.battingStance} />
+              <Field label="Star swing" value={ratings.starSwing} />
+              <Field label="Slap hit power" value={ratings.slapHitPower} />
+              <Field label="Charge hit power" value={ratings.chargeHitPower} />
+              <Field label="Bunting" value={ratings.bunting} />
+              <Field label="Horizontal trajectory" value={ratings.horizontalTrajectory} />
+              <Field label="Vertical trajectory" value={ratings.verticalTrajectory} />
+            </dl>
+          </div>
         </div>
       </div>
     </section>

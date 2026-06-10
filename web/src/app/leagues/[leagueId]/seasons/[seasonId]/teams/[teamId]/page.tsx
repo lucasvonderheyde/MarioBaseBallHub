@@ -4,7 +4,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, rosterInstances, teams, users } from "@/db/schema";
 import { BattingStatCells } from "@/components/BattingStatCells";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { GameMatchupInline } from "@/components/games/GameMatchupScore";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
 import { battingStatHeaders, pitchingStatHeaders } from "@/components/stats/stat-table-headers";
@@ -28,7 +28,7 @@ import {
 } from "@/lib/team-roster-stats";
 import { normalizeStadiumId } from "@/domain/stats/stadium-id";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
-import { characterMugshotUrl, stadiumIconUrl } from "@/lib/asset-urls";
+import { stadiumIconUrl } from "@/lib/asset-urls";
 import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
 import { updateTeamAction, updateProfileAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
@@ -255,18 +255,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
                       href={`/leagues/${leagueId}/characters/${encodeURIComponent(character.gameCharId)}?season=${seasonId}`}
                       className="flex items-center gap-2 hover:text-amber-400"
                     >
-                      {character.mugshotFile ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={characterMugshotUrl(character.mugshotFile)}
-                          alt=""
-                          width={28}
-                          height={28}
-                          className="rounded"
-                        />
-                      ) : (
-                        <CharacterMugshot charId={character.gameCharId} />
-                      )}
+                      <CharacterIcon charId={character.gameCharId} size={28} />
                       {character.displayName}
                       {showCopy ? (
                         <span className="text-zinc-500">#{instance.copyIndex}</span>
@@ -389,18 +378,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
                           href={`/leagues/${leagueId}/characters/${encodeURIComponent(character.gameCharId)}?season=${seasonId}&tab=pitching`}
                           className="flex items-center gap-2 hover:text-amber-400"
                         >
-                          {character.mugshotFile ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={characterMugshotUrl(character.mugshotFile)}
-                              alt=""
-                              width={28}
-                              height={28}
-                              className="rounded"
-                            />
-                          ) : (
-                            <CharacterMugshot charId={character.gameCharId} />
-                          )}
+                          <CharacterIcon charId={character.gameCharId} size={28} />
                           {character.displayName}
                           {showCopy ? (
                             <span className="text-zinc-500">#{instance.copyIndex}</span>
@@ -462,18 +440,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
                                 href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}`}
                                 className="flex items-center gap-2 hover:text-amber-400"
                               >
-                                {character?.mugshotFile ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={characterMugshotUrl(character.mugshotFile)}
-                                    alt=""
-                                    width={28}
-                                    height={28}
-                                    className="rounded"
-                                  />
-                                ) : (
-                                  <CharacterMugshot charId={line.charId} />
-                                )}
+                                  <CharacterIcon charId={line.charId} size={28} />
                                 {character?.displayName ?? formatCharIdDisplay(line.charId)}
                               </Link>
                             </td>
@@ -530,18 +497,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
                                 href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}&tab=pitching`}
                                 className="flex items-center gap-2 hover:text-amber-400"
                               >
-                                {character?.mugshotFile ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={characterMugshotUrl(character.mugshotFile)}
-                                    alt=""
-                                    width={28}
-                                    height={28}
-                                    className="rounded"
-                                  />
-                                ) : (
-                                  <CharacterMugshot charId={line.charId} />
-                                )}
+                                  <CharacterIcon charId={line.charId} size={28} />
                                 {character?.displayName ?? formatCharIdDisplay(line.charId)}
                               </Link>
                             </td>

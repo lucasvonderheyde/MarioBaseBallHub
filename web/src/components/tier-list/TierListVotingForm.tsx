@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { saveTierBallotAction } from "@/server/actions";
 import {
   TIER_OPTIONS,
@@ -70,7 +70,7 @@ export function TierListVotingForm({ characters, initialTiers }: Props) {
             key={character.gameCharId}
             className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2"
           >
-            <CharacterMugshot charId={character.gameCharId} size={32} />
+            <CharacterIcon charId={character.gameCharId} size={32} />
             <span className="min-w-0 flex-1 text-sm font-medium text-zinc-200">
               {character.displayName}
             </span>

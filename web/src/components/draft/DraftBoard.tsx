@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import {
   lockDraftAction,
   makeDraftPickAction,
@@ -158,7 +158,7 @@ export function DraftBoard({
                   }
                   className="flex w-full items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-left text-sm hover:border-amber-700/50"
                 >
-                  <CharacterMugshot charId={instance.gameCharId} size={32} />
+                  <CharacterIcon charId={instance.gameCharId} size={32} />
                   <span>
                     {instance.displayName}
                     {instance.copyIndex > 0 ? ` #${instance.copyIndex + 1}` : ""}

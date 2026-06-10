@@ -3,6 +3,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import path from "path";
 import * as schema from "./schema";
+import { applySqliteSchemaPatches } from "./apply-schema-patches";
 import { isNextProductionBuild } from "./build-phase";
 import { resolveDbPath } from "./resolve-db-path";
 
@@ -29,6 +30,9 @@ function openSqlite(): Database.Database {
   const sqlite = new Database(dbPath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("busy_timeout = 5000");
+  if (dbPath !== ":memory:") {
+    applySqliteSchemaPatches(sqlite);
+  }
   return sqlite;
 }
 

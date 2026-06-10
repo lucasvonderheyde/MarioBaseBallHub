@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
 import { TierListVotingForm } from "@/components/tier-list/TierListVotingForm";
@@ -65,7 +65,7 @@ export default async function TierListPage() {
                   key={row.gameCharId}
                   className="flex flex-wrap items-center gap-3 text-sm"
                 >
-                  <CharacterMugshot charId={row.gameCharId} size={28} />
+                  <CharacterIcon charId={row.gameCharId} size={28} />
                   <Link
                     href={`/characters/${encodeURIComponent(row.gameCharId)}`}
                     className="w-40 shrink-0 text-amber-400 hover:underline"

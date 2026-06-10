@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { assignRosterInstanceAction } from "@/server/actions/season-admin-actions";
 
 export type RosterBoardInstance = {
@@ -57,7 +57,7 @@ function CharacterChip({
           : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-600"
       } ${dragging ? "opacity-50" : ""}`}
     >
-      <CharacterMugshot charId={instance.gameCharId} size={28} />
+      <CharacterIcon charId={instance.gameCharId} size={28} />
       <div className="min-w-0">
         <p className="truncate font-medium">{instance.displayName}</p>
         {duplicateCount > 1 ? (

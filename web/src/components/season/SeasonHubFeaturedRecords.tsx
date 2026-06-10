@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { Card } from "@/components/ui/Card";
 import type { SeasonRecordHolder } from "@/lib/season-records";
 
@@ -40,7 +40,7 @@ export function SeasonHubFeaturedRecords({ leagueId, seasonId, records }: Props)
           <p className="mt-2 text-sm text-zinc-400">{record.detail}</p>
           {record.charId ? (
             <div className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
-              <CharacterMugshot
+              <CharacterIcon
                 charId={record.charId}
                 displayName={record.charDisplayName}
                 size={28}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterIcon } from "@/components/CharacterIcon";
+import { CharacterIcon } from "@/components/CharacterIcon";
 import { GlobalCharactersNav } from "@/components/GlobalCharactersNav";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
@@ -129,7 +130,7 @@ export default async function ChemistryPage() {
                   <th className="sticky left-0 z-10 bg-zinc-950 px-2 py-1.5 text-left font-medium text-zinc-300">
                     <div className="flex items-center gap-2">
                       {rowA.gameCharId ? (
-                        <CharacterMugshot
+                        <CharacterIcon
                           charId={rowA.gameCharId}
                           displayName={rowA.displayName}
                           size={24}
@@ -178,7 +179,7 @@ export default async function ChemistryPage() {
               >
                 <div className="flex items-center gap-2">
                   {row.gameCharId ? (
-                    <CharacterMugshot
+                    <CharacterIcon
                       charId={row.gameCharId}
                       displayName={row.displayName}
                       size={32}
