@@ -227,6 +227,8 @@ export type PitchingLine = {
   charId: string;
   charOccurrenceIndex: number;
   games: number;
+  gamesStarted: number;
+  reliefAppearances: number;
   outsPitched: number;
   battersFaced: number;
   hitsAllowed: number;
@@ -249,6 +251,8 @@ function toPitchingLine(
   charOccurrenceIndex: number,
   row: {
     games: number;
+    gamesStarted?: number;
+    reliefAppearances?: number;
     outsPitched: number;
     battersFaced: number;
     hitsAllowed: number;
@@ -264,6 +268,8 @@ function toPitchingLine(
     charId,
     charOccurrenceIndex,
     games: row.games,
+    gamesStarted: row.gamesStarted ?? 0,
+    reliefAppearances: row.reliefAppearances ?? 0,
     outsPitched: row.outsPitched,
     battersFaced: row.battersFaced,
     hitsAllowed: row.hitsAllowed,
@@ -307,6 +313,8 @@ export async function aggregatePitchingByCharOccurrence(
       charId: characterGameStats.charId,
       charOccurrenceIndex: characterGameStats.charOccurrenceIndex,
       games: sql<number>`count(distinct ${characterGameStats.gameId})`.mapWith(Number),
+      gamesStarted: sql<number>`sum(case when ${characterGameStats.pitchingRole} = 'starter' then 1 else 0 end)`.mapWith(Number),
+      reliefAppearances: sql<number>`sum(case when ${characterGameStats.pitchingRole} = 'reliever' then 1 else 0 end)`.mapWith(Number),
       outsPitched: sql<number>`sum(${characterGameStats.outsPitched})`.mapWith(Number),
       battersFaced: sql<number>`sum(${characterGameStats.battersFaced})`.mapWith(Number),
       hitsAllowed: sql<number>`sum(${characterGameStats.hitsAllowed})`.mapWith(Number),
@@ -343,6 +351,8 @@ export async function aggregatePitchingByCharId(
     .select({
       charId: characterGameStats.charId,
       games: sql<number>`count(distinct ${characterGameStats.gameId})`.mapWith(Number),
+      gamesStarted: sql<number>`sum(case when ${characterGameStats.pitchingRole} = 'starter' then 1 else 0 end)`.mapWith(Number),
+      reliefAppearances: sql<number>`sum(case when ${characterGameStats.pitchingRole} = 'reliever' then 1 else 0 end)`.mapWith(Number),
       outsPitched: sql<number>`sum(${characterGameStats.outsPitched})`.mapWith(Number),
       battersFaced: sql<number>`sum(${characterGameStats.battersFaced})`.mapWith(Number),
       hitsAllowed: sql<number>`sum(${characterGameStats.hitsAllowed})`.mapWith(Number),
@@ -375,6 +385,8 @@ export async function aggregatePitchingByCharAndSeason(
       seasonId: seasons.id,
       seasonName: seasons.name,
       games: sql<number>`count(distinct ${characterGameStats.gameId})`.mapWith(Number),
+      gamesStarted: sql<number>`sum(case when ${characterGameStats.pitchingRole} = 'starter' then 1 else 0 end)`.mapWith(Number),
+      reliefAppearances: sql<number>`sum(case when ${characterGameStats.pitchingRole} = 'reliever' then 1 else 0 end)`.mapWith(Number),
       outsPitched: sql<number>`sum(${characterGameStats.outsPitched})`.mapWith(Number),
       battersFaced: sql<number>`sum(${characterGameStats.battersFaced})`.mapWith(Number),
       hitsAllowed: sql<number>`sum(${characterGameStats.hitsAllowed})`.mapWith(Number),

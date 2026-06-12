@@ -403,9 +403,24 @@ export default async function TeamPage({ params, searchParams }: Props) {
             </thead>
             <tbody>
               {rosterPitchers.length > 0 ? (
-                rosterPitchers.map(({ character, instance, line }) => {
+                [...rosterPitchers]
+                  .sort(
+                    (a, b) =>
+                      (b.line?.gamesStarted ?? 0) - (a.line?.gamesStarted ?? 0),
+                  )
+                  .map(({ character, instance, line }) => {
                   const showCopy =
                     (rosterCopyCounts.get(character.gameCharId) ?? 0) > 1;
+                  const gs = line?.gamesStarted ?? 0;
+                  const ra = line?.reliefAppearances ?? 0;
+                  const roleTag =
+                    gs > 0 && ra > 0
+                      ? "SP/RP"
+                      : gs > 0
+                        ? "SP"
+                        : ra > 0
+                          ? "RP"
+                          : null;
                   return (
                     <tr key={instance.id} className="border-b border-zinc-900">
                       <td className="py-2 pr-2">
@@ -417,6 +432,14 @@ export default async function TeamPage({ params, searchParams }: Props) {
                           {character.displayName}
                           {showCopy ? (
                             <span className="text-zinc-500">#{instance.copyIndex}</span>
+                          ) : null}
+                          {roleTag ? (
+                            <span
+                              title={`${gs} start${gs === 1 ? "" : "s"} · ${ra} relief appearance${ra === 1 ? "" : "s"}`}
+                              className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300"
+                            >
+                              {roleTag}
+                            </span>
                           ) : null}
                         </Link>
                       </td>

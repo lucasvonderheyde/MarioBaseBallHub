@@ -28,4 +28,12 @@ export function applySqliteSchemaPatches(sqlite: Database.Database): void {
   if (!scheduleColumns.some((column) => column.name === "stats_home_player")) {
     sqlite.exec("ALTER TABLE schedule_games ADD COLUMN stats_home_player text");
   }
+
+  const statColumns = sqlite
+    .prepare("PRAGMA table_info(character_game_stats)")
+    .all() as { name: string }[];
+
+  if (!statColumns.some((column) => column.name === "pitching_role")) {
+    sqlite.exec("ALTER TABLE character_game_stats ADD COLUMN pitching_role text");
+  }
 }

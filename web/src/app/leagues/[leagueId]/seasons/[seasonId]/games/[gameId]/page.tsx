@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { scheduleGames } from "@/db/schema";
-import { CharacterIcon } from "@/components/CharacterIcon";
+import { CharacterLink } from "@/components/CharacterLink";
 import { InningLineScoreTable } from "@/components/games/InningLineScoreTable";
 import {
   winnerScoreClass,
@@ -153,8 +153,12 @@ export default async function GameReportPage({ params, searchParams }: Props) {
                     <td className="py-1 pr-2 text-zinc-500">{r.rosterSlot}</td>
                     <td className="py-1 pr-2">
                       <span className="flex items-center gap-1.5">
-                        <CharacterIcon charId={r.charId} size={24} />
-                        {charDisplayName(rows, r)}
+                        <CharacterLink
+                          charId={r.charId}
+                          displayName={charDisplayName(rows, r)}
+                          leagueId={leagueId}
+                          seasonId={seasonId}
+                        />
                         {r.wasPitcher ? (
                           <span title="Pitcher" className="text-amber-400">
                             ⚾
@@ -202,8 +206,21 @@ export default async function GameReportPage({ params, searchParams }: Props) {
                   <tr key={row.id} className="border-b border-zinc-900">
                     <td className="py-1 pr-2">
                       <span className="flex items-center gap-1.5">
-                        <CharacterIcon charId={row.charId} size={24} />
-                        {charDisplayName(rows, row)}
+                        <CharacterLink
+                          charId={row.charId}
+                          displayName={charDisplayName(rows, row)}
+                          leagueId={leagueId}
+                          seasonId={seasonId}
+                          tab="pitching"
+                        />
+                        {row.pitchingRole ? (
+                          <span
+                            title={row.pitchingRole === "starter" ? "Starting pitcher" : "Relief pitcher"}
+                            className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300"
+                          >
+                            {row.pitchingRole === "starter" ? "SP" : "RP"}
+                          </span>
+                        ) : null}
                       </span>
                     </td>
                     <td className="py-1 pr-2 tabular-nums">

@@ -53,6 +53,8 @@ function sumPitchingTotals(lines: PitchingLine[]): Omit<PitchingLine, "charId" |
   return lines.reduce(
     (acc, line) => ({
       games: acc.games + line.games,
+      gamesStarted: acc.gamesStarted + line.gamesStarted,
+      reliefAppearances: acc.reliefAppearances + line.reliefAppearances,
       outsPitched: acc.outsPitched + line.outsPitched,
       battersFaced: acc.battersFaced + line.battersFaced,
       hitsAllowed: acc.hitsAllowed + line.hitsAllowed,
@@ -65,6 +67,8 @@ function sumPitchingTotals(lines: PitchingLine[]): Omit<PitchingLine, "charId" |
     }),
     {
       games: 0,
+      gamesStarted: 0,
+      reliefAppearances: 0,
       outsPitched: 0,
       battersFaced: 0,
       hitsAllowed: 0,

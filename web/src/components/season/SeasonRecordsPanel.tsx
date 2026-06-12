@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CharacterIcon } from "@/components/CharacterIcon";
+import { CharacterLink } from "@/components/CharacterLink";
 import { Card } from "@/components/ui/Card";
 import type { SeasonRecordHolder } from "@/lib/season-records";
 
@@ -56,13 +56,13 @@ export function SeasonRecordsPanel({
               <p className="mt-1 text-sm text-zinc-400">{record.detail}</p>
               {record.charId ? (
                 <p className="mt-3 flex items-center gap-2 text-sm text-zinc-300">
-                  <CharacterIcon
+                  <CharacterLink
                     charId={record.charId}
-                    displayName={record.charDisplayName}
-                    size={22}
-                    className="rounded-full"
+                    displayName={record.charDisplayName ?? record.charId}
+                    leagueId={leagueId}
+                    seasonId={seasonId}
+                    iconSize={22}
                   />
-                  {record.charDisplayName}
                 </p>
               ) : null}
               {managerLabel(record) ? (

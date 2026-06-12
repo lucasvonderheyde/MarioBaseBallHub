@@ -11,6 +11,7 @@ import { getLeagueRole } from "@/lib/league-access";
 import { getLeagueCharacterLibrary } from "@/lib/league-characters";
 import {
   aggregateBattingByCharId,
+  aggregatePitchingByCharId,
   getManagersInLeague,
 } from "@/lib/game-stats-queries";
 import { matchesCharacterSearch } from "@/lib/character-search";
@@ -18,11 +19,24 @@ import {
   parseCharacterLibrarySort,
   sortCharacterLibrary,
 } from "@/lib/sort-character-library";
+import {
+  parseCharacterLibraryPitchingSort,
+  sortCharacterLibraryPitching,
+} from "@/lib/sort-character-library-pitching";
+import { GlobalCharacterPitchingGrid } from "@/components/GlobalCharacterPitchingGrid";
+import { CharacterSeasonSnapshotTable } from "@/components/CharacterSeasonSnapshotTable";
+import type { PitchingLine } from "@/lib/game-stats-queries";
 import { PageShell } from "@/components/PageShell";
 
 type Props = {
   params: Promise<{ leagueId: string }>;
-  searchParams: Promise<{ season?: string; player?: string; q?: string; sort?: string }>;
+  searchParams: Promise<{
+    season?: string;
+    player?: string;
+    q?: string;
+    sort?: string;
+    view?: string;
+  }>;
 };
 
 export default async function CharacterLibraryPage({ params, searchParams }: Props) {
@@ -32,7 +46,10 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
     player: managerUserId,
     q: searchQuery,
     sort: sortParam,
+    view: viewParam,
   } = await searchParams;
+  const view =
+    viewParam === "pitching" || viewParam === "table" ? viewParam : "batting";
   const user = await getCurrentUser();
 
   const role = await getLeagueRole(leagueId, user);
@@ -55,11 +72,16 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
   if (seasonId && !selectedSeason) notFound();
 
   const { active, inactive } = await getLeagueCharacterLibrary(leagueId, seasonId || undefined);
-  const batting = await aggregateBattingByCharId({
+  const statFilter = {
     leagueId,
     seasonId: seasonId || undefined,
     managerUserId: managerUserId || undefined,
-  });
+  };
+  const batting = await aggregateBattingByCharId(statFilter);
+  const pitching =
+    view === "pitching" || view === "table"
+      ? await aggregatePitchingByCharId(statFilter)
+      : new Map<string, PitchingLine>();
   const managers = await getManagersInLeague(leagueId);
 
   const query = searchQuery?.trim() ?? "";
@@ -71,10 +93,41 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
     : inactive;
 
   const sort = parseCharacterLibrarySort(sortParam);
-  const sortedActive = sortCharacterLibrary(filteredActive, batting, sort);
-  const sortedInactive = sortCharacterLibrary(filteredInactive, batting, sort);
+  const pitchingSort = parseCharacterLibraryPitchingSort(sortParam);
+  const sortedActive =
+    view === "pitching"
+      ? sortCharacterLibraryPitching(filteredActive, pitching, pitchingSort)
+      : sortCharacterLibrary(filteredActive, batting, sort);
+  const sortedInactive =
+    view === "pitching"
+      ? sortCharacterLibraryPitching(filteredInactive, pitching, pitchingSort)
+      : sortCharacterLibrary(filteredInactive, batting, sort);
 
   const seasonLabel = selectedSeason?.name ?? "any season";
+
+  function viewHref(
+    nextView: "batting" | "pitching" | "table",
+    nextSort?: string,
+  ): string {
+    const params = new URLSearchParams();
+    if (seasonId) params.set("season", seasonId);
+    if (managerUserId) params.set("player", managerUserId);
+    if (query) params.set("q", query);
+    if (nextView !== "batting") params.set("view", nextView);
+    if (nextSort && nextSort !== "name") params.set("sort", nextSort);
+    const qs = params.toString();
+    return `/leagues/${leagueId}/characters${qs ? `?${qs}` : ""}`;
+  }
+
+  const leagueCharHref = (gameCharId: string) =>
+    `/leagues/${leagueId}/characters/${encodeURIComponent(gameCharId)}${
+      seasonId ? `?season=${seasonId}&tab=pitching` : "?tab=pitching"
+    }`;
+
+  const viewTabClass = (active: boolean) =>
+    active
+      ? "msb-btn-nav-active text-xs"
+      : "msb-btn-nav text-xs";
 
   return (
     <PageShell width="wide">
@@ -90,6 +143,18 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
         }
       />
 
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Link href={viewHref("batting")} className={viewTabClass(view === "batting")}>
+          Batting
+        </Link>
+        <Link href={viewHref("pitching")} className={viewTabClass(view === "pitching")}>
+          Pitching
+        </Link>
+        <Link href={viewHref("table")} className={viewTabClass(view === "table")}>
+          Season table
+        </Link>
+      </div>
+
       <CharacterLibraryFilters
         leagueId={leagueId}
         seasonId={seasonId}
@@ -100,6 +165,26 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
         managers={managers}
       />
 
+      {view === "table" ? (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold">Season snapshot</h2>
+          <p className="text-sm text-zinc-500">
+            Every character in one sortable table for {seasonLabel} — batting
+            plus core pitching.
+            {query ? ` Showing matches for “${query}”.` : null}
+          </p>
+          <CharacterSeasonSnapshotTable
+            characters={[...sortedActive, ...sortedInactive]}
+            batting={batting}
+            pitching={pitching}
+            leagueId={leagueId}
+            seasonId={seasonId}
+            sort={sort}
+            sortHref={(nextSort) => viewHref("table", nextSort)}
+          />
+        </section>
+      ) : (
+      <>
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Active characters</h2>
         <p className="text-sm text-zinc-500">
@@ -107,12 +192,20 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
           {query ? ` Showing matches for “${query}”.` : null}
         </p>
         {sortedActive.length > 0 ? (
+          view === "pitching" ? (
+            <GlobalCharacterPitchingGrid
+              characters={sortedActive}
+              pitching={pitching}
+              hrefFor={leagueCharHref}
+            />
+          ) : (
           <CharacterLibraryGrid
             leagueId={leagueId}
             seasonId={seasonId}
             characters={sortedActive}
             batting={batting}
           />
+          )
         ) : (
           <p className="mt-3 text-sm text-zinc-500">
             {query
@@ -129,6 +222,13 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
             Not in the pool for {seasonLabel}. You can still view their attributes and stats.
           </p>
           {sortedInactive.length > 0 ? (
+            view === "pitching" ? (
+              <GlobalCharacterPitchingGrid
+                characters={sortedInactive}
+                pitching={pitching}
+                hrefFor={leagueCharHref}
+              />
+            ) : (
             <CharacterLibraryGrid
               leagueId={leagueId}
               seasonId={seasonId}
@@ -136,11 +236,14 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
               batting={batting}
               inactive
             />
+            )
           ) : query ? (
             <p className="mt-3 text-sm text-zinc-500">No inactive characters match your search.</p>
           ) : null}
         </section>
       ) : null}
+      </>
+      )}
     </PageShell>
   );
 }

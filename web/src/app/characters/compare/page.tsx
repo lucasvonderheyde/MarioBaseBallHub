@@ -28,6 +28,8 @@ function emptyPitchingLine(charId: string): PitchingLine {
     charId,
     charOccurrenceIndex: 0,
     games: 0,
+    gamesStarted: 0,
+    reliefAppearances: 0,
     outsPitched: 0,
     battersFaced: 0,
     hitsAllowed: 0,

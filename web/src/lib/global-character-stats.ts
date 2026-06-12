@@ -41,12 +41,16 @@ function toPitchingLine(
     strikeouts: number;
     hrAllowed: number;
     pitchesThrown: number;
+    gamesStarted?: number;
+    reliefAppearances?: number;
   },
 ): PitchingLine {
   return {
     charId,
     charOccurrenceIndex,
     games: row.games,
+    gamesStarted: row.gamesStarted ?? 0,
+    reliefAppearances: row.reliefAppearances ?? 0,
     outsPitched: row.outsPitched,
     battersFaced: row.battersFaced,
     hitsAllowed: row.hitsAllowed,

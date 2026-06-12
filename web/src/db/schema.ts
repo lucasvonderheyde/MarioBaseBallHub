@@ -282,6 +282,8 @@ export const characterGameStats = sqliteTable(
     bunts: integer("bunts").notNull().default(0),
     starHits: integer("star_hits").notNull().default(0),
     wasPitcher: integer("was_pitcher", { mode: "boolean" }).notNull().default(false),
+    /** starter | reliever for pitching appearances; null for position players. */
+    pitchingRole: text("pitching_role", { enum: ["starter", "reliever"] }),
     battersFaced: integer("batters_faced").notNull().default(0),
     runsAllowed: integer("runs_allowed").notNull().default(0),
     earnedRuns: integer("earned_runs").notNull().default(0),

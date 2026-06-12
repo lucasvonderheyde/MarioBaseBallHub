@@ -7,6 +7,10 @@ import {
   parseCharacterGameStats,
 } from "@/domain/stats/parse-character-game-stats";
 import {
+  classifyPitchingRoles,
+  pitchingRoleKey,
+} from "@/domain/stats/classify-pitching-roles";
+import {
   backfillStatsFieldSides,
   resolveStatsFieldSidesForGame,
 } from "@/lib/stats-field-sides";
@@ -29,6 +33,7 @@ export type PersistGameStatsInput = {
 export async function persistCharacterGameStats(input: PersistGameStatsInput): Promise<void> {
   const data = JSON.parse(input.rawJson) as unknown;
   const parsed = parseCharacterGameStats(data);
+  const pitchingRoles = classifyPitchingRoles(parsed.characterStats, data);
 
   await db.delete(characterGameStats).where(eq(characterGameStats.gameId, input.gameId));
 
@@ -60,6 +65,7 @@ export async function persistCharacterGameStats(input: PersistGameStatsInput): P
     bunts: s.bunts,
     starHits: s.starHits,
     wasPitcher: s.wasPitcher,
+    pitchingRole: pitchingRoles.get(pitchingRoleKey(s.teamSide, s.rosterSlot)) ?? null,
     battersFaced: s.battersFaced,
     runsAllowed: s.runsAllowed,
     earnedRuns: s.earnedRuns,
@@ -165,6 +171,49 @@ export async function backfillCharacterGameStats(seasonId: string): Promise<numb
 
   await resyncStadiumIdsFromGameJson(seasonId);
   await backfillStatsFieldSides(seasonId);
+  await backfillPitchingRoles(seasonId);
+  return count;
+}
+
+/** Recomputes starter/reliever roles for stored rows from each game's raw JSON. */
+export async function backfillPitchingRoles(seasonId: string): Promise<number> {
+  const games = await db
+    .select({ id: scheduleGames.id, statsRawJson: scheduleGames.statsRawJson })
+    .from(scheduleGames)
+    .innerJoin(rounds, eq(scheduleGames.roundId, rounds.id))
+    .where(and(eq(rounds.seasonId, seasonId), isNotNull(scheduleGames.statsRawJson)));
+
+  let count = 0;
+  for (const g of games) {
+    if (!g.statsRawJson) continue;
+    let data: unknown;
+    try {
+      data = JSON.parse(g.statsRawJson);
+    } catch {
+      continue;
+    }
+
+    const rows = await db
+      .select({
+        id: characterGameStats.id,
+        teamSide: characterGameStats.teamSide,
+        rosterSlot: characterGameStats.rosterSlot,
+        wasPitcher: characterGameStats.wasPitcher,
+        outsPitched: characterGameStats.outsPitched,
+      })
+      .from(characterGameStats)
+      .where(eq(characterGameStats.gameId, g.id));
+
+    const roles = classifyPitchingRoles(rows, data);
+    for (const row of rows) {
+      const role = roles.get(pitchingRoleKey(row.teamSide, row.rosterSlot)) ?? null;
+      await db
+        .update(characterGameStats)
+        .set({ pitchingRole: role })
+        .where(eq(characterGameStats.id, row.id));
+    }
+    count++;
+  }
   return count;
 }
 

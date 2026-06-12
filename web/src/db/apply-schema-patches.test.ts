@@ -21,6 +21,11 @@ describe("applySqliteSchemaPatches", () => {
         home_team_id text NOT NULL,
         away_team_id text NOT NULL
       );
+      CREATE TABLE character_game_stats (
+        id text PRIMARY KEY,
+        game_id text NOT NULL,
+        char_id text NOT NULL
+      );
     `);
 
     applySqliteSchemaPatches(sqlite);
@@ -45,6 +50,13 @@ describe("applySqliteSchemaPatches", () => {
         true,
       );
     }
+
+    const statColumns = sqlite
+      .prepare("PRAGMA table_info(character_game_stats)")
+      .all() as { name: string }[];
+    expect(statColumns.some((column) => column.name === "pitching_role")).toBe(
+      true,
+    );
 
     sqlite.close();
   });
