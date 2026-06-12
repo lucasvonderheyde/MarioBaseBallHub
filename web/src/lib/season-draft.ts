@@ -35,6 +35,11 @@ export type SeasonDraftView = {
   totalPicks: number;
   picks: DraftPickRow[];
   availableCount: number;
+  pickClockSeconds: number | null;
+  /** When the current pick's clock expires; null when no clock is set. */
+  pickDeadline: Date | null;
+  /** First-round order as team names, for pre-draft display. */
+  teamOrderNames: string[];
 };
 
 function parseTeamOrder(json: string): string[] {
@@ -74,7 +79,51 @@ export async function getOrCreateSeasonDraft(seasonId: string) {
   return created!;
 }
 
+/**
+ * Lazily enforces the pick clock: every expired pick window since the clock
+ * started is skipped (forfeited), so the draft stays live even when nobody
+ * acted for several windows. Runs on draft page loads and polls.
+ */
+export async function enforceDraftClock(seasonId: string): Promise<void> {
+  const draft = await getOrCreateSeasonDraft(seasonId);
+  if (
+    draft.status !== "active" ||
+    !draft.pickClockSeconds ||
+    !draft.currentPickStartedAt
+  ) {
+    return;
+  }
+
+  const clockMs = draft.pickClockSeconds * 1000;
+  const teamOrder = parseTeamOrder(draft.teamOrderJson);
+  let pickIndex = draft.currentPickIndex;
+  let windowStart = draft.currentPickStartedAt.getTime();
+  let skipped = 0;
+
+  while (
+    Date.now() >= windowStart + clockMs &&
+    teamIdForPickIndex(teamOrder, pickIndex) != null
+  ) {
+    pickIndex += 1;
+    windowStart += clockMs;
+    skipped += 1;
+  }
+  if (skipped === 0) return;
+
+  const finished = isDraftFinished(teamOrder.length, draft.picksPerTeam, pickIndex);
+  await db
+    .update(seasonDrafts)
+    .set({
+      currentPickIndex: pickIndex,
+      status: finished ? "complete" : "active",
+      currentPickStartedAt: finished ? null : new Date(windowStart),
+      updatedAt: new Date(),
+    })
+    .where(eq(seasonDrafts.seasonId, seasonId));
+}
+
 export async function getSeasonDraftView(seasonId: string): Promise<SeasonDraftView> {
+  await enforceDraftClock(seasonId);
   const draft = await getOrCreateSeasonDraft(seasonId);
   const teamOrder = parseTeamOrder(draft.teamOrderJson);
   const teamRows = await db.select().from(teams).where(eq(teams.seasonId, seasonId));
@@ -129,6 +178,16 @@ export async function getSeasonDraftView(seasonId: string): Promise<SeasonDraftV
       copyIndex: row.copyIndex,
     })),
     availableCount: unassignedCount,
+    teamOrderNames: teamOrder.map((teamId) => teamNames.get(teamId) ?? "Team"),
+    pickClockSeconds: draft.pickClockSeconds ?? null,
+    pickDeadline:
+      draft.status === "active" &&
+      draft.pickClockSeconds &&
+      draft.currentPickStartedAt
+        ? new Date(
+            draft.currentPickStartedAt.getTime() + draft.pickClockSeconds * 1000,
+          )
+        : null,
   };
 }
 

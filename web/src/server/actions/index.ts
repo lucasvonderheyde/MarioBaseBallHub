@@ -45,6 +45,7 @@ export {
   redraftAction,
   lockDraftAction,
   makeDraftPickAction,
+  runDraftLotteryAction,
 } from "./draft-actions";
 export { saveTierBallotAction } from "./tier-list-actions";
 export {

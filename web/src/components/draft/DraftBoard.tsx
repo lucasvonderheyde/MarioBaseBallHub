@@ -1,14 +1,44 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CharacterIcon } from "@/components/CharacterIcon";
 import {
   lockDraftAction,
   makeDraftPickAction,
   redraftAction,
+  runDraftLotteryAction,
   startDraftAction,
 } from "@/server/actions";
 import type { SeasonDraftView } from "@/lib/season-draft";
+
+const POLL_INTERVAL_MS = 8000;
+
+function formatCountdown(msRemaining: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(msRemaining / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function usePickCountdown(deadline: Date | null): string | null {
+  const [label, setLabel] = useState<string | null>(() =>
+    deadline ? formatCountdown(deadline.getTime() - Date.now()) : null,
+  );
+
+  useEffect(() => {
+    if (!deadline) {
+      setLabel(null);
+      return;
+    }
+    const tick = () => setLabel(formatCountdown(deadline.getTime() - Date.now()));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [deadline]);
+
+  return label;
+}
 
 export type DraftAvailableInstance = {
   id: string;
@@ -38,6 +68,18 @@ export function DraftBoard({
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [clockChoice, setClockChoice] = useState("0");
+  const router = useRouter();
+  const countdown = usePickCountdown(draft.pickDeadline);
+
+  // Keep the board live for everyone while the draft runs.
+  useEffect(() => {
+    if (draft.status !== "active") return;
+    const interval = setInterval(() => {
+      if (!pending) router.refresh();
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [draft.status, pending, router]);
 
   const canPick =
     draft.status === "active" &&
@@ -87,26 +129,84 @@ export function DraftBoard({
               {draft.teamOnClockName ?? "—"}
             </span>{" "}
             · Pick {draft.currentPickIndex + 1} of {draft.totalPicks}
+            {countdown ? (
+              <span
+                className={`ml-3 rounded-md border px-2 py-0.5 font-mono text-sm tabular-nums ${
+                  countdown === "0:00"
+                    ? "border-red-800/60 bg-red-950/40 text-red-300"
+                    : "border-amber-800/50 bg-amber-950/30 text-amber-300"
+                }`}
+              >
+                ⏱ {countdown === "0:00" ? "Time! Pick skipped on next refresh" : countdown}
+              </span>
+            ) : null}
           </p>
         ) : draft.status === "complete" ? (
           <p className="mt-4 text-sm text-emerald-300">Draft complete.</p>
         ) : (
-          <p className="mt-4 text-sm text-zinc-500">
-            Draft is locked. Admins can start a new draft during season setup.
-          </p>
+          <div className="mt-4">
+            <p className="text-sm text-zinc-500">
+              Draft is locked. Admins can run the lottery and start the draft
+              during season setup.
+            </p>
+            {draft.teamOrderNames.length > 0 ? (
+              <p className="mt-2 text-sm text-zinc-300">
+                <span className="text-zinc-500">First-round order:</span>{" "}
+                {draft.teamOrderNames.map((name, index) => (
+                  <span key={`${name}-${index}`}>
+                    {index > 0 ? <span className="text-zinc-600"> → </span> : null}
+                    <span className="font-medium">{name}</span>
+                  </span>
+                ))}
+              </p>
+            ) : null}
+          </div>
         )}
 
         {isAdmin && seasonStatus === "setup" ? (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             {draft.status === "locked" ? (
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => runAction(() => startDraftAction({ leagueId, seasonId }))}
-                className="msb-btn-primary px-4 py-2 text-sm"
-              >
-                Start draft
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    runAction(() => runDraftLotteryAction({ leagueId, seasonId }))
+                  }
+                  className="msb-btn-outline-gold px-4 py-2 text-sm"
+                >
+                  Run draft lottery
+                </button>
+                <label className="flex items-center gap-2 text-xs text-zinc-500">
+                  Pick clock
+                  <select
+                    value={clockChoice}
+                    onChange={(event) => setClockChoice(event.target.value)}
+                    className="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1.5 text-sm text-zinc-100"
+                  >
+                    <option value="0">No clock</option>
+                    <option value="60">1 minute</option>
+                    <option value="120">2 minutes</option>
+                    <option value="300">5 minutes</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    runAction(() =>
+                      startDraftAction({
+                        leagueId,
+                        seasonId,
+                        pickClockSeconds: Number(clockChoice) || null,
+                      }),
+                    )
+                  }
+                  className="msb-btn-primary px-4 py-2 text-sm"
+                >
+                  Start draft
+                </button>
+              </>
             ) : null}
             {draft.status === "active" ? (
               <button

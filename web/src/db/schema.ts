@@ -389,6 +389,10 @@ export const seasonDrafts = sqliteTable("season_drafts", {
   teamOrderJson: text("team_order_json").notNull().default("[]"),
   currentPickIndex: integer("current_pick_index").notNull().default(0),
   picksPerTeam: integer("picks_per_team").notNull().default(9),
+  /** Seconds each manager has to pick; null disables the clock. */
+  pickClockSeconds: integer("pick_clock_seconds"),
+  /** When the current pick went on the clock. */
+  currentPickStartedAt: integer("current_pick_started_at", { mode: "timestamp" }),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

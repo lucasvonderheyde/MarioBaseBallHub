@@ -26,6 +26,13 @@ describe("applySqliteSchemaPatches", () => {
         game_id text NOT NULL,
         char_id text NOT NULL
       );
+      CREATE TABLE season_drafts (
+        season_id text PRIMARY KEY,
+        status text NOT NULL,
+        team_order_json text NOT NULL,
+        current_pick_index integer NOT NULL,
+        picks_per_team integer NOT NULL
+      );
     `);
 
     applySqliteSchemaPatches(sqlite);
@@ -57,6 +64,16 @@ describe("applySqliteSchemaPatches", () => {
     expect(statColumns.some((column) => column.name === "pitching_role")).toBe(
       true,
     );
+
+    const draftColumns = sqlite
+      .prepare("PRAGMA table_info(season_drafts)")
+      .all() as { name: string }[];
+    expect(
+      draftColumns.some((column) => column.name === "pick_clock_seconds"),
+    ).toBe(true);
+    expect(
+      draftColumns.some((column) => column.name === "current_pick_started_at"),
+    ).toBe(true);
 
     sqlite.close();
   });
