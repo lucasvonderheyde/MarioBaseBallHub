@@ -187,9 +187,17 @@ export async function backupDatabaseOnStartup(
   dbPath = resolveDbPath(),
 ): Promise<string | null> {
   if (process.env.NODE_ENV !== "production") return null;
-  const backupPath = await createSqliteBackup(dbPath, "pre-migrate");
-  if (backupPath) {
-    console.log(`[database] Startup backup created: ${backupPath}`);
+  try {
+    const backupPath = await createSqliteBackup(dbPath, "pre-migrate");
+    if (backupPath) {
+      console.log(`[database] Startup backup created: ${backupPath}`);
+    }
+    return backupPath;
+  } catch (error) {
+    console.error(
+      "[database] Startup backup skipped:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
   }
-  return backupPath;
 }
