@@ -22,6 +22,7 @@ import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
 import { matchNetplayTeams } from "@/domain/stats/match-netplay-teams";
 import { parseCharacterGameStats } from "@/domain/stats/parse-character-game-stats";
 import { charIdsForSide } from "@/domain/stats/roster-team-match";
+import { postDiscordMessage } from "@/lib/discord";
 import { recordSeasonEvent } from "@/lib/season-events";
 import {
   persistCharacterGameStats,
@@ -218,6 +219,9 @@ export async function uploadStatsAction(
     message: `Game reported: ${parsed.awayPlayer} (${parsed.awayScore}) @ ${parsed.homePlayer} (${parsed.homeScore}) — ${fieldAwayName} vs ${fieldHomeName}`,
     relatedGameId: gameId,
   });
+  await postDiscordMessage(
+    `⚾ **Game reported** — ${fieldAwayName} ${parsed.awayScore} @ ${fieldHomeName} ${parsed.homeScore} (${parsed.awayPlayer} vs ${parsed.homePlayer})`,
+  );
 
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`, "layout");
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`);

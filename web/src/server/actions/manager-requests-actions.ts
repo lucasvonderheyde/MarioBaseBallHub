@@ -20,6 +20,7 @@ import {
   MIN_TEAM_ROSTER_SIZE,
   rosterCountAfterTrade,
 } from "@/lib/roster-rules";
+import { postDiscordMessage } from "@/lib/discord";
 import { createNotification } from "@/lib/notifications";
 import { recordSeasonEvent } from "@/lib/season-events";
 import { parseTradeInstanceIds } from "@/lib/trade-requests";
@@ -250,6 +251,9 @@ export async function respondGameScheduleAction(input: {
     message: `${user.displayName ?? user.username} accepted ${when} for ${loaded.awayTeamName} @ ${loaded.homeTeamName}.`,
     href: gameHref,
   });
+  await postDiscordMessage(
+    `📅 **Game scheduled** — ${loaded.awayTeamName} @ ${loaded.homeTeamName} on ${when}`,
+  );
 
   revalidateSeasonPaths(input.leagueId, input.seasonId);
   return {};
@@ -492,6 +496,9 @@ export async function respondTradeAction(input: {
     message: `${toTeam.name} accepted your trade offer.`,
     href: `${seasonHref}/rosters`,
   });
+  await postDiscordMessage(
+    `🔁 **Trade completed** — ${fromTeam?.name ?? "Team"} ↔ ${toTeam.name}`,
+  );
 
   revalidateSeasonPaths(input.leagueId, input.seasonId);
   revalidatePath(`/leagues/${input.leagueId}/seasons/${input.seasonId}/rosters`);
