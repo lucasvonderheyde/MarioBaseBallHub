@@ -32,6 +32,11 @@ import {
   teamScheduleScores,
 } from "@/domain/stats/resolve-game-field-sides";
 import { normalizeStadiumId } from "@/domain/stats/stadium-id";
+import {
+  scheduleGameCardStatus,
+  scheduleStatusBadgeClass,
+  scheduleStatusRowClass,
+} from "@/lib/schedule-display";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { stadiumIconUrl } from "@/lib/asset-urls";
 import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
@@ -169,7 +174,8 @@ export default async function TeamPage({ params, searchParams }: Props) {
         }
       }
       const hadHomeField = played && fieldSides.fromStats && isHome;
-      return { game, round, isHome, opp, played, result, hadHomeField, fieldSides };
+      const status = scheduleGameCardStatus(game);
+      return { game, round, isHome, opp, played, result, hadHomeField, fieldSides, status };
     });
 
   return (
@@ -314,10 +320,10 @@ export default async function TeamPage({ params, searchParams }: Props) {
       <section>
         <h2 className="text-lg font-semibold">Schedule</h2>
         <ul className="mt-3 space-y-2">
-          {teamGames.map(({ game, round, isHome, opp, played, result, hadHomeField }) => (
+          {teamGames.map(({ game, round, isHome, opp, played, result, hadHomeField, status }) => (
             <li
               key={game.id}
-              className="rounded border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-sm"
+              className={`rounded border px-3 py-2 text-sm ${scheduleStatusRowClass(status)}`}
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-zinc-500">
@@ -343,7 +349,19 @@ export default async function TeamPage({ params, searchParams }: Props) {
                 ) : (
                   <>
                     <span className="font-medium">{opp?.team.name ?? "?"}</span>
-                    <span className="text-zinc-500">Scheduled</span>
+                    <span
+                      className={`text-xs ${scheduleStatusBadgeClass(status)}`}
+                    >
+                      {status === "time_agreed"
+                        ? `Time agreed${game.agreedPlayAt ? ` · ${game.agreedPlayAt.toLocaleString()}` : ""}`
+                        : "Needs scheduling"}
+                    </span>
+                    <Link
+                      href={`/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`}
+                      className="text-amber-400 hover:underline"
+                    >
+                      {status === "time_agreed" ? "Game page" : "Propose time"}
+                    </Link>
                   </>
                 )}
                 {game.statsRawJson ? (

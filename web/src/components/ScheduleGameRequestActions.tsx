@@ -36,6 +36,7 @@ export function ScheduleGameRequestActions({
   pendingProposal,
 }: Props) {
   const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const isManager = isUserGameParticipant(
     userId,
@@ -64,7 +65,11 @@ export function ScheduleGameRequestActions({
         proposedPlayAt: String(formData.get("proposedPlayAt") ?? ""),
         note: String(formData.get("note") ?? ""),
       });
-      if (result.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setFormOpen(false);
     });
   }
 
@@ -120,6 +125,25 @@ export function ScheduleGameRequestActions({
             </button>
           </div>
         </div>
+      ) : !formOpen ? (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {ownProposal ? (
+            <p className="text-xs text-zinc-500">
+              Your proposal:{" "}
+              <span className="text-amber-300">
+                {ownProposal.proposedPlayAt.toLocaleString()}
+              </span>{" "}
+              — waiting on opponent.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setFormOpen(true)}
+            className="msb-btn-nav text-xs"
+          >
+            {ownProposal ? "Change time" : "Propose time"}
+          </button>
+        </div>
       ) : (
         <form action={handlePropose} className="mt-3 space-y-3">
           {ownProposal ? (
@@ -146,13 +170,22 @@ export function ScheduleGameRequestActions({
               className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
             />
           </label>
-          <button
-            type="submit"
-            disabled={pending}
-            className="msb-btn-primary text-xs"
-          >
-            {ownProposal ? "Update proposal" : "Propose time"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={pending}
+              className="msb-btn-primary text-xs"
+            >
+              {ownProposal ? "Update proposal" : "Propose time"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormOpen(false)}
+              className="msb-btn-nav text-xs"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 

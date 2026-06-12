@@ -81,6 +81,20 @@ export function SeasonHubUpcomingGames({
                 <span className="msb-badge-muted">
                   {scheduleRoundShortLabel(round.phase, round.roundNumber)}
                 </span>
+                {game.agreedPlayAt ? (
+                  <span className="rounded-md border border-sky-700/50 bg-sky-950/40 px-2 py-0.5 text-xs text-sky-300">
+                    {game.agreedPlayAt.toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                ) : (
+                  <span className="rounded-md border border-amber-800/50 bg-amber-950/30 px-2 py-0.5 text-xs text-amber-300">
+                    Needs scheduling
+                  </span>
+                )}
                 {gameOdds?.get(game.id) ? (
                   <span className="msb-badge-muted tabular-nums">
                     {formatWinPct(gameOdds.get(game.id)!.awayWinPct)} ·{" "}
