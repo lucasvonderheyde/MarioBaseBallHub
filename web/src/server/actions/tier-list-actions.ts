@@ -34,7 +34,7 @@ function normalizeBallot(ballot: OrderedTierBallot): OrderedTierBallot {
 
 export async function saveTierBallotAction(input: {
   ballot: OrderedTierBallot;
-}): Promise<{ error?: string }> {
+}): Promise<{ error?: string; ballot?: OrderedTierBallot }> {
   const user = await requireUser();
   const normalized = normalizeBallot(input.ballot);
   const assignments = ballotToAssignmentMap(normalized);
@@ -67,7 +67,7 @@ export async function saveTierBallotAction(input: {
     });
 
   revalidatePath("/tier-list");
-  return {};
+  return { ballot: normalized };
 }
 
 export async function getUserTierBallot(userId: string): Promise<OrderedTierBallot> {

@@ -8,6 +8,10 @@ import {
   type CharacterTier,
   type OrderedTierBallot,
 } from "@/domain/tier-list/tiers";
+import {
+  moveCharacterInBoard,
+  type TierDropTarget,
+} from "@/domain/tier-list/move-character";
 
 type CharacterRow = {
   gameCharId: string;
@@ -18,10 +22,6 @@ type Props = {
   characters: CharacterRow[];
   initialBallot: OrderedTierBallot;
 };
-
-type DragSource =
-  | { kind: "tier"; tier: CharacterTier; index: number }
-  | { kind: "pool"; index: number };
 
 const TIER_ROW_CLASS: Record<CharacterTier, string> = {
   S: "border-amber-700/60 bg-amber-950/30",
@@ -68,14 +68,12 @@ function buildInitialState(
 
 function CharacterChip({
   character,
-  source,
   onDragStart,
   onDragOver,
   onDrop,
 }: {
   character: CharacterRow;
-  source: DragSource;
-  onDragStart: (source: DragSource) => void;
+  onDragStart: () => void;
   onDragOver?: (event: React.DragEvent) => void;
   onDrop?: (event: React.DragEvent) => void;
 }) {
@@ -86,10 +84,10 @@ function CharacterChip({
       onDragStart={(event) => {
         event.dataTransfer.setData(
           DRAG_MIME,
-          JSON.stringify({ charId: character.gameCharId, source }),
+          JSON.stringify({ charId: character.gameCharId }),
         );
         event.dataTransfer.effectAllowed = "move";
-        onDragStart(source);
+        onDragStart();
       }}
       onDragOver={onDragOver}
       onDrop={onDrop}
@@ -120,81 +118,39 @@ export function TierListVotingForm({ characters, initialBallot }: Props) {
     [tierOrder],
   );
 
-  function moveCharacter(
-    charId: string,
-    from: DragSource,
-    to: { kind: "tier"; tier: CharacterTier; index: number } | { kind: "pool"; index: number },
-  ) {
-    setBallot((current) => {
-      const nextTierOrder: OrderedTierBallot = {};
-      for (const tier of TIER_OPTIONS) {
-        nextTierOrder[tier] = [...(current.tierOrder[tier] ?? [])];
-      }
-      const nextUnranked = [...current.unranked];
-
-      function removeFromSource() {
-        if (from.kind === "tier") {
-          nextTierOrder[from.tier]!.splice(from.index, 1);
-        } else {
-          nextUnranked.splice(from.index, 1);
-        }
-      }
-
-      removeFromSource();
-
-      if (to.kind === "tier") {
-        const list = nextTierOrder[to.tier]!;
-        let insertIndex = to.index;
-        if (
-          from.kind === "tier" &&
-          from.tier === to.tier &&
-          from.index < insertIndex
-        ) {
-          insertIndex -= 1;
-        }
-        list.splice(insertIndex, 0, charId);
-      } else {
-        nextUnranked.splice(to.index, 0, charId);
-      }
-
-      return { tierOrder: nextTierOrder, unranked: nextUnranked };
-    });
-  }
-
-  function readDragPayload(event: React.DragEvent): {
-    charId: string;
-    source: DragSource;
-  } | null {
+  function readDragPayload(event: React.DragEvent): string | null {
     event.preventDefault();
+    // Chips sit inside tier rows / the pool, which are drop targets too —
+    // without this a single drop fires twice and corrupts the ballot.
+    event.stopPropagation();
     const raw = event.dataTransfer.getData(DRAG_MIME);
     if (!raw) return null;
     try {
-      const parsed = JSON.parse(raw) as { charId?: string; source?: DragSource };
-      if (!parsed.charId || !parsed.source || !catalogById.has(parsed.charId)) {
+      const parsed = JSON.parse(raw) as { charId?: string };
+      if (!parsed.charId || !catalogById.has(parsed.charId)) {
         return null;
       }
-      return { charId: parsed.charId, source: parsed.source };
+      return parsed.charId;
     } catch {
       return null;
     }
   }
 
-  function handleDropOnTier(tier: CharacterTier, index: number) {
+  function handleDrop(target: TierDropTarget) {
     return (event: React.DragEvent) => {
-      const payload = readDragPayload(event);
-      if (!payload) return;
-      moveCharacter(payload.charId, payload.source, { kind: "tier", tier, index });
+      const charId = readDragPayload(event);
+      if (!charId) return;
+      setBallot((current) => moveCharacterInBoard(current, charId, target));
       setDraggingId(null);
     };
   }
 
+  function handleDropOnTier(tier: CharacterTier, index: number) {
+    return handleDrop({ kind: "tier", tier, index });
+  }
+
   function handleDropOnPool(index: number) {
-    return (event: React.DragEvent) => {
-      const payload = readDragPayload(event);
-      if (!payload) return;
-      moveCharacter(payload.charId, payload.source, { kind: "pool", index });
-      setDraggingId(null);
-    };
+    return handleDrop({ kind: "pool", index });
   }
 
   function submit() {
@@ -205,6 +161,9 @@ export function TierListVotingForm({ characters, initialBallot }: Props) {
       if (result.error) {
         setError(result.error);
         return;
+      }
+      if (result.ballot) {
+        setBallot(buildInitialState(characters, result.ballot));
       }
       setMessage("Your tier list was saved. One ballot per account — you can update anytime.");
     });
@@ -254,7 +213,6 @@ export function TierListVotingForm({ characters, initialBallot }: Props) {
                   <CharacterChip
                     key={character.gameCharId}
                     character={character}
-                    source={{ kind: "tier", tier, index }}
                     onDragStart={() => setDraggingId(character.gameCharId)}
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={handleDropOnTier(tier, index)}
@@ -283,7 +241,6 @@ export function TierListVotingForm({ characters, initialBallot }: Props) {
               <CharacterChip
                 key={charId}
                 character={character}
-                source={{ kind: "pool", index }}
                 onDragStart={() => setDraggingId(charId)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={handleDropOnPool(index)}
