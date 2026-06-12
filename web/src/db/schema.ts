@@ -447,6 +447,21 @@ export const seasonAwardVotes = sqliteTable(
   ],
 );
 
+export const notifications = sqliteTable("notifications", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  message: text("message").notNull(),
+  /** In-app destination for the notification, e.g. a game or season page. */
+  href: text("href"),
+  readAt: integer("read_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const seasonEvents = sqliteTable("season_events", {
   id: text("id").primaryKey(),
   seasonId: text("season_id")

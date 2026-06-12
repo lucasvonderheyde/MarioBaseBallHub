@@ -2,11 +2,13 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
 import { getUserCurrentSeasonNav } from "@/lib/current-season-nav";
+import { getUnreadNotificationCount } from "@/lib/notifications";
 import { logoutAction } from "@/server/actions";
 
 export async function Nav() {
   const user = await getCurrentUser();
   const currentSeason = user ? await getUserCurrentSeasonNav(user.id) : null;
+  const unreadCount = user ? await getUnreadNotificationCount(user.id) : 0;
 
   return (
     <header className="border-b-2 border-msb-grass bg-zinc-950/90 shadow-[0_4px_24px_rgb(10_34_64/0.15)] backdrop-blur dark:shadow-[0_4px_24px_rgb(10_34_64/0.6)]">
@@ -71,6 +73,18 @@ export async function Nav() {
                   Admin
                 </Link>
               ) : null}
+              <Link
+                href="/account/notifications"
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+                className="relative text-zinc-300 hover:text-msb-gold-bright"
+              >
+                <span aria-hidden>🔔</span>
+                {unreadCount > 0 ? (
+                  <span className="absolute -right-2 -top-1.5 rounded-full bg-msb-mario px-1.5 text-[10px] font-bold leading-4 text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                ) : null}
+              </Link>
               <Link
                 href="/account"
                 className="hidden text-zinc-500 hover:text-msb-gold-bright sm:inline"

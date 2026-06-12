@@ -20,6 +20,7 @@ import {
   MIN_TEAM_ROSTER_SIZE,
   rosterCountAfterTrade,
 } from "@/lib/roster-rules";
+import { createNotification } from "@/lib/notifications";
 import { recordSeasonEvent } from "@/lib/season-events";
 import { parseTradeInstanceIds } from "@/lib/trade-requests";
 
@@ -136,6 +137,19 @@ export async function proposeGameTimeAction(input: {
     createdAt: new Date(),
   });
 
+  const opponentUserId =
+    loaded.homeManagerUserId === user.id
+      ? loaded.awayManagerUserId
+      : loaded.homeManagerUserId;
+  if (opponentUserId) {
+    await createNotification({
+      userId: opponentUserId,
+      type: "schedule_proposal",
+      message: `${user.displayName ?? user.username} proposed ${proposedPlayAt.toLocaleString()} for ${loaded.awayTeamName} @ ${loaded.homeTeamName}.`,
+      href: `/leagues/${input.leagueId}/seasons/${input.seasonId}/games/${input.gameId}`,
+    });
+  }
+
   revalidateSeasonPaths(input.leagueId, input.seasonId);
   return {};
 }
@@ -179,6 +193,7 @@ export async function respondGameScheduleAction(input: {
   }
 
   const now = new Date();
+  const gameHref = `/leagues/${input.leagueId}/seasons/${input.seasonId}/games/${proposal.gameId}`;
   if (input.decision === "decline") {
     await db
       .update(gameScheduleProposals)
@@ -188,6 +203,12 @@ export async function respondGameScheduleAction(input: {
         respondedAt: now,
       })
       .where(eq(gameScheduleProposals.id, proposal.id));
+    await createNotification({
+      userId: proposal.proposedByUserId,
+      type: "schedule_declined",
+      message: `${user.displayName ?? user.username} declined your proposed time for ${loaded.awayTeamName} @ ${loaded.homeTeamName}.`,
+      href: gameHref,
+    });
     revalidateSeasonPaths(input.leagueId, input.seasonId);
     return {};
   }
@@ -222,6 +243,12 @@ export async function respondGameScheduleAction(input: {
     eventType: "schedule_agreed",
     message: `${loaded.awayTeamName} @ ${loaded.homeTeamName} scheduled for ${when}.`,
     relatedGameId: proposal.gameId,
+  });
+  await createNotification({
+    userId: proposal.proposedByUserId,
+    type: "schedule_agreed",
+    message: `${user.displayName ?? user.username} accepted ${when} for ${loaded.awayTeamName} @ ${loaded.homeTeamName}.`,
+    href: gameHref,
   });
 
   revalidateSeasonPaths(input.leagueId, input.seasonId);
@@ -344,6 +371,20 @@ export async function proposeTradeAction(input: {
     createdAt: new Date(),
   });
 
+  const [targetTeam] = await db
+    .select({ managerUserId: teams.managerUserId, name: teams.name })
+    .from(teams)
+    .where(eq(teams.id, input.toTeamId))
+    .limit(1);
+  if (targetTeam?.managerUserId) {
+    await createNotification({
+      userId: targetTeam.managerUserId,
+      type: "trade_proposal",
+      message: `${userTeam.name} proposed a trade with ${targetTeam.name}.`,
+      href: `/leagues/${input.leagueId}/seasons/${input.seasonId}`,
+    });
+  }
+
   revalidateSeasonPaths(input.leagueId, input.seasonId);
   return {};
 }
@@ -381,6 +422,7 @@ export async function respondTradeAction(input: {
   }
 
   const now = new Date();
+  const seasonHref = `/leagues/${input.leagueId}/seasons/${input.seasonId}`;
   if (input.decision === "decline") {
     await db
       .update(tradeRequests)
@@ -390,6 +432,12 @@ export async function respondTradeAction(input: {
         respondedAt: now,
       })
       .where(eq(tradeRequests.id, trade.id));
+    await createNotification({
+      userId: trade.proposedByUserId,
+      type: "trade_declined",
+      message: `${toTeam.name} declined your trade offer.`,
+      href: seasonHref,
+    });
     revalidateSeasonPaths(input.leagueId, input.seasonId);
     return {};
   }
@@ -437,6 +485,12 @@ export async function respondTradeAction(input: {
     seasonId: input.seasonId,
     eventType: "trade_completed",
     message: `Trade completed: ${fromTeam?.name ?? "Team"} ↔ ${toTeam.name}.`,
+  });
+  await createNotification({
+    userId: trade.proposedByUserId,
+    type: "trade_accepted",
+    message: `${toTeam.name} accepted your trade offer.`,
+    href: `${seasonHref}/rosters`,
   });
 
   revalidateSeasonPaths(input.leagueId, input.seasonId);
