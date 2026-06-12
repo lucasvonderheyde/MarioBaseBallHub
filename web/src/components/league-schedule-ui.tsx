@@ -210,6 +210,11 @@ export function ScheduleGameCard({
           action={clearGameStatsAction.bind(null, game.id, leagueId, seasonId)}
           className="border-t border-zinc-800/80 px-4 py-2 sm:px-5"
         >
+          <input
+            type="hidden"
+            name="returnTo"
+            value={`/leagues/${leagueId}/schedule`}
+          />
           <button type="submit" className="text-xs text-red-400 hover:underline">
             Clear stats (admin)
           </button>

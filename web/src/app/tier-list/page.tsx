@@ -28,7 +28,7 @@ export default async function TierListPage() {
   const user = await getCurrentUser();
 
   const charIds = CHARACTER_CATALOG.map((row) => row.gameCharId);
-  const [userTiers, allBallots] = await Promise.all([
+  const [userBallot, allBallots] = await Promise.all([
     user ? getUserTierBallot(user.id) : Promise.resolve({}),
     getAllTierBallots(),
   ]);
@@ -110,7 +110,7 @@ export default async function TierListPage() {
               gameCharId: row.gameCharId,
               displayName: row.displayName,
             }))}
-            initialTiers={userTiers}
+            initialBallot={userBallot}
           />
         </section>
       ) : (

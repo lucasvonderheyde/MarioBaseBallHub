@@ -6,6 +6,7 @@ import { saveTierBallotAction } from "@/server/actions";
 import {
   TIER_OPTIONS,
   type CharacterTier,
+  type OrderedTierBallot,
 } from "@/domain/tier-list/tiers";
 
 type CharacterRow = {
@@ -15,8 +16,12 @@ type CharacterRow = {
 
 type Props = {
   characters: CharacterRow[];
-  initialTiers: Record<string, CharacterTier>;
+  initialBallot: OrderedTierBallot;
 };
+
+type DragSource =
+  | { kind: "tier"; tier: CharacterTier; index: number }
+  | { kind: "pool"; index: number };
 
 const TIER_ROW_CLASS: Record<CharacterTier, string> = {
   S: "border-amber-700/60 bg-amber-950/30",
@@ -36,24 +41,58 @@ const TIER_LABEL_CLASS: Record<CharacterTier, string> = {
   F: "bg-red-700 text-zinc-50",
 };
 
+const DRAG_MIME = "application/x-tier-char";
+
+function buildInitialState(
+  characters: CharacterRow[],
+  initialBallot: OrderedTierBallot,
+): { tierOrder: OrderedTierBallot; unranked: string[] } {
+  const catalogIds = new Set(characters.map((character) => character.gameCharId));
+  const assigned = new Set<string>();
+  const tierOrder: OrderedTierBallot = {};
+
+  for (const tier of TIER_OPTIONS) {
+    tierOrder[tier] = (initialBallot[tier] ?? []).filter((charId) => {
+      if (!catalogIds.has(charId)) return false;
+      assigned.add(charId);
+      return true;
+    });
+  }
+
+  const unranked = characters
+    .filter((character) => !assigned.has(character.gameCharId))
+    .map((character) => character.gameCharId);
+
+  return { tierOrder, unranked };
+}
+
 function CharacterChip({
   character,
-  draggable = true,
+  source,
   onDragStart,
+  onDragOver,
+  onDrop,
 }: {
   character: CharacterRow;
-  draggable?: boolean;
-  onDragStart?: (charId: string) => void;
+  source: DragSource;
+  onDragStart: (source: DragSource) => void;
+  onDragOver?: (event: React.DragEvent) => void;
+  onDrop?: (event: React.DragEvent) => void;
 }) {
   return (
     <button
       type="button"
-      draggable={draggable}
+      draggable
       onDragStart={(event) => {
-        event.dataTransfer.setData("text/char-id", character.gameCharId);
+        event.dataTransfer.setData(
+          DRAG_MIME,
+          JSON.stringify({ charId: character.gameCharId, source }),
+        );
         event.dataTransfer.effectAllowed = "move";
-        onDragStart?.(character.gameCharId);
+        onDragStart(source);
       }}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       className="flex cursor-grab items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm active:cursor-grabbing"
     >
       <CharacterIcon charId={character.gameCharId} size={28} />
@@ -62,8 +101,10 @@ function CharacterChip({
   );
 }
 
-export function TierListVotingForm({ characters, initialTiers }: Props) {
-  const [tiers, setTiers] = useState<Record<string, CharacterTier>>(initialTiers);
+export function TierListVotingForm({ characters, initialBallot }: Props) {
+  const [{ tierOrder, unranked }, setBallot] = useState(() =>
+    buildInitialState(characters, initialBallot),
+  );
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
@@ -74,35 +115,84 @@ export function TierListVotingForm({ characters, initialTiers }: Props) {
     [characters],
   );
 
-  const assignedCount = useMemo(() => Object.keys(tiers).length, [tiers]);
-
-  const unassigned = useMemo(
-    () => characters.filter((character) => !tiers[character.gameCharId]),
-    [characters, tiers],
+  const assignedCount = useMemo(
+    () => TIER_OPTIONS.reduce((sum, tier) => sum + (tierOrder[tier]?.length ?? 0), 0),
+    [tierOrder],
   );
 
-  function charsInTier(tier: CharacterTier): CharacterRow[] {
-    return characters.filter((character) => tiers[character.gameCharId] === tier);
-  }
-
-  function assignTier(charId: string, tier: CharacterTier | null) {
-    setTiers((current) => {
-      const next = { ...current };
-      if (tier) {
-        next[charId] = tier;
-      } else {
-        delete next[charId];
+  function moveCharacter(
+    charId: string,
+    from: DragSource,
+    to: { kind: "tier"; tier: CharacterTier; index: number } | { kind: "pool"; index: number },
+  ) {
+    setBallot((current) => {
+      const nextTierOrder: OrderedTierBallot = {};
+      for (const tier of TIER_OPTIONS) {
+        nextTierOrder[tier] = [...(current.tierOrder[tier] ?? [])];
       }
-      return next;
+      const nextUnranked = [...current.unranked];
+
+      function removeFromSource() {
+        if (from.kind === "tier") {
+          nextTierOrder[from.tier]!.splice(from.index, 1);
+        } else {
+          nextUnranked.splice(from.index, 1);
+        }
+      }
+
+      removeFromSource();
+
+      if (to.kind === "tier") {
+        const list = nextTierOrder[to.tier]!;
+        let insertIndex = to.index;
+        if (
+          from.kind === "tier" &&
+          from.tier === to.tier &&
+          from.index < insertIndex
+        ) {
+          insertIndex -= 1;
+        }
+        list.splice(insertIndex, 0, charId);
+      } else {
+        nextUnranked.splice(to.index, 0, charId);
+      }
+
+      return { tierOrder: nextTierOrder, unranked: nextUnranked };
     });
   }
 
-  function handleDrop(tier: CharacterTier | null) {
+  function readDragPayload(event: React.DragEvent): {
+    charId: string;
+    source: DragSource;
+  } | null {
+    event.preventDefault();
+    const raw = event.dataTransfer.getData(DRAG_MIME);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as { charId?: string; source?: DragSource };
+      if (!parsed.charId || !parsed.source || !catalogById.has(parsed.charId)) {
+        return null;
+      }
+      return { charId: parsed.charId, source: parsed.source };
+    } catch {
+      return null;
+    }
+  }
+
+  function handleDropOnTier(tier: CharacterTier, index: number) {
     return (event: React.DragEvent) => {
-      event.preventDefault();
-      const charId = event.dataTransfer.getData("text/char-id");
-      if (!charId || !catalogById.has(charId)) return;
-      assignTier(charId, tier);
+      const payload = readDragPayload(event);
+      if (!payload) return;
+      moveCharacter(payload.charId, payload.source, { kind: "tier", tier, index });
+      setDraggingId(null);
+    };
+  }
+
+  function handleDropOnPool(index: number) {
+    return (event: React.DragEvent) => {
+      const payload = readDragPayload(event);
+      if (!payload) return;
+      moveCharacter(payload.charId, payload.source, { kind: "pool", index });
       setDraggingId(null);
     };
   }
@@ -111,7 +201,7 @@ export function TierListVotingForm({ characters, initialTiers }: Props) {
     setError(null);
     setMessage(null);
     startTransition(async () => {
-      const result = await saveTierBallotAction({ tiers });
+      const result = await saveTierBallotAction({ ballot: tierOrder });
       if (result.error) {
         setError(result.error);
         return;
@@ -134,18 +224,22 @@ export function TierListVotingForm({ characters, initialTiers }: Props) {
       ) : null}
 
       <p className="text-sm text-zinc-500">
-        Drag characters into tiers like TierListMaker. {assignedCount} of{" "}
+        Drag characters into tiers and reorder within each row. {assignedCount} of{" "}
         {characters.length} characters tiered.
       </p>
 
       <div className="space-y-2">
         {TIER_OPTIONS.map((tier) => {
-          const tierChars = charsInTier(tier);
+          const tierCharIds = tierOrder[tier] ?? [];
+          const tierChars = tierCharIds
+            .map((charId) => catalogById.get(charId))
+            .filter((character): character is CharacterRow => character != null);
+
           return (
             <div
               key={tier}
               onDragOver={(event) => event.preventDefault()}
-              onDrop={handleDrop(tier)}
+              onDrop={handleDropOnTier(tier, tierChars.length)}
               className={`flex min-h-16 items-stretch gap-3 rounded-lg border p-2 ${TIER_ROW_CLASS[tier]} ${
                 draggingId ? "ring-1 ring-zinc-700/50" : ""
               }`}
@@ -156,11 +250,14 @@ export function TierListVotingForm({ characters, initialTiers }: Props) {
                 {tier}
               </div>
               <div className="flex min-h-12 flex-1 flex-wrap content-start gap-2">
-                {tierChars.map((character) => (
+                {tierChars.map((character, index) => (
                   <CharacterChip
                     key={character.gameCharId}
                     character={character}
-                    onDragStart={setDraggingId}
+                    source={{ kind: "tier", tier, index }}
+                    onDragStart={() => setDraggingId(character.gameCharId)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={handleDropOnTier(tier, index)}
                   />
                 ))}
               </div>
@@ -171,7 +268,7 @@ export function TierListVotingForm({ characters, initialTiers }: Props) {
 
       <div
         onDragOver={(event) => event.preventDefault()}
-        onDrop={handleDrop(null)}
+        onDrop={handleDropOnPool(unranked.length)}
         className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/40 p-4"
       >
         <p className="text-sm font-medium text-zinc-400">Unranked pool</p>
@@ -179,14 +276,21 @@ export function TierListVotingForm({ characters, initialTiers }: Props) {
           Drop characters here to remove them from a tier.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {unassigned.map((character) => (
-            <CharacterChip
-              key={character.gameCharId}
-              character={character}
-              onDragStart={setDraggingId}
-            />
-          ))}
-          {unassigned.length === 0 ? (
+          {unranked.map((charId, index) => {
+            const character = catalogById.get(charId);
+            if (!character) return null;
+            return (
+              <CharacterChip
+                key={charId}
+                character={character}
+                source={{ kind: "pool", index }}
+                onDragStart={() => setDraggingId(charId)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleDropOnPool(index)}
+              />
+            );
+          })}
+          {unranked.length === 0 ? (
             <span className="text-sm text-zinc-600">All characters are tiered.</span>
           ) : null}
         </div>

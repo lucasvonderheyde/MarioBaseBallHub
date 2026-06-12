@@ -102,21 +102,32 @@ export default async function ChemistryPage() {
       <section className="mt-8 msb-panel overflow-hidden p-2 sm:p-4">
         <h2 className="px-2 text-lg font-semibold sm:px-0">Full chemistry matrix</h2>
         <p className="mt-1 px-2 text-sm text-zinc-500 sm:px-0">
-          Scroll horizontally on smaller screens. Diagonal entries are neutral (50).
+          Diagonal entries are neutral (50). Hover a cell for the full character names.
         </p>
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-max text-left text-xs">
+        <div className="mt-4">
+          <table className="w-full table-fixed text-left text-[10px] leading-tight sm:text-[11px]">
+            <colgroup>
+              <col className="w-[6.5rem] sm:w-[7.5rem]" />
+              {baseRows.map((row) => (
+                <col key={row.index} />
+              ))}
+            </colgroup>
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-500">
-                <th className="sticky left-0 z-10 bg-zinc-950 px-2 py-2">Character</th>
+                <th className="px-1 py-1 text-left font-medium sm:px-2 sm:py-2">
+                  Character
+                </th>
                 {baseRows.map((row) => (
                   <th
                     key={row.index}
-                    className="px-1 py-2 text-center font-normal"
+                    className="px-0 py-1 text-center font-normal sm:py-2"
                     title={row.displayName}
                   >
-                    <span className="inline-block max-w-[3.5rem] truncate">
-                      {row.name.split(" ")[0]}
+                    <span className="block truncate">
+                      {row.name
+                        .split(" ")
+                        .map((part) => part[0])
+                        .join("")}
                     </span>
                   </th>
                 ))}
@@ -125,16 +136,18 @@ export default async function ChemistryPage() {
             <tbody>
               {baseRows.map((rowA) => (
                 <tr key={rowA.index} className="border-b border-zinc-900">
-                  <th className="sticky left-0 z-10 bg-zinc-950 px-2 py-1.5 text-left font-medium text-zinc-300">
-                    <div className="flex items-center gap-2">
+                  <th className="px-1 py-0.5 text-left font-medium text-zinc-300 sm:px-2 sm:py-1">
+                    <div className="flex items-center gap-1">
                       {rowA.gameCharId ? (
                         <CharacterIcon
                           charId={rowA.gameCharId}
                           displayName={rowA.displayName}
-                          size={24}
+                          size={18}
                         />
                       ) : null}
-                      <span className="whitespace-nowrap">{rowA.name}</span>
+                      <span className="truncate" title={rowA.name}>
+                        {rowA.name}
+                      </span>
                     </div>
                   </th>
                   {baseRows.map((rowB) => {
@@ -143,7 +156,7 @@ export default async function ChemistryPage() {
                     return (
                       <td
                         key={rowB.index}
-                        className={`px-1 py-1.5 text-center tabular-nums ${tierClass(tier)}`}
+                        className={`px-0 py-0.5 text-center tabular-nums sm:py-1 ${tierClass(tier)}`}
                         title={`${rowA.name} + ${rowB.name}: ${value}`}
                       >
                         {value}

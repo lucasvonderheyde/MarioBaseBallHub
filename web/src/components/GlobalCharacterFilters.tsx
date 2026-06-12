@@ -3,39 +3,57 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  CHARACTER_LIBRARY_PITCHING_SORT_OPTIONS,
+  type CharacterLibraryPitchingSort,
+} from "@/lib/sort-character-library-pitching";
+import {
   CHARACTER_LIBRARY_SORT_OPTIONS,
   type CharacterLibrarySort,
 } from "@/lib/sort-character-library";
 
+export type CharacterLibraryView = "batting" | "pitching";
+
 type Props = {
+  view: CharacterLibraryView;
   managerUserId?: string;
   searchQuery?: string;
-  sort: CharacterLibrarySort;
+  battingSort: CharacterLibrarySort;
+  pitchingSort: CharacterLibraryPitchingSort;
   managers: { id: string; username: string; displayName: string | null }[];
 };
 
 export function GlobalCharacterFilters({
+  view,
   managerUserId,
   searchQuery,
-  sort,
+  battingSort,
+  pitchingSort,
   managers,
 }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState(searchQuery ?? "");
+  const sort = view === "pitching" ? pitchingSort : battingSort;
 
   useEffect(() => {
     setSearch(searchQuery ?? "");
   }, [searchQuery]);
 
   function navigate(
+    nextView: CharacterLibraryView,
     nextPlayer: string,
     nextSearch: string,
-    nextSort: CharacterLibrarySort,
+    nextBattingSort: CharacterLibrarySort,
+    nextPitchingSort: CharacterLibraryPitchingSort,
   ) {
     const params = new URLSearchParams();
+    if (nextView === "pitching") params.set("view", "pitching");
     if (nextPlayer) params.set("player", nextPlayer);
     if (nextSearch.trim()) params.set("q", nextSearch.trim());
-    if (nextSort !== "name") params.set("sort", nextSort);
+    if (nextView === "pitching") {
+      if (nextPitchingSort !== "name") params.set("sort", nextPitchingSort);
+    } else if (nextBattingSort !== "name") {
+      params.set("sort", nextBattingSort);
+    }
     const query = params.toString();
     router.push(`/characters${query ? `?${query}` : ""}`);
   }
@@ -43,10 +61,15 @@ export function GlobalCharacterFilters({
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       if (search === (searchQuery ?? "")) return;
-      navigate(managerUserId ?? "", search, sort);
+      navigate(view, managerUserId ?? "", search, battingSort, pitchingSort);
     }, 300);
     return () => window.clearTimeout(timeout);
-  }, [search, searchQuery, managerUserId, sort]);
+  }, [search, searchQuery, managerUserId, view, battingSort, pitchingSort]);
+
+  const sortOptions =
+    view === "pitching"
+      ? CHARACTER_LIBRARY_PITCHING_SORT_OPTIONS
+      : CHARACTER_LIBRARY_SORT_OPTIONS;
 
   return (
     <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -65,7 +88,9 @@ export function GlobalCharacterFilters({
         <select
           defaultValue={managerUserId ?? ""}
           className="min-w-[10rem] rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
-          onChange={(event) => navigate(event.target.value, search, sort)}
+          onChange={(event) =>
+            navigate(view, event.target.value, search, battingSort, pitchingSort)
+          }
         >
           <option value="">All managers</option>
           {managers.map((manager) => (
@@ -80,18 +105,35 @@ export function GlobalCharacterFilters({
         <select
           value={sort}
           className="min-w-[10rem] rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
-          onChange={(event) =>
-            navigate(
-              managerUserId ?? "",
-              search,
-              event.target.value as CharacterLibrarySort,
-            )
-          }
+          onChange={(event) => {
+            const nextSort = event.target.value;
+            if (view === "pitching") {
+              navigate(
+                view,
+                managerUserId ?? "",
+                search,
+                battingSort,
+                nextSort as CharacterLibraryPitchingSort,
+              );
+            } else {
+              navigate(
+                view,
+                managerUserId ?? "",
+                search,
+                nextSort as CharacterLibrarySort,
+                pitchingSort,
+              );
+            }
+          }}
         >
-          {CHARACTER_LIBRARY_SORT_OPTIONS.map((option) => (
+          {sortOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
-              {option.value !== "name" ? " (high → low)" : ""}
+              {option.value !== "name"
+                ? view === "pitching" && option.value === "era"
+                  ? " (low → high)"
+                  : " (high → low)"
+                : ""}
             </option>
           ))}
         </select>

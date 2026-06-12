@@ -18,10 +18,12 @@ import { PageShell } from "@/components/PageShell";
 
 type Props = {
   params: Promise<{ leagueId: string }>;
+  searchParams: Promise<{ m?: string; e?: string }>;
 };
 
-export default async function LeagueSchedulePage({ params }: Props) {
+export default async function LeagueSchedulePage({ params, searchParams }: Props) {
   const { leagueId } = await params;
+  const { m, e } = await searchParams;
   const user = await getCurrentUser();
 
   if (!(await leagueExists(leagueId))) notFound();
@@ -64,6 +66,17 @@ export default async function LeagueSchedulePage({ params }: Props) {
         title="Schedule"
         subtitle="All games by season. The current season is listed first. Managers can report games they played in directly from this page."
       />
+
+      {m === "stats-cleared" ? (
+        <p className="mt-3 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Game stats cleared.
+        </p>
+      ) : null}
+      {e ? (
+        <p className="mt-3 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
+          {e}
+        </p>
+      ) : null}
 
       <div className="space-y-10">
         {seasonsWithSchedule.map(({ season, dash, gamesByRound }) => (

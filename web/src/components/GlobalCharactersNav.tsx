@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type Section = "library" | "chemistry" | "compare";
+type Section = "library" | "library-pitching" | "chemistry" | "compare";
 
 type Props = {
   active: Section;
@@ -21,7 +21,13 @@ export function GlobalCharactersNav({ active }: Props) {
       aria-label="Character library sections"
     >
       <Link href="/characters" className={tabClass(active === "library")}>
-        Stats library
+        Batting
+      </Link>
+      <Link
+        href="/characters?view=pitching"
+        className={tabClass(active === "library-pitching")}
+      >
+        Pitching
       </Link>
       <Link href="/characters/chemistry" className={tabClass(active === "chemistry")}>
         Chemistry

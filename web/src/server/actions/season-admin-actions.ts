@@ -14,7 +14,7 @@ import {
   teams,
   users,
 } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { getCurrentUser, requireUser } from "@/lib/auth";
 import { getSeasonLeagueId, getLeagueRole } from "@/lib/league-access";
 import { canUserReportGame } from "@/lib/game-report-access";
 import {
@@ -901,17 +901,40 @@ export async function saveYoutubeFormAction(formData: FormData) {
   );
 }
 
+function safeLeagueReturnPath(
+  leagueId: string,
+  returnTo: string | undefined,
+): string {
+  const fallback = `/leagues/${leagueId}/schedule`;
+  if (!returnTo?.startsWith(`/leagues/${leagueId}`)) return fallback;
+  if (returnTo.includes("//")) return fallback;
+  return returnTo;
+}
+
 export async function clearGameStatsAction(
   gameId: string,
   leagueId: string,
   seasonId: string,
-  _formData?: FormData,
+  formData?: FormData,
 ) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
   const role = await getLeagueRole(leagueId, user);
-  if (role !== "admin")
-    redirectWithFormError(seasonAdminPath(leagueId, seasonId), "Forbidden.");
-  await backupLiveDatabase(`pre-clear-game-stats-${gameId.slice(0, 8)}`);
+  if (role !== "admin") {
+    const returnTo = safeLeagueReturnPath(
+      leagueId,
+      String(formData?.get("returnTo") ?? ""),
+    );
+    redirectWithFormError(returnTo, "Forbidden.");
+  }
+
+  try {
+    await backupLiveDatabase(`pre-clear-game-stats-${gameId.slice(0, 8)}`);
+  } catch (error) {
+    console.error("[database] Backup before clear-game-stats failed:", error);
+  }
+
   await deleteCharacterGameStatsForGame(gameId);
   await db
     .update(scheduleGames)
@@ -928,7 +951,21 @@ export async function clearGameStatsAction(
       playedAt: null,
     })
     .where(eq(scheduleGames.id, gameId));
+
+  const seasonBase = `/leagues/${leagueId}/seasons/${seasonId}`;
   revalidatePath(seasonAdminPath(leagueId, seasonId), "layout");
   revalidatePath(seasonAdminPath(leagueId, seasonId));
-  redirect(seasonAdminPath(leagueId, seasonId, { m: "stats-cleared" }));
+  revalidatePath(seasonBase);
+  revalidatePath(`${seasonBase}/games/${gameId}`);
+  revalidatePath(`${seasonBase}/records`);
+  revalidatePath(`/leagues/${leagueId}/schedule`);
+  revalidatePath(`/leagues/${leagueId}/standings`);
+  revalidatePath("/account");
+
+  const returnTo = safeLeagueReturnPath(
+    leagueId,
+    String(formData?.get("returnTo") ?? ""),
+  );
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}m=stats-cleared`);
 }
