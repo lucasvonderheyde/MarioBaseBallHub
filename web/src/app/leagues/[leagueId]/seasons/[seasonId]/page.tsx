@@ -8,6 +8,9 @@ import { TiebreakerOrderDisplay } from "@/components/standings/TiebreakerOrderDi
 import { PageShell } from "@/components/PageShell";
 import { PageHero } from "@/components/PageHero";
 import { SeasonActivityFeed } from "@/components/season/SeasonActivityFeed";
+import { SeasonNewsPanel } from "@/components/season/SeasonNewsPanel";
+import { aiNewsEnabled } from "@/lib/ai-news";
+import { getSeasonNewsPosts } from "@/lib/league-news";
 import { getRecentSeasonEvents } from "@/lib/season-events";
 import { SeasonHubStandings } from "@/components/season/SeasonHubStandings";
 import { SeasonHubTeamGrid } from "@/components/season/SeasonHubTeamGrid";
@@ -51,6 +54,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const isAdmin = isLeagueAdmin(role);
   const teamNames = new Map(teams.map((t) => [t.team.id, t.team.name]));
   const recentEvents = await getRecentSeasonEvents(seasonId, 20);
+  const newsPosts = await getSeasonNewsPosts(seasonId, isAdmin);
   const scheduleProposals = await getPendingScheduleProposalsForSeason(seasonId);
   const proposalMap = pendingProposalsByGameId(scheduleProposals);
   const { games: upcomingRaw } = selectUpcomingScheduleGames(
@@ -243,6 +247,21 @@ export default async function SeasonPage({ params, searchParams }: Props) {
             pendingTrades={pendingTrades}
           />
         </div>
+
+        <SeasonNewsPanel
+          leagueId={leagueId}
+          seasonId={seasonId}
+          posts={newsPosts.map((post) => ({
+            id: post.id,
+            title: post.title,
+            body: post.body,
+            source: post.source,
+            status: post.status,
+            createdAt: post.createdAt,
+          }))}
+          isAdmin={isAdmin}
+          aiEnabled={aiNewsEnabled()}
+        />
 
         <SeasonActivityFeed
           events={recentEvents.map((event) => ({

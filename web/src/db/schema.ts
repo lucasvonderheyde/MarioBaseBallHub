@@ -451,6 +451,30 @@ export const seasonAwardVotes = sqliteTable(
   ],
 );
 
+/** League news feed: AI-generated recaps (draft until approved) and human posts. */
+export const leaguePosts = sqliteTable("league_posts", {
+  id: text("id").primaryKey(),
+  leagueId: text("league_id")
+    .notNull()
+    .references(() => leagues.id, { onDelete: "cascade" }),
+  seasonId: text("season_id").references(() => seasons.id, {
+    onDelete: "cascade",
+  }),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  source: text("source", { enum: ["ai", "human"] }).notNull(),
+  status: text("status", { enum: ["draft", "published"] })
+    .notNull()
+    .default("draft"),
+  createdByUserId: text("created_by_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  publishedAt: integer("published_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const notifications = sqliteTable("notifications", {
   id: text("id").primaryKey(),
   userId: text("user_id")

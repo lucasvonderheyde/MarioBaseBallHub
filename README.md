@@ -117,6 +117,8 @@ All root-level `npm run …` commands forward to `web/` (see root `package.json`
 | `SITE_ADMIN_USERNAME` | Optional | Username auto-promoted to site admin on register/login |
 | `ADMIN_SETUP_SECRET` | Optional | One-time secret for `/setup-admin` to claim site admin |
 | `DISCORD_WEBHOOK_URL` | Optional | Discord webhook; posts game reports, agreed times, and trades to your server |
+| `ANTHROPIC_API_KEY` | Optional | Enables the AI news reporter (commissioner-reviewed season recaps) |
+| `AI_NEWS_MODEL` | Optional | Claude model for recaps (default `claude-opus-4-8`) |
 | `DEV_ADMIN_USERNAME` | Scripts only | Bootstrap script default user (not read by Next.js) |
 | `DEV_ADMIN_PASSWORD` | Scripts only | Bootstrap script default password |
 
