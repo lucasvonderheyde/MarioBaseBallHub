@@ -18,6 +18,13 @@ export type StatsFieldSides = {
   homeTeamId: string;
   awayPlayer: string;
   homePlayer: string;
+  /**
+   * Scores re-oriented to the scheduled home/away slots, or null when the
+   * netplay match was ambiguous. Games uploaded before the orientation fix
+   * may store file-side scores; backfilling from these repairs them.
+   */
+  scheduleHomeScore: number | null;
+  scheduleAwayScore: number | null;
 };
 
 export async function resolveStatsFieldSidesForGame(
@@ -124,6 +131,8 @@ export async function resolveStatsFieldSidesForGame(
       homeTeamId: game.homeTeamId,
       awayPlayer: parsed.awayPlayer,
       homePlayer: parsed.homePlayer,
+      scheduleHomeScore: null,
+      scheduleAwayScore: null,
     };
   }
 
@@ -132,6 +141,8 @@ export async function resolveStatsFieldSidesForGame(
     homeTeamId: match.homeSideTeamId,
     awayPlayer: parsed.awayPlayer,
     homePlayer: parsed.homePlayer,
+    scheduleHomeScore: match.scheduleHomeScore,
+    scheduleAwayScore: match.scheduleAwayScore,
   };
 }
 
@@ -162,6 +173,12 @@ export async function backfillStatsFieldSides(seasonId: string): Promise<number>
         statsHomeTeamId: sides.homeTeamId,
         statsAwayPlayer: sides.awayPlayer,
         statsHomePlayer: sides.homePlayer,
+        ...(sides.scheduleHomeScore != null && sides.scheduleAwayScore != null
+          ? {
+              homeScore: sides.scheduleHomeScore,
+              awayScore: sides.scheduleAwayScore,
+            }
+          : {}),
       })
       .where(eq(scheduleGames.id, game.id));
     count++;

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isTeamHomeInGame,
   resolveGameFieldSides,
-  teamScoresFromFieldSides,
+  teamScheduleScores,
 } from "./resolve-game-field-sides";
 
 const scheduleGame = {
@@ -44,7 +44,7 @@ describe("resolveGameFieldSides", () => {
   });
 });
 
-describe("teamScoresFromFieldSides", () => {
+describe("teamScheduleScores", () => {
   const swappedSides = {
     awayTeamId: "team-home",
     homeTeamId: "team-away",
@@ -53,18 +53,22 @@ describe("teamScoresFromFieldSides", () => {
     fromStats: true,
   };
 
-  it("maps scores for the JSON away team", () => {
-    expect(teamScoresFromFieldSides("team-home", swappedSides, 10, 0)).toEqual({
+  it("maps the stored home score to the scheduled home team even when field sides flipped", () => {
+    expect(teamScheduleScores("team-home", scheduleGame, 10, 0)).toEqual({
+      ours: 0,
+      theirs: 10,
+    });
+  });
+
+  it("maps the stored away score to the scheduled away team", () => {
+    expect(teamScheduleScores("team-away", scheduleGame, 10, 0)).toEqual({
       ours: 10,
       theirs: 0,
     });
   });
 
-  it("maps scores for the JSON home team", () => {
-    expect(teamScoresFromFieldSides("team-away", swappedSides, 10, 0)).toEqual({
-      ours: 0,
-      theirs: 10,
-    });
+  it("returns null for a team not in the game", () => {
+    expect(teamScheduleScores("someone-else", scheduleGame, 10, 0)).toBeNull();
   });
 
   it("identifies home field from JSON sides", () => {

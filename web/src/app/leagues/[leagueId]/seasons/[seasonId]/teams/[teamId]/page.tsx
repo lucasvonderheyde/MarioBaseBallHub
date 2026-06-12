@@ -29,7 +29,7 @@ import {
 import {
   isTeamHomeInGame,
   resolveGameFieldSides,
-  teamScoresFromFieldSides,
+  teamScheduleScores,
 } from "@/domain/stats/resolve-game-field-sides";
 import { normalizeStadiumId } from "@/domain/stats/stadium-id";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
@@ -158,9 +158,9 @@ export default async function TeamPage({ params, searchParams }: Props) {
       const opp = dash.teams.find((t) => t.team.id === oppId);
       let result: "W" | "L" | null = null;
       if (played) {
-        const scores = teamScoresFromFieldSides(
+        const scores = teamScheduleScores(
           teamId,
-          fieldSides,
+          game,
           game.awayScore!,
           game.homeScore!,
         );

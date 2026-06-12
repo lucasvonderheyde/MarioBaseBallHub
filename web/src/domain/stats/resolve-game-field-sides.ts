@@ -49,18 +49,25 @@ export function isTeamAwayInGame(teamId: string, sides: GameFieldSides): boolean
   return sides.awayTeamId === teamId;
 }
 
-/** Scores for a team using JSON away/home field sides (not schedule slots). */
-export function teamScoresFromFieldSides(
+/**
+ * Scores for a team from the stored schedule-slot scores.
+ *
+ * `scheduleGames.homeScore/awayScore` are always re-oriented to the
+ * *scheduled* home/away teams on upload (see buildMapping in
+ * match-netplay-teams.ts), even when the uploaded file flipped field
+ * sides. Field sides only affect home/away labels, never score mapping.
+ */
+export function teamScheduleScores(
   teamId: string,
-  sides: GameFieldSides,
+  game: Pick<ScheduleGameFieldRow, "homeTeamId" | "awayTeamId">,
   scheduleAwayScore: number,
   scheduleHomeScore: number,
 ): { ours: number; theirs: number } | null {
-  if (sides.awayTeamId === teamId) {
-    return { ours: scheduleAwayScore, theirs: scheduleHomeScore };
-  }
-  if (sides.homeTeamId === teamId) {
+  if (game.homeTeamId === teamId) {
     return { ours: scheduleHomeScore, theirs: scheduleAwayScore };
+  }
+  if (game.awayTeamId === teamId) {
+    return { ours: scheduleAwayScore, theirs: scheduleHomeScore };
   }
   return null;
 }
