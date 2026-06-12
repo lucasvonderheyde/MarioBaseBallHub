@@ -9,10 +9,9 @@ import { PageShell } from "@/components/PageShell";
 import { PageHero } from "@/components/PageHero";
 import { SeasonActivityFeed } from "@/components/season/SeasonActivityFeed";
 import { getRecentSeasonEvents } from "@/lib/season-events";
-import { SeasonHubRecentGames } from "@/components/season/SeasonHubRecentGames";
 import { SeasonHubStandings } from "@/components/season/SeasonHubStandings";
 import { SeasonHubTeamGrid } from "@/components/season/SeasonHubTeamGrid";
-import { SeasonHubUpcomingGames } from "@/components/season/SeasonHubUpcomingGames";
+import { SeasonWeekTimeline } from "@/components/season/SeasonWeekTimeline";
 import { SeasonHubFeaturedRecords } from "@/components/season/SeasonHubFeaturedRecords";
 import { SeasonHubRecordsCompact } from "@/components/season/SeasonHubRecordsCompact";
 import { SeasonTradePanel } from "@/components/season/SeasonTradePanel";
@@ -54,7 +53,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const recentEvents = await getRecentSeasonEvents(seasonId, 20);
   const scheduleProposals = await getPendingScheduleProposalsForSeason(seasonId);
   const proposalMap = pendingProposalsByGameId(scheduleProposals);
-  const { games: upcomingRaw, phase: upcomingPhase } = selectUpcomingScheduleGames(
+  const { games: upcomingRaw } = selectUpcomingScheduleGames(
     games,
     4,
   );
@@ -186,12 +185,19 @@ export default async function SeasonPage({ params, searchParams }: Props) {
         />
 
         <div className="grid gap-4 md:grid-cols-2">
-          <SeasonHubRecentGames
+          <SeasonWeekTimeline
             leagueId={leagueId}
             seasonId={seasonId}
             games={games}
+            upcoming={upcomingGames}
+            teams={teams.map(({ team, manager }) => ({
+              team,
+              manager: manager ? { id: manager.id } : null,
+            }))}
             teamNames={teamNames}
+            userId={user?.id ?? ""}
             userTeamId={userTeam?.id ?? null}
+            gameOdds={oddsSnapshot.gameOdds}
           />
           <SeasonHubStandings
             leagueId={leagueId}
@@ -206,21 +212,6 @@ export default async function SeasonPage({ params, searchParams }: Props) {
             leagueId={leagueId}
             seasonId={seasonId}
             records={seasonRecords}
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <SeasonHubUpcomingGames
-            leagueId={leagueId}
-            seasonId={seasonId}
-            phase={upcomingPhase}
-            upcoming={upcomingGames}
-            teams={teams.map(({ team, manager }) => ({
-              team,
-              manager: manager ? { id: manager.id } : null,
-            }))}
-            userId={user?.id ?? ""}
-            gameOdds={oddsSnapshot.gameOdds}
           />
           <SeasonHubRecordsCompact
             leagueId={leagueId}

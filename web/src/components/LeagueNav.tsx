@@ -110,6 +110,11 @@ export function LeagueNav({
         label: "Stadiums",
         match: (path) => path.startsWith(`${leagueHome}/stadiums`),
       },
+      {
+        href: `/leagues/${leagueId}/rivalries`,
+        label: "Rivalries",
+        match: (path) => path.startsWith(`${leagueHome}/rivalries`),
+      },
     );
   }
 
