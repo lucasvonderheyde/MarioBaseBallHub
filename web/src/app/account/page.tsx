@@ -97,7 +97,7 @@ export default async function AccountPage({
   return (
     <PageShell width={activeTab === "profile" ? "narrow" : "default"}>
       <div className="flex items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">Account</h1>
+        <h1 className="text-2xl font-bold">Account</h1>
         <Link href="/leagues" className="text-sm text-zinc-400 hover:text-white">
           Leagues
         </Link>

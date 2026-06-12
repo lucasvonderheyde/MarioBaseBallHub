@@ -18,8 +18,10 @@ type RemainingGame = {
 };
 
 /**
- * Simplified clinch math: assumes each remaining game is independent and
- * teams win/lose all remaining games in best/worst case combinations.
+ * Conservative clinch math: a badge is only awarded when no combination of
+ * remaining results can take it away. Ties on wins are treated as losable
+ * (tiebreakers are not evaluated), so badges may appear a game later than a
+ * full simulation would show, but never prematurely.
  */
 export function computeClinchStatus(input: {
   standings: TeamStandingRow[];
@@ -46,40 +48,26 @@ export function computeClinchStatus(input: {
     );
   }
 
-  return standings.map((team, index) => {
+  return standings.map((team) => {
     const badges: ClinchBadge[] = [];
-    const remaining = remainingByTeam.get(team.teamId) ?? 0;
-    const maxWins = team.wins + remaining;
 
-    const teamsBelowCanCatch = standings.some((other, otherIndex) => {
-      if (otherIndex <= index) return false;
+    // Worst case for this team: it loses out, finishing on its current wins.
+    // Another team can still finish ahead if its best case reaches that
+    // total (equal wins could go either way on tiebreakers).
+    const othersWhoCanFinishAhead = standings.filter((other) => {
+      if (other.teamId === team.teamId) return false;
       const otherRemaining = remainingByTeam.get(other.teamId) ?? 0;
-      return other.wins + otherRemaining > maxWins;
-    });
+      return other.wins + otherRemaining >= team.wins;
+    }).length;
 
-    if (!teamsBelowCanCatch && index === 0) {
+    if (othersWhoCanFinishAhead === 0) {
       badges.push("clinched-top-seed");
       if (settings.higherSeedHomeField) {
         badges.push("clinched-home-field");
       }
-    } else if (
-      settings.higherSeedHomeField &&
-      index === 0 &&
-      !teamsBelowCanCatch
-    ) {
-      badges.push("clinched-home-field");
     }
 
-    const cutoffIndex = playoffSpots - 1;
-    const canFallOutOfPlayoffs = standings.some((other, otherIndex) => {
-      if (otherIndex <= index) return false;
-      if (otherIndex > cutoffIndex + remaining) return false;
-      const otherRemaining = remainingByTeam.get(other.teamId) ?? 0;
-      const otherMaxWins = other.wins + otherRemaining;
-      return otherMaxWins > maxWins;
-    });
-
-    if (index <= cutoffIndex && !canFallOutOfPlayoffs && playoffSpots > 0) {
+    if (playoffSpots > 0 && othersWhoCanFinishAhead < playoffSpots) {
       badges.push("clinched-playoffs");
     }
 

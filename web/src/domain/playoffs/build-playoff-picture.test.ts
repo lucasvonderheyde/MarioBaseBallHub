@@ -60,7 +60,7 @@ describe("build-playoff-picture", () => {
     { teamId: "t8", name: "H", wins: 3, losses: 9 },
     { teamId: "t9", name: "I", wins: 2, losses: 10 },
     { teamId: "t10", name: "J", wins: 1, losses: 11 },
-  ];
+  ].map((row) => ({ ...row, runsFor: 0, runsAgainst: 0 }));
 
   const teamNames = new Map(standings.map((s) => [s.teamId, s.name]));
 
@@ -141,7 +141,7 @@ describe("build-bracket-picture", () => {
     { teamId: "t8", name: "H", wins: 3, losses: 9 },
     { teamId: "t9", name: "I", wins: 2, losses: 10 },
     { teamId: "t10", name: "J", wins: 1, losses: 11 },
-  ];
+  ].map((row) => ({ ...row, runsFor: 0, runsAgainst: 0 }));
   const teamNames = new Map(standings.map((s) => [s.teamId, s.name]));
 
   it("builds projected 8-team bracket from standings", () => {

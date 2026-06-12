@@ -48,6 +48,13 @@
   --emerald-200: #166534;
   --emerald-900: #bbf7d0;
   --emerald-950: #dcfce7;
+
+  /* Tier rows / status tints use these hues too — pale in daylight,
+     matching the amber/red/emerald inversion above. */
+  --sky-300: #1e5a8f;
+  --sky-950: #e3f1fc;
+  --violet-950: #f1edfe;
+  --orange-950: #fff3e8;
 }
 
 .dark {
@@ -84,6 +91,11 @@
   --emerald-200: #b8f0c0;
   --emerald-900: #1a5c24;
   --emerald-950: #0d3013;
+
+  --sky-300: #7dd3fc;
+  --sky-950: #082f49;
+  --violet-950: #2e1065;
+  --orange-950: #431407;
 }
 
 @theme inline {
@@ -124,6 +136,11 @@
   --color-emerald-200: var(--emerald-200);
   --color-emerald-900: var(--emerald-900);
   --color-emerald-950: var(--emerald-950);
+
+  --color-sky-300: var(--sky-300);
+  --color-sky-950: var(--sky-950);
+  --color-violet-950: var(--violet-950);
+  --color-orange-950: var(--orange-950);
 
   --color-msb-sky: var(--msb-sky);
   --color-msb-sky-deep: var(--msb-sky-deep);

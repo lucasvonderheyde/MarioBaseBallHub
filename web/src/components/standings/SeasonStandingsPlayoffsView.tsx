@@ -10,6 +10,7 @@ import type { BracketPicture } from "@/domain/playoffs/bracket-model";
 import { enrichGamesWithSeries } from "@/domain/playoffs/bracket-model";
 import type { PlayoffPicture } from "@/domain/playoffs/build-playoff-picture";
 import type { TeamClinchStatus } from "@/domain/playoffs/compute-clinch-status";
+import type { PlayoffProbabilityRow } from "@/domain/playoffs/playoff-probability";
 import type { PlayoffSettings } from "@/domain/playoffs/playoff-settings";
 import { standingsStatHeaders } from "@/components/stats/stat-table-headers";
 import type { TeamStandingRow } from "@/domain/standings/compute-standings";
@@ -23,6 +24,7 @@ type Props = {
   picture: PlayoffPicture;
   bracket: BracketPicture;
   clinchByTeam: Map<string, TeamClinchStatus["badges"]>;
+  playoffOddsByTeam?: Map<string, PlayoffProbabilityRow>;
   directSpots: number;
   showPlayIn: boolean;
   regularSeasonComplete: boolean;
@@ -57,6 +59,22 @@ function clinchClass(badge: string): string {
   return "bg-emerald-950/60 text-emerald-300";
 }
 
+function formatPlayoffPct(pct: number): string {
+  if (pct >= 1) return "100%";
+  if (pct <= 0) return "0%";
+  if (pct > 0.99) return ">99%";
+  if (pct < 0.01) return "<1%";
+  return `${Math.round(pct * 100)}%`;
+}
+
+function playoffPctClass(pct: number): string {
+  if (pct >= 1) return "text-emerald-300";
+  if (pct <= 0) return "text-zinc-600";
+  if (pct >= 0.75) return "text-emerald-400/90";
+  if (pct < 0.25) return "text-zinc-500";
+  return "text-zinc-300";
+}
+
 export function SeasonStandingsPlayoffsView({
   leagueId,
   seasonId,
@@ -66,6 +84,7 @@ export function SeasonStandingsPlayoffsView({
   picture,
   bracket,
   clinchByTeam,
+  playoffOddsByTeam,
   directSpots,
   showPlayIn,
   regularSeasonComplete,
@@ -86,6 +105,9 @@ export function SeasonStandingsPlayoffsView({
       </h2>
       <p className="text-sm text-zinc-500">
         Regular-season results only.
+        {!playoffsPhase && playoffOddsByTeam
+          ? " Playoff % = 2,000 simulations of the remaining schedule using matchup odds and this season's tiebreakers."
+          : null}
         {!playoffsPhase && showPlayIn
           ? ` Top ${directSpots} auto-qualify · Seeds ${directSpots + 1}–${directSpots + settings.playInTeamCount} play in for ${settings.playInSpots} spot${settings.playInSpots === 1 ? "" : "s"}.`
           : null}
@@ -99,6 +121,11 @@ export function SeasonStandingsPlayoffsView({
               {standingsStatHeaders()}
               {!playoffsPhase ? (
                 <>
+                  {playoffOddsByTeam ? (
+                    <th className="py-2 pr-2" title="Chance to finish inside the playoff cutoff, from 2,000 simulations of the remaining schedule using the matchup win model and this season's tiebreakers">
+                      Playoff %
+                    </th>
+                  ) : null}
                   <th className="py-2 pr-2">Status</th>
                   <th className="py-2 pr-2">Clinch</th>
                 </>
@@ -129,6 +156,19 @@ export function SeasonStandingsPlayoffsView({
                   <td className="py-2 pr-2 tabular-nums">{row.runsAgainst}</td>
                   {!playoffsPhase && seed ? (
                     <>
+                      {playoffOddsByTeam ? (
+                        <td className="py-2 pr-2 tabular-nums">
+                          <span
+                            className={playoffPctClass(
+                              playoffOddsByTeam.get(row.teamId)?.playoffPct ?? 0,
+                            )}
+                          >
+                            {formatPlayoffPct(
+                              playoffOddsByTeam.get(row.teamId)?.playoffPct ?? 0,
+                            )}
+                          </span>
+                        </td>
+                      ) : null}
                       <td className="py-2 pr-2">
                         <span
                           className={`rounded px-2 py-0.5 text-xs ${seedBadgeClass(seed.status)}`}

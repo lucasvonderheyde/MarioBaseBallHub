@@ -24,6 +24,8 @@ import {
 import { isRegularSeasonComplete } from "@/lib/regular-season-status";
 import { buildSeasonOddsSnapshot } from "@/lib/season-odds";
 import { pickRivalryOfWeek } from "@/domain/odds/rivalry-of-week";
+import { simulatePlayoffProbabilities } from "@/domain/playoffs/playoff-probability";
+import { parseTiebreakerOrder } from "@/domain/standings/tiebreakers";
 import type { FinishedGame } from "@/domain/standings/compute-standings";
 
 type Props = {
@@ -71,6 +73,7 @@ export default async function LeagueStandingsPage({ params, searchParams }: Prop
   const remainingRegularGames = dash.games
     .filter(({ round, game }) => round.phase === "regular" && game.playedAt == null)
     .map(({ game }) => ({
+      gameId: game.id,
       homeTeamId: game.homeTeamId,
       awayTeamId: game.awayTeamId,
     }));
@@ -111,6 +114,23 @@ export default async function LeagueStandingsPage({ params, searchParams }: Prop
       awayScore: game.awayScore,
     });
   }
+
+  const playoffSpots =
+    settings.autoQualifyCount + (showPlayIn ? settings.playInSpots : 0);
+  const playoffOddsByTeam = new Map(
+    simulatePlayoffProbabilities({
+      teamIds: dash.standings.map((row) => row.teamId),
+      teamNames,
+      finishedGames,
+      remainingGames: remainingRegularGames.map((game) => ({
+        homeTeamId: game.homeTeamId,
+        awayTeamId: game.awayTeamId,
+        homeWinPct: oddsSnapshot.gameOdds.get(game.gameId)?.homeWinPct ?? 0.5,
+      })),
+      tiebreakerOrder: parseTiebreakerOrder(dash.season.tiebreakerOrder),
+      playoffSpots,
+    }).map((row) => [row.teamId, row]),
+  );
 
   const playoffFeatured = regularSeasonComplete
     ? pickRivalryOfWeek({
@@ -173,6 +193,7 @@ export default async function LeagueStandingsPage({ params, searchParams }: Prop
         picture={picture}
         bracket={bracket}
         clinchByTeam={clinchByTeam}
+        playoffOddsByTeam={playoffOddsByTeam}
         directSpots={directSpots}
         showPlayIn={showPlayIn}
         regularSeasonComplete={regularSeasonComplete}

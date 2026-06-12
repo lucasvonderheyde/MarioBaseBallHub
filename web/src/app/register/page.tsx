@@ -21,7 +21,7 @@ export default async function RegisterPage({
   }
   return (
     <PageShell width="narrow" className="py-12">
-      <h1 className="text-xl font-semibold">Register</h1>
+      <h1 className="text-2xl font-bold">Register</h1>
       {e ? (
         <p className="mt-2 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {e}
