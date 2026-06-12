@@ -7,7 +7,5 @@ node_modules/
 # OS / editor
 .DS_Store
 
-# Local SQLite (under web/data when developing)
-web/data/*.db
-web/data/*.db-wal
-web/data/*.db-shm
+# Local SQLite (under web/data when developing), including backup snapshots
+web/data/
