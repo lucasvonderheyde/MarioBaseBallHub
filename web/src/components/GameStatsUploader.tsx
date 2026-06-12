@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   uploadStatsFormAction,
@@ -55,6 +56,7 @@ function GameStatsUploaderForm({
   seasonId,
   compact = false,
 }: Props) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(uploadStatsFormAction, null);
   const [mode, setMode] = useState<UploadMode>("file");
   const [jsonText, setJsonText] = useState("");
@@ -90,6 +92,12 @@ function GameStatsUploaderForm({
   }
 
   const canSubmit = jsonText.trim().length > 0 && !pending;
+
+  useEffect(() => {
+    if (state && "ok" in state && state.ok) {
+      router.refresh();
+    }
+  }, [state, router]);
 
   return (
     <form action={action} className="space-y-3">

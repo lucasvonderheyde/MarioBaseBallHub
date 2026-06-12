@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { CharacterRatings } from "@/data/character-ratings";
 
 type Props = {
@@ -79,52 +80,60 @@ export function CharacterAttributesDiff({
         between {charAName} and {charBName}.
       </p>
 
-      <div className="mt-6 space-y-8">
-        {ATTRIBUTE_SECTIONS.map((section) => {
-          const fieldsA = section.fields(ratingsA);
-          const fieldsB = section.fields(ratingsB);
-          const rows: FieldDef[] = fieldsA.map((field, index) => ({
-            label: field.label,
-            valueA: normalize(field.value),
-            valueB: normalize(fieldsB[index]?.value ?? ""),
-          }));
+      <div className="msb-table-wrap mt-6">
+        <table className="w-full table-fixed text-left text-sm">
+          <colgroup>
+            <col className="w-[38%]" />
+            <col className="w-[31%]" />
+            <col className="w-[31%]" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-zinc-800 text-zinc-500">
+              <th className="py-2 pr-4 text-left">Attribute</th>
+              <th className="py-2 pr-4 text-left">{charAName}</th>
+              <th className="py-2 text-left">{charBName}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ATTRIBUTE_SECTIONS.map((section) => {
+              const fieldsA = section.fields(ratingsA);
+              const fieldsB = section.fields(ratingsB);
+              const rows: FieldDef[] = fieldsA.map((field, index) => ({
+                label: field.label,
+                valueA: normalize(field.value),
+                valueB: normalize(fieldsB[index]?.value ?? ""),
+              }));
 
-          return (
-            <div key={section.title}>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-                {section.title}
-              </h3>
-              <div className="msb-table-wrap mt-3">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-zinc-800 text-zinc-500">
-                      <th className="py-1 pr-2">Attribute</th>
-                      <th className="py-1 pr-2">{charAName}</th>
-                      <th className="py-1 pr-2">{charBName}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => {
-                      const differs = row.valueA !== row.valueB;
-                      return (
-                        <tr
-                          key={row.label}
-                          className={`border-b border-zinc-900 ${
-                            differs ? "bg-amber-950/20" : ""
-                          }`}
-                        >
-                          <td className="py-1 pr-2 text-zinc-400">{row.label}</td>
-                          <td className="py-1 pr-2">{row.valueA}</td>
-                          <td className="py-1 pr-2">{row.valueB}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        })}
+              return (
+                <Fragment key={section.title}>
+                  <tr className="border-b border-zinc-800">
+                    <td
+                      colSpan={3}
+                      className="bg-zinc-950/60 py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-zinc-400"
+                    >
+                      {section.title}
+                    </td>
+                  </tr>
+                  {rows.map((row) => {
+                    const differs = row.valueA !== row.valueB;
+                    return (
+                      <tr
+                        key={`${section.title}-${row.label}`}
+                        className={`border-b border-zinc-900 ${
+                          differs ? "bg-amber-950/20" : ""
+                        }`}
+                      >
+                        <td className="py-1.5 pr-4 text-zinc-400">{row.label}</td>
+                        <td className="py-1.5 pr-4 tabular-nums">{row.valueA}</td>
+                        <td className="py-1.5 tabular-nums">{row.valueB}</td>
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </section>
   );
