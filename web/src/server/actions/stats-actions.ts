@@ -258,7 +258,7 @@ export async function uploadStatsBatchAction(
   }
 
   if (files.length === 0) return { error: "No files selected." };
-  if (files.length > 20) return { error: "Maximum 20 files per batch." };
+  if (files.length > 50) return { error: "Maximum 50 files per batch." };
 
   const user = await requireUser();
 

@@ -1,24 +1,26 @@
-import { redirect } from "next/navigation";
 import { HeadToHeadComparisonView } from "@/components/HeadToHeadComparisonView";
 import { HeadToHeadSelector } from "@/components/HeadToHeadSelector";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
-import { getCurrentUser } from "@/lib/auth";
 import {
   getHeadToHeadComparison,
   getH2hManagerOptions,
   getH2hSeasonOptions,
+  type H2hSourceFilter,
 } from "@/lib/head-to-head";
 
 type Props = {
-  searchParams: Promise<{ a?: string; b?: string; season?: string }>;
+  searchParams: Promise<{ a?: string; b?: string; season?: string; source?: string }>;
 };
 
-export default async function HeadToHeadPage({ searchParams }: Props) {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+function parseSource(value: string | undefined): H2hSourceFilter {
+  if (value === "league" || value === "friendly") return value;
+  return "all";
+}
 
-  const { a, b, season } = await searchParams;
+export default async function HeadToHeadPage({ searchParams }: Props) {
+  const { a, b, season, source: sourceParam } = await searchParams;
+  const source = parseSource(sourceParam);
   const [managers, seasons] = await Promise.all([
     getH2hManagerOptions(),
     getH2hSeasonOptions(),
@@ -30,6 +32,7 @@ export default async function HeadToHeadPage({ searchParams }: Props) {
           managerAId: a,
           managerBId: b,
           seasonId: season || undefined,
+          source: season ? "all" : source,
         })
       : null;
 
@@ -47,6 +50,7 @@ export default async function HeadToHeadPage({ searchParams }: Props) {
           managerAId={a ?? ""}
           managerBId={b ?? ""}
           seasonId={season ?? ""}
+          source={season ? "all" : source}
         />
       </section>
 

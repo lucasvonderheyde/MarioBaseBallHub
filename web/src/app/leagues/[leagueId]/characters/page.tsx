@@ -34,10 +34,8 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
     sort: sortParam,
   } = await searchParams;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
-  if (!role) notFound();
 
   const [league] = await db
     .select()

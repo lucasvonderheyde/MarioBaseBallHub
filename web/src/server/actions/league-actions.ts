@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { leagueMembers, leagues, seasons, users } from "@/db/schema";
-import { requireUser, userIsSiteAdmin } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import {
   DEFAULT_TIEBREAKER_ORDER,
@@ -17,9 +17,6 @@ import { newUuid, slugifyLeagueSegment } from "@/server/ids";
 
 export async function createLeagueAction(formData: FormData) {
   const user = await requireUser();
-  if (!userIsSiteAdmin(user)) {
-    redirectWithFormError("/leagues", "Only site admins can create leagues.");
-  }
   const name = String(formData.get("name") ?? "").trim();
   if (!name) redirectWithFormError("/leagues", "League name required.");
   const id = newUuid();

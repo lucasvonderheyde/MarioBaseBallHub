@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { CharacterIcon } from "@/components/CharacterIcon";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
@@ -27,11 +26,10 @@ function tierBarClass(tier: CharacterTier): string {
 
 export default async function TierListPage() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const charIds = CHARACTER_CATALOG.map((row) => row.gameCharId);
   const [userTiers, allBallots] = await Promise.all([
-    getUserTierBallot(user.id),
+    user ? getUserTierBallot(user.id) : Promise.resolve({}),
     getAllTierBallots(),
   ]);
 
@@ -104,16 +102,25 @@ export default async function TierListPage() {
         )}
       </section>
 
-      <section className="mt-8 msb-panel p-4 sm:p-5">
-        <h2 className="text-lg font-semibold">Your ballot</h2>
-        <TierListVotingForm
-          characters={CHARACTER_CATALOG.map((row) => ({
-            gameCharId: row.gameCharId,
-            displayName: row.displayName,
-          }))}
-          initialTiers={userTiers}
-        />
-      </section>
+      {user ? (
+        <section className="mt-8 msb-panel p-4 sm:p-5">
+          <h2 className="text-lg font-semibold">Your ballot</h2>
+          <TierListVotingForm
+            characters={CHARACTER_CATALOG.map((row) => ({
+              gameCharId: row.gameCharId,
+              displayName: row.displayName,
+            }))}
+            initialTiers={userTiers}
+          />
+        </section>
+      ) : (
+        <p className="mt-8 text-sm text-zinc-500">
+          <Link href="/login" className="text-amber-400 hover:underline">
+            Log in
+          </Link>{" "}
+          to submit your tier list.
+        </p>
+      )}
     </PageShell>
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { scheduleGames } from "@/db/schema";
@@ -26,6 +26,8 @@ import { getGameCharacterStats } from "@/lib/game-stats-queries";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { stadiumIconUrl } from "@/lib/asset-urls";
 import {
+  earnedRunAverage,
+  formatEra,
   formatRate,
   inningsPitched,
 } from "@/domain/stats/batting-metrics";
@@ -49,7 +51,6 @@ export default async function GameReportPage({ params, searchParams }: Props) {
   const { leagueId, seasonId, gameId } = await params;
   const { e, m } = await searchParams;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   if (!(await leagueExists(leagueId))) notFound();
 
@@ -72,12 +73,9 @@ export default async function GameReportPage({ params, searchParams }: Props) {
   const away = dash.teams.find((t) => t.team.id === game.awayTeamId);
   if (!home || !away) notFound();
 
-  const canEdit = canUserReportGame(
-    user.id,
-    role,
-    home.manager?.id,
-    away.manager?.id,
-  );
+  const canEdit =
+    user != null &&
+    canUserReportGame(user.id, role, home.manager?.id, away.manager?.id);
 
   const hasStats = game.statsRawJson != null;
   const played =
@@ -216,6 +214,9 @@ export default async function GameReportPage({ params, searchParams }: Props) {
                     <td className="py-1 pr-2 tabular-nums">{row.runsAllowed}</td>
                     <td className="py-1 pr-2 tabular-nums">{row.earnedRuns}</td>
                     <td className="py-1 pr-2 tabular-nums">
+                      {formatEra(earnedRunAverage(row.earnedRuns, row.outsPitched))}
+                    </td>
+                    <td className="py-1 pr-2 tabular-nums">
                       {row.pitchingWalks + row.battersHit}
                     </td>
                     <td className="py-1 pr-2 tabular-nums">{row.strikeoutsDef}</td>
@@ -225,7 +226,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
                 ))
               ) : (
                 <tr className="border-b border-zinc-900 text-zinc-500">
-                  <td className="py-1 pr-2" colSpan={10}>
+                  <td className="py-1 pr-2" colSpan={11}>
                     No pitching stats recorded
                   </td>
                 </tr>

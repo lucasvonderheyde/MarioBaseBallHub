@@ -41,6 +41,16 @@ export type H2hGameResult = {
   leagueName?: string;
 };
 
+export type H2hSourceFilter = "all" | "league" | "friendly";
+
+export type H2hRecordSlice = {
+  games: number;
+  managerAWins: number;
+  managerBWins: number;
+  managerARuns: number;
+  managerBRuns: number;
+};
+
 export type HeadToHeadComparison = {
   managerA: H2hManagerOption;
   managerB: H2hManagerOption;
@@ -51,6 +61,10 @@ export type HeadToHeadComparison = {
   managerARuns: number;
   managerBRuns: number;
   recentGames: H2hGameResult[];
+  breakdown?: {
+    league: H2hRecordSlice;
+    friendly: H2hRecordSlice;
+  };
 };
 
 function managersOpposedInPersonalGame(
@@ -369,10 +383,33 @@ async function loadFriendlyMatchups(
   return results;
 }
 
+function summarizeGames(games: H2hGameResult[]): H2hRecordSlice {
+  let managerAWins = 0;
+  let managerBWins = 0;
+  let managerARuns = 0;
+  let managerBRuns = 0;
+
+  for (const game of games) {
+    managerARuns += game.managerAScore;
+    managerBRuns += game.managerBScore;
+    if (game.managerAWon) managerAWins++;
+    else managerBWins++;
+  }
+
+  return {
+    games: games.length,
+    managerAWins,
+    managerBWins,
+    managerARuns,
+    managerBRuns,
+  };
+}
+
 export async function getHeadToHeadComparison(input: {
   managerAId: string;
   managerBId: string;
   seasonId?: string;
+  source?: H2hSourceFilter;
 }): Promise<HeadToHeadComparison | null> {
   const managers = await loadManagers(input.managerAId, input.managerBId);
   if (!managers) return null;
@@ -386,15 +423,17 @@ export async function getHeadToHeadComparison(input: {
   const userA = userRows.find((u) => u.id === input.managerAId)!;
   const userB = userRows.find((u) => u.id === input.managerBId)!;
 
-  const leagueGames = await loadLeagueMatchups(
-    input.managerAId,
-    input.managerBId,
-    input.seasonId,
-  );
+  const source = input.source ?? "all";
 
-  const friendlyGames = input.seasonId
-    ? []
-    : await loadFriendlyMatchups(userA, userB);
+  const leagueGames =
+    source === "friendly"
+      ? []
+      : await loadLeagueMatchups(input.managerAId, input.managerBId, input.seasonId);
+
+  const friendlyGames =
+    input.seasonId || source === "league"
+      ? []
+      : await loadFriendlyMatchups(userA, userB);
 
   const allGames = [...leagueGames, ...friendlyGames].sort(
     (a, b) => (b.playedAt?.getTime() ?? 0) - (a.playedAt?.getTime() ?? 0),
@@ -408,29 +447,31 @@ export async function getHeadToHeadComparison(input: {
       .where(eq(seasons.id, input.seasonId))
       .limit(1);
     scopeLabel = season?.name ?? "Season";
+  } else if (source === "league") {
+    scopeLabel = "All seasons";
+  } else if (source === "friendly") {
+    scopeLabel = "Friendlies";
   }
 
-  let managerAWins = 0;
-  let managerBWins = 0;
-  let managerARuns = 0;
-  let managerBRuns = 0;
-
-  for (const game of allGames) {
-    managerARuns += game.managerAScore;
-    managerBRuns += game.managerBScore;
-    if (game.managerAWon) managerAWins++;
-    else managerBWins++;
-  }
+  const totals = summarizeGames(allGames);
+  const breakdown =
+    !input.seasonId && source === "all"
+      ? {
+          league: summarizeGames(leagueGames),
+          friendly: summarizeGames(friendlyGames),
+        }
+      : undefined;
 
   return {
     managerA,
     managerB,
     scopeLabel,
-    games: allGames.length,
-    managerAWins,
-    managerBWins,
-    managerARuns,
-    managerBRuns,
+    games: totals.games,
+    managerAWins: totals.managerAWins,
+    managerBWins: totals.managerBWins,
+    managerARuns: totals.managerARuns,
+    managerBRuns: totals.managerBRuns,
     recentGames: allGames.slice(0, 15),
+    breakdown,
   };
 }

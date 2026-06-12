@@ -35,7 +35,6 @@ function toSortableEntry(
 
 export default async function GlobalCharactersPage({ searchParams }: Props) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const { player: managerUserId, q: searchQuery, sort: sortParam } =
     await searchParams;

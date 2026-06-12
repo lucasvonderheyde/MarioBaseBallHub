@@ -139,10 +139,8 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
   const charId = slugToCharId(charSlug);
 
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
-  if (!role) notFound();
 
   const [characterRow] = await db
     .select()

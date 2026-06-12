@@ -76,3 +76,18 @@ export function inningsPitched(outsPitched: number): string {
   const partial = outsPitched % 3;
   return `${full}.${partial}`;
 }
+
+/** Standard ERA: earned runs per 9 innings pitched. */
+export function earnedRunAverage(
+  earnedRuns: number,
+  outsPitched: number,
+): number | null {
+  if (outsPitched === 0) return null;
+  return (earnedRuns * 27) / outsPitched;
+}
+
+/** e.g. 3.45 → "3.45", null → "—" */
+export function formatEra(era: number | null, decimals = 2): string {
+  if (era == null) return "—";
+  return era.toFixed(decimals);
+}

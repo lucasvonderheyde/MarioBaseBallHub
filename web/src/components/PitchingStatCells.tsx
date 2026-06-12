@@ -1,5 +1,9 @@
 import { pitchingStatHeaders } from "@/components/stats/stat-table-headers";
-import { inningsPitched } from "@/domain/stats/batting-metrics";
+import {
+  earnedRunAverage,
+  formatEra,
+  inningsPitched,
+} from "@/domain/stats/batting-metrics";
 import type { PitchingLine } from "@/lib/game-stats-queries";
 
 type Props = Pick<
@@ -33,6 +37,9 @@ export function PitchingStatCells({
       <td className="py-1 pr-2 tabular-nums">{hitsAllowed}</td>
       <td className="py-1 pr-2 tabular-nums">{runsAllowed}</td>
       <td className="py-1 pr-2 tabular-nums">{earnedRuns}</td>
+      <td className="py-1 pr-2 tabular-nums">
+        {formatEra(earnedRunAverage(earnedRuns, outsPitched))}
+      </td>
       <td className="py-1 pr-2 tabular-nums">{walks}</td>
       <td className="py-1 pr-2 tabular-nums">{strikeouts}</td>
       <td className="py-1 pr-2 tabular-nums">{hrAllowed}</td>

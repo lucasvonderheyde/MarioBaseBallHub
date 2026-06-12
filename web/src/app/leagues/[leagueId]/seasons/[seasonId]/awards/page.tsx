@@ -21,10 +21,8 @@ type Props = {
 export default async function SeasonAwardsPage({ params }: Props) {
   const { leagueId, seasonId } = await params;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
-  if (!role) notFound();
 
   const [season] = await db
     .select()
@@ -56,7 +54,9 @@ export default async function SeasonAwardsPage({ params }: Props) {
     .where(eq(teams.seasonId, seasonId));
 
   const [userVotes, results] = await Promise.all([
-    getUserAwardVotes(user.id, seasonId),
+    user
+      ? getUserAwardVotes(user.id, seasonId)
+      : Promise.resolve(new Map<string, string>()),
     getAwardVoteResults(seasonId),
   ]);
 
@@ -88,12 +88,21 @@ export default async function SeasonAwardsPage({ params }: Props) {
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <section className="msb-panel p-4 sm:p-5">
           <h2 className="text-lg font-semibold">Cast your votes</h2>
-          <SeasonAwardVotingForm
-            leagueId={leagueId}
-            seasonId={seasonId}
-            teams={teamRows}
-            initialVotes={Object.fromEntries(userVotes)}
-          />
+          {user ? (
+            <SeasonAwardVotingForm
+              leagueId={leagueId}
+              seasonId={seasonId}
+              teams={teamRows}
+              initialVotes={Object.fromEntries(userVotes)}
+            />
+          ) : (
+            <p className="mt-3 text-sm text-zinc-500">
+              <Link href="/login" className="text-amber-400 hover:underline">
+                Log in
+              </Link>{" "}
+              to vote on season awards.
+            </p>
+          )}
         </section>
 
         <section className="msb-panel p-4 sm:p-5">

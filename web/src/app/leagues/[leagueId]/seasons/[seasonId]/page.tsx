@@ -42,7 +42,6 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const { leagueId, seasonId } = await params;
   const { e, m, count, week } = await searchParams;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
 
@@ -64,7 +63,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
     round,
   }));
   const rosterCounts = await getTeamRosterCountsForSeason(seasonId);
-  const userTeam = await getManagedTeamInSeason(user.id, seasonId);
+  const userTeam = user ? await getManagedTeamInSeason(user.id, seasonId) : null;
   const tradeRoster = await getTradeRosterInstancesForSeason(seasonId);
   const pendingTrades = await getPendingTradeRequestsForSeason(seasonId);
   const seasonRecords = await getSeasonRecords(seasonId);
@@ -220,7 +219,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
               team,
               manager: manager ? { id: manager.id } : null,
             }))}
-            userId={user.id}
+            userId={user?.id ?? ""}
             gameOdds={oddsSnapshot.gameOdds}
           />
           <SeasonHubRecordsCompact
@@ -242,7 +241,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
           <SeasonTradePanel
             leagueId={leagueId}
             seasonId={seasonId}
-            userId={user.id}
+            userId={user?.id ?? ""}
             userTeam={userTeam}
             teams={teams.map(({ team, manager }) => ({
               id: team.id,

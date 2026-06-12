@@ -18,10 +18,8 @@ type Props = {
 export default async function SeasonDraftPage({ params }: Props) {
   const { leagueId, seasonId } = await params;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
-  if (!role) notFound();
 
   const [season] = await db
     .select()
@@ -31,7 +29,7 @@ export default async function SeasonDraftPage({ params }: Props) {
   if (!season) notFound();
 
   const draft = await getSeasonDraftView(seasonId);
-  const userTeam = await getManagedTeamInSeason(user.id, seasonId);
+  const userTeam = user ? await getManagedTeamInSeason(user.id, seasonId) : null;
 
   const available = await db
     .select({

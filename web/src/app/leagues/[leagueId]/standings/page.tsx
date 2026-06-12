@@ -35,7 +35,6 @@ export default async function LeagueStandingsPage({ params, searchParams }: Prop
   const { leagueId } = await params;
   const { season: seasonParam } = await searchParams;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   if (!(await leagueExists(leagueId))) notFound();
 

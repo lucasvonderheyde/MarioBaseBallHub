@@ -48,10 +48,8 @@ export default async function TeamPage({ params, searchParams }: Props) {
   const { leagueId, seasonId, teamId } = await params;
   const { e, m } = await searchParams;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
-  if (!role) notFound();
 
   const dash = await getSeasonDashboard(seasonId);
   if (!dash || dash.league.id !== leagueId) notFound();
@@ -141,7 +139,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
     : null;
 
   const isAdmin = role === "admin";
-  const isManager = team.managerUserId === user.id;
+  const isManager = user != null && team.managerUserId === user.id;
   const canEdit = isAdmin || isManager;
 
   const teamNames = new Map(dash.teams.map((t) => [t.team.id, t.team.name]));

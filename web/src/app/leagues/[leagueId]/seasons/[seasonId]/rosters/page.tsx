@@ -18,7 +18,6 @@ export default async function RostersPage({ params, searchParams }: Props) {
   const { leagueId, seasonId } = await params;
   const { e } = await searchParams;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
   if (role !== "admin") notFound();

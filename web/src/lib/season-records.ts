@@ -109,6 +109,54 @@ async function loadSeasonContext(seasonId: string) {
   return season ?? null;
 }
 
+type TeamMeta = {
+  teamName: string;
+  managerUsername: string | null;
+  managerDisplayName: string | null;
+};
+
+async function loadSeasonTeamMeta(seasonId: string): Promise<{
+  teamNames: Map<string, string>;
+  teamMeta: Map<string, TeamMeta>;
+}> {
+  const rows = await db
+    .select({
+      id: teams.id,
+      name: teams.name,
+      managerUsername: users.username,
+      managerDisplayName: users.displayName,
+    })
+    .from(teams)
+    .leftJoin(users, eq(teams.managerUserId, users.id))
+    .where(eq(teams.seasonId, seasonId));
+
+  const teamNames = new Map(rows.map((team) => [team.id, team.name]));
+  const teamMeta = new Map(
+    rows.map((team) => [
+      team.id,
+      {
+        teamName: team.name,
+        managerUsername: team.managerUsername,
+        managerDisplayName: team.managerDisplayName,
+      },
+    ]),
+  );
+
+  return { teamNames, teamMeta };
+}
+
+function teamRecordFields(
+  teamId: string,
+  teamMeta: Map<string, TeamMeta>,
+): Pick<SeasonRecordHolder, "teamName" | "managerUsername" | "managerDisplayName"> {
+  const meta = teamMeta.get(teamId);
+  return {
+    teamName: meta?.teamName,
+    managerUsername: meta?.managerUsername ?? null,
+    managerDisplayName: meta?.managerDisplayName ?? null,
+  };
+}
+
 async function topCharacterRecord(
   seasonId: string,
   leagueId: string,
@@ -211,17 +259,11 @@ async function topTeamScoreRecord(
 
   if (games.length === 0) return null;
 
-  const teamNames = new Map(
-    (
-      await db
-        .select({ id: teams.id, name: teams.name })
-        .from(teams)
-        .where(eq(teams.seasonId, seasonId))
-    ).map((team) => [team.id, team.name]),
-  );
+  const { teamNames, teamMeta } = await loadSeasonTeamMeta(seasonId);
 
   let best: {
     gameId: string;
+    teamId: string;
     teamName: string;
     runs: number;
     homeScore: number;
@@ -242,6 +284,7 @@ async function topTeamScoreRecord(
       if (!best || candidate.runs > best.runs) {
         best = {
           gameId: game.id,
+          teamId: candidate.teamId,
           teamName: teamNames.get(candidate.teamId) ?? "Team",
           runs: candidate.runs,
           homeScore,
@@ -265,7 +308,7 @@ async function topTeamScoreRecord(
     value: best.runs,
     valueLabel: String(best.runs),
     detail: `${best.teamName} scored ${best.runs}`,
-    teamName: best.teamName,
+    ...teamRecordFields(best.teamId, teamMeta),
     gameId: best.gameId,
     leagueId,
     seasonId,
@@ -372,17 +415,11 @@ async function topBlowoutRecord(
 
   if (games.length === 0) return null;
 
-  const teamNames = new Map(
-    (
-      await db
-        .select({ id: teams.id, name: teams.name })
-        .from(teams)
-        .where(eq(teams.seasonId, seasonId))
-    ).map((team) => [team.id, team.name]),
-  );
+  const { teamNames, teamMeta } = await loadSeasonTeamMeta(seasonId);
 
-  let best: (typeof games)[number] & { margin: number; winnerName: string } | null =
-    null;
+  let best:
+    | ((typeof games)[number] & { margin: number; winnerId: string; winnerName: string })
+    | null = null;
 
   for (const game of games) {
     const margin = Math.abs(game.homeScore! - game.awayScore!);
@@ -393,6 +430,7 @@ async function topBlowoutRecord(
       best = {
         ...game,
         margin,
+        winnerId,
         winnerName: teamNames.get(winnerId) ?? "Winner",
       };
     }
@@ -409,7 +447,7 @@ async function topBlowoutRecord(
     value: best.margin,
     valueLabel: `+${best.margin}`,
     detail: `${best.winnerName} won by ${best.margin}`,
-    teamName: best.winnerName,
+    ...teamRecordFields(best.winnerId, teamMeta),
     gameId: best.id,
     leagueId,
     seasonId,
@@ -445,14 +483,7 @@ async function topInningRecords(
     )
     .groupBy(scheduleGames.id);
 
-  const teamNames = new Map(
-    (
-      await db
-        .select({ id: teams.id, name: teams.name })
-        .from(teams)
-        .where(eq(teams.seasonId, seasonId))
-    ).map((team) => [team.id, team.name]),
-  );
+  const { teamNames, teamMeta } = await loadSeasonTeamMeta(seasonId);
 
   let bestHalf: {
     game: (typeof games)[number];
@@ -493,7 +524,9 @@ async function topInningRecords(
   if (bestHalf) {
     const awayName = teamNames.get(bestHalf.game.awayTeamId) ?? "Away";
     const homeName = teamNames.get(bestHalf.game.homeTeamId) ?? "Home";
-    const teamName = bestHalf.side === "away" ? awayName : homeName;
+    const scoringTeamId =
+      bestHalf.side === "away" ? bestHalf.game.awayTeamId : bestHalf.game.homeTeamId;
+    const teamName = teamNames.get(scoringTeamId) ?? "Team";
     const halfLabel = bestHalf.side === "away" ? "top" : "bottom";
     records.push({
       id: `half_inning-${bestHalf.game.id}`,
@@ -502,11 +535,11 @@ async function topInningRecords(
       value: bestHalf.runs,
       valueLabel: String(bestHalf.runs),
       detail: `${teamName} scored ${bestHalf.runs} in the ${halfLabel} ${bestHalf.inning}${ordinal(bestHalf.inning)}`,
-      teamName,
+      ...teamRecordFields(scoringTeamId, teamMeta),
       gameId: bestHalf.game.id,
       leagueId,
       seasonId,
-      matchup: `${awayName} ${bestHalf.game.awayScore}–${bestHalf.game.awayScore} ${homeName}`,
+      matchup: `${awayName} ${bestHalf.game.awayScore}–${bestHalf.game.homeScore} ${homeName}`,
       playedAt: bestHalf.game.playedAt,
     });
   }
@@ -524,7 +557,7 @@ async function topInningRecords(
       gameId: bestFull.game.id,
       leagueId,
       seasonId,
-      matchup: `${awayName} ${bestFull.game.awayScore}–${bestFull.game.awayScore} ${homeName}`,
+      matchup: `${awayName} ${bestFull.game.awayScore}–${bestFull.game.homeScore} ${homeName}`,
       playedAt: bestFull.game.playedAt,
     });
   }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type Section = "library" | "chemistry";
+type Section = "library" | "chemistry" | "compare";
 
 type Props = {
   active: Section;
@@ -25,6 +25,9 @@ export function GlobalCharactersNav({ active }: Props) {
       </Link>
       <Link href="/characters/chemistry" className={tabClass(active === "chemistry")}>
         Chemistry
+      </Link>
+      <Link href="/characters/compare" className={tabClass(active === "compare")}>
+        Comparer
       </Link>
     </nav>
   );

@@ -14,7 +14,7 @@ export function ExpandableBatPreview({ batFile }: Props) {
     <button
       type="button"
       onClick={() => setExpanded((value) => !value)}
-      className={`flex shrink-0 flex-col items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 transition-colors hover:border-zinc-700 hover:bg-zinc-900/60 ${
+      className={`flex min-h-28 min-w-44 shrink-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900/60 sm:min-h-32 sm:min-w-52 ${
         expanded ? "ring-1 ring-amber-700/40" : ""
       }`}
       aria-expanded={expanded}

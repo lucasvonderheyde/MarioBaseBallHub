@@ -6,7 +6,7 @@ import {
   type BatchUploadState,
 } from "@/server/actions/stats-actions";
 
-const MAX_FILES = 20;
+const MAX_FILES = 50;
 
 export function BatchGameStatsUploader() {
   const [state, action, pending] = useActionState(uploadStatsBatchAction, null);

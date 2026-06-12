@@ -62,7 +62,6 @@ function emptyBattingLine(charId: string): BattingLine {
 
 export default async function GlobalCharacterDetailPage({ params }: Props) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const { charId: slug } = await params;
   const gameCharId = slugToCharId(slug);

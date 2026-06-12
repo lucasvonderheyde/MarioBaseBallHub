@@ -57,7 +57,6 @@ function tierClass(tier: ReturnType<typeof chemistryTier>): string {
 
 export default async function ChemistryPage() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const baseRows = CHEMISTRY_BASE_CHARACTERS.map((name, index) => {
     const gameCharId = BASE_TO_CATALOG_CHAR[name];

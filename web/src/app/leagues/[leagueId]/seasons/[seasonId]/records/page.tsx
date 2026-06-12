@@ -15,10 +15,8 @@ type Props = {
 export default async function SeasonRecordsPage({ params }: Props) {
   const { leagueId, seasonId } = await params;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
-  if (!role) notFound();
 
   const dash = await getSeasonDashboard(seasonId);
   if (!dash || dash.league.id !== leagueId) notFound();

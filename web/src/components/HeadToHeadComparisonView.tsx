@@ -56,6 +56,37 @@ export function HeadToHeadComparisonView({ comparison }: Props) {
             These managers have not played each other in this scope yet.
           </p>
         )}
+
+        {comparison.breakdown ? (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Seasons</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {comparison.breakdown.league.managerAWins}–
+                {comparison.breakdown.league.managerBWins}
+              </p>
+              <p className="mt-1 text-sm text-zinc-400">
+                {comparison.breakdown.league.managerARuns}–
+                {comparison.breakdown.league.managerBRuns} runs ·{" "}
+                {comparison.breakdown.league.games} game
+                {comparison.breakdown.league.games === 1 ? "" : "s"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Friendlies</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {comparison.breakdown.friendly.managerAWins}–
+                {comparison.breakdown.friendly.managerBWins}
+              </p>
+              <p className="mt-1 text-sm text-zinc-400">
+                {comparison.breakdown.friendly.managerARuns}–
+                {comparison.breakdown.friendly.managerBRuns} runs ·{" "}
+                {comparison.breakdown.friendly.games} game
+                {comparison.breakdown.friendly.games === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       {comparison.recentGames.length > 0 ? (

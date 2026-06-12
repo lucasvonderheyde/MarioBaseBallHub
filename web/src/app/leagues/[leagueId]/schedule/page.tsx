@@ -23,7 +23,6 @@ type Props = {
 export default async function LeagueSchedulePage({ params }: Props) {
   const { leagueId } = await params;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   if (!(await leagueExists(leagueId))) notFound();
 
@@ -35,7 +34,6 @@ export default async function LeagueSchedulePage({ params }: Props) {
   if (!league) notFound();
 
   const role = await getLeagueRole(leagueId, user);
-  if (!role) notFound();
   const isAdmin = isLeagueAdmin(role);
 
   const seasons = await getLeagueScheduleData(leagueId);
@@ -85,7 +83,7 @@ export default async function LeagueSchedulePage({ params }: Props) {
                 rounds={dash.rounds}
                 gamesByRound={gamesByRound}
                 teams={dash.teams}
-                userId={user.id}
+                userId={user?.id ?? ""}
                 role={role}
                 isAdmin={isAdmin}
                 gameOdds={buildSeasonOddsSnapshot(dash).gameOdds}

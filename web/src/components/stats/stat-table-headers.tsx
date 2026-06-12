@@ -55,6 +55,7 @@ export function pitchingStatHeaders({ className = "py-1 pr-2", includeG = true }
       <StatColumnHeader abbr="H" className={className} description="Hits allowed" />
       <StatColumnHeader abbr="R" className={className} description="Runs allowed" />
       <StatColumnHeader abbr="ER" className={className} />
+      <StatColumnHeader abbr="ERA" className={className} />
       <StatColumnHeader abbr="BB" className={className} description="Walks allowed" />
       <StatColumnHeader abbr="K" className={className} description="Strikeouts (pitching)" />
       <StatColumnHeader abbr="HR" className={className} description="Home runs allowed" />

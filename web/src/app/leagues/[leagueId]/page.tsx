@@ -41,7 +41,6 @@ export default async function LeaguePage({ params, searchParams }: Props) {
   const { leagueId } = await params;
   const { e, m, tab: tabParam } = await searchParams;
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   if (!(await leagueExists(leagueId))) notFound();
 
@@ -84,6 +83,8 @@ export default async function LeaguePage({ params, searchParams }: Props) {
       </PageShell>
     );
   }
+
+  if (!user) redirect("/login");
 
   const activeTab = parseTab(tabParam);
   const [overview, commissionerSeasons, members] = await Promise.all([

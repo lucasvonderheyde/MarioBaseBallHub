@@ -13,8 +13,9 @@ export function isLeagueAdmin(role: LeagueRole | null): boolean {
 
 export async function getLeagueRole(
   leagueId: string,
-  user: LeagueAccessUser,
+  user: LeagueAccessUser | null,
 ): Promise<LeagueRole | null> {
+  if (!user) return null;
   if (userIsSiteAdmin(user)) return "admin";
 
   const [row] = await db
@@ -30,7 +31,7 @@ export async function getLeagueRole(
   return row?.role ?? null;
 }
 
-/** Logged-in users may view league hub, schedule, and playoffs without membership. */
+/** Anyone may view league hub, schedule, and playoffs without logging in. */
 export async function leagueExists(leagueId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: leagues.id })

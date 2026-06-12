@@ -57,6 +57,12 @@ export async function Nav() {
               >
                 Tier list
               </Link>
+              <Link
+                href="/users"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                Users
+              </Link>
               {userIsSiteAdmin(user) ? (
                 <Link
                   href="/admin"
@@ -82,6 +88,36 @@ export async function Nav() {
             </>
           ) : (
             <>
+              <Link
+                href="/leagues"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                Leagues
+              </Link>
+              <Link
+                href="/characters"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                Characters
+              </Link>
+              <Link
+                href="/h2h"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                H2H
+              </Link>
+              <Link
+                href="/tier-list"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                Tier list
+              </Link>
+              <Link
+                href="/users"
+                className="text-zinc-300 hover:text-msb-gold-bright"
+              >
+                Users
+              </Link>
               <Link
                 href="/login"
                 className="text-zinc-300 hover:text-msb-gold-bright"

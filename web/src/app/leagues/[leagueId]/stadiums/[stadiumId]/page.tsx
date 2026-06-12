@@ -38,10 +38,8 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
   const stadiumId = slugToCharId(stadiumSlug);
 
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const role = await getLeagueRole(leagueId, user);
-  if (!role) notFound();
 
   const catalog = STADIUM_CATALOG.find((s) => s.gameStadiumId === stadiumId);
   if (!catalog) notFound();

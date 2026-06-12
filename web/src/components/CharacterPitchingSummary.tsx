@@ -1,6 +1,10 @@
 import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { pitchingStatHeaders } from "@/components/stats/stat-table-headers";
-import { inningsPitched } from "@/domain/stats/batting-metrics";
+import {
+  earnedRunAverage,
+  formatEra,
+  inningsPitched,
+} from "@/domain/stats/batting-metrics";
 import type { PitchingLine } from "@/lib/game-stats-queries";
 
 type Props = {
@@ -16,7 +20,8 @@ export function CharacterPitchingSummary({ title, line, compact = false }: Props
         <h2 className="text-lg font-semibold">{title}</h2>
         <p className="mt-2 text-sm text-zinc-400">
           {line.games}G · {inningsPitched(line.outsPitched)} IP · {line.strikeouts} K ·{" "}
-          {line.earnedRuns} ER · {line.walks} BB
+          {formatEra(earnedRunAverage(line.earnedRuns, line.outsPitched))} ERA ·{" "}
+          {line.walks} BB
         </p>
       </section>
     );
