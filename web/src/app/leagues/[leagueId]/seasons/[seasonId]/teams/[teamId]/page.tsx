@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { characters, rosterInstances, teams, users } from "@/db/schema";
 import { BattingStatCells } from "@/components/BattingStatCells";
@@ -117,6 +117,31 @@ export default async function TeamPage({ params, searchParams }: Props) {
   const offRosterCharMap = new Map(
     offRosterCharacters.map((character) => [character.gameCharId, character]),
   );
+
+  // Where each former-roster character plays now (traded within the season).
+  const currentTeamRows =
+    offRosterCharIds.length > 0
+      ? await db
+          .select({
+            gameCharId: characters.gameCharId,
+            teamId: rosterInstances.teamId,
+          })
+          .from(rosterInstances)
+          .innerJoin(characters, eq(rosterInstances.characterId, characters.id))
+          .where(
+            and(
+              eq(rosterInstances.seasonId, seasonId),
+              inArray(characters.gameCharId, offRosterCharIds),
+              isNotNull(rosterInstances.teamId),
+            ),
+          )
+      : [];
+  const currentTeamByCharId = new Map<string, { teamId: string; name: string }>();
+  for (const row of currentTeamRows) {
+    if (!row.teamId || row.teamId === teamId) continue;
+    const name = dash.teams.find((t) => t.team.id === row.teamId)?.team.name;
+    if (name) currentTeamByCharId.set(row.gameCharId, { teamId: row.teamId, name });
+  }
 
   const rosterPitchers = roster
     .map(({ character, instance }) => {
@@ -494,13 +519,23 @@ export default async function TeamPage({ params, searchParams }: Props) {
                         return (
                           <tr key={charId} className="border-b border-zinc-900">
                             <td className="py-2 pr-2">
-                              <Link
-                                href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}`}
-                                className="flex items-center gap-2 hover:text-amber-400"
-                              >
+                              <span className="flex flex-wrap items-center gap-2">
+                                <Link
+                                  href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}`}
+                                  className="flex items-center gap-2 hover:text-amber-400"
+                                >
                                   <CharacterIcon charId={line.charId} size={28} />
-                                {character?.displayName ?? formatCharIdDisplay(line.charId)}
-                              </Link>
+                                  {character?.displayName ?? formatCharIdDisplay(line.charId)}
+                                </Link>
+                                {currentTeamByCharId.get(line.charId) ? (
+                                  <Link
+                                    href={`/leagues/${leagueId}/seasons/${seasonId}/teams/${currentTeamByCharId.get(line.charId)!.teamId}`}
+                                    className="rounded-md border border-sky-700/50 bg-sky-950/40 px-2 py-0.5 text-xs text-sky-300 hover:border-sky-600"
+                                  >
+                                    Now on {currentTeamByCharId.get(line.charId)!.name}
+                                  </Link>
+                                ) : null}
+                              </span>
                             </td>
                             <BattingStatCells
                               ab={line.ab}
@@ -551,13 +586,23 @@ export default async function TeamPage({ params, searchParams }: Props) {
                         return (
                           <tr key={charId} className="border-b border-zinc-900">
                             <td className="py-2 pr-2">
-                              <Link
-                                href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}&tab=pitching`}
-                                className="flex items-center gap-2 hover:text-amber-400"
-                              >
+                              <span className="flex flex-wrap items-center gap-2">
+                                <Link
+                                  href={`/leagues/${leagueId}/characters/${encodeURIComponent(line.charId)}?season=${seasonId}&tab=pitching`}
+                                  className="flex items-center gap-2 hover:text-amber-400"
+                                >
                                   <CharacterIcon charId={line.charId} size={28} />
-                                {character?.displayName ?? formatCharIdDisplay(line.charId)}
-                              </Link>
+                                  {character?.displayName ?? formatCharIdDisplay(line.charId)}
+                                </Link>
+                                {currentTeamByCharId.get(line.charId) ? (
+                                  <Link
+                                    href={`/leagues/${leagueId}/seasons/${seasonId}/teams/${currentTeamByCharId.get(line.charId)!.teamId}`}
+                                    className="rounded-md border border-sky-700/50 bg-sky-950/40 px-2 py-0.5 text-xs text-sky-300 hover:border-sky-600"
+                                  >
+                                    Now on {currentTeamByCharId.get(line.charId)!.name}
+                                  </Link>
+                                ) : null}
+                              </span>
                             </td>
                             <PitchingTableRow line={line} />
                           </tr>
