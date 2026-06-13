@@ -26,6 +26,7 @@ import {
 } from "@/components/stats/stat-table-headers";
 import { StatColumnHeader } from "@/components/stats/StatColumnHeader";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 
 type Props = {
   params: Promise<{ leagueId: string; stadiumId: string }>;
@@ -119,7 +120,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
       </div>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Games at this stadium</h2>
+        <SectionHeading>Games at this stadium</SectionHeading>
         <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>
@@ -175,7 +176,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Top characters (5+ AB)</h2>
+        <SectionHeading>Top characters (5+ AB)</SectionHeading>
         <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>
@@ -209,7 +210,7 @@ export default async function StadiumDetailPage({ params, searchParams }: Props)
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Manager records</h2>
+        <SectionHeading>Manager records</SectionHeading>
         <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>

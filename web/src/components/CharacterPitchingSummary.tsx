@@ -1,4 +1,5 @@
 import { PitchingTableRow } from "@/components/PitchingStatCells";
+import { SectionHeading } from "@/components/SectionHeading";
 import { pitchingStatHeaders } from "@/components/stats/stat-table-headers";
 import {
   earnedRunAverage,
@@ -17,7 +18,7 @@ export function CharacterPitchingSummary({ title, line, compact = false }: Props
   if (compact) {
     return (
       <section>
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <SectionHeading>{title}</SectionHeading>
         <p className="mt-2 text-sm text-zinc-400">
           {line.games}G · {inningsPitched(line.outsPitched)} IP · {line.strikeouts} K ·{" "}
           {formatEra(earnedRunAverage(line.earnedRuns, line.outsPitched))} ERA ·{" "}
@@ -29,7 +30,7 @@ export function CharacterPitchingSummary({ title, line, compact = false }: Props
 
   return (
     <section>
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <SectionHeading>{title}</SectionHeading>
       <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>

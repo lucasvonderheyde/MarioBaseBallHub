@@ -24,21 +24,21 @@ type Props = {
 };
 
 const TIER_ROW_CLASS: Record<CharacterTier, string> = {
-  S: "border-amber-700/60 bg-amber-950/30",
-  A: "border-emerald-800/50 bg-emerald-950/25",
-  B: "border-sky-800/50 bg-sky-950/25",
-  C: "border-violet-800/50 bg-violet-950/25",
-  D: "border-orange-800/50 bg-orange-950/25",
-  F: "border-red-800/50 bg-red-950/25",
+  S: "msb-tier-row msb-tier-row-s",
+  A: "msb-tier-row msb-tier-row-a",
+  B: "msb-tier-row msb-tier-row-b",
+  C: "msb-tier-row msb-tier-row-c",
+  D: "msb-tier-row msb-tier-row-d",
+  F: "msb-tier-row msb-tier-row-f",
 };
 
 const TIER_LABEL_CLASS: Record<CharacterTier, string> = {
-  S: "bg-amber-500 text-zinc-950",
-  A: "bg-emerald-500 text-zinc-950",
-  B: "bg-sky-500 text-zinc-950",
-  C: "bg-violet-500 text-zinc-50",
-  D: "bg-orange-600 text-zinc-50",
-  F: "bg-red-700 text-zinc-50",
+  S: "msb-tier-label msb-tier-label-s",
+  A: "msb-tier-label msb-tier-label-a",
+  B: "msb-tier-label msb-tier-label-b",
+  C: "msb-tier-label msb-tier-label-c",
+  D: "msb-tier-label msb-tier-label-d",
+  F: "msb-tier-label msb-tier-label-f",
 };
 
 const DRAG_MIME = "application/x-tier-char";
@@ -91,7 +91,7 @@ function CharacterChip({
       }}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      className="flex cursor-grab items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm active:cursor-grabbing"
+      className="msb-tier-chip"
     >
       <CharacterIcon charId={character.gameCharId} size={28} />
       <span className="max-w-[8rem] truncate">{character.displayName}</span>
@@ -170,7 +170,7 @@ export function TierListVotingForm({ characters, initialBallot }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mt-4 space-y-4">
       {error ? (
         <p className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {error}
@@ -199,13 +199,11 @@ export function TierListVotingForm({ characters, initialBallot }: Props) {
               key={tier}
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDropOnTier(tier, tierChars.length)}
-              className={`flex min-h-16 items-stretch gap-3 rounded-lg border p-2 ${TIER_ROW_CLASS[tier]} ${
-                draggingId ? "ring-1 ring-zinc-700/50" : ""
+              className={`flex min-h-16 items-stretch gap-3 p-2 ${TIER_ROW_CLASS[tier]} ${
+                draggingId ? "msb-tier-row-active" : ""
               }`}
             >
-              <div
-                className={`flex w-12 shrink-0 items-center justify-center rounded-md text-lg font-bold ${TIER_LABEL_CLASS[tier]}`}
-              >
+              <div className={TIER_LABEL_CLASS[tier]}>
                 {tier}
               </div>
               <div className="flex min-h-12 flex-1 flex-wrap content-start gap-2">
@@ -227,7 +225,7 @@ export function TierListVotingForm({ characters, initialBallot }: Props) {
       <div
         onDragOver={(event) => event.preventDefault()}
         onDrop={handleDropOnPool(unranked.length)}
-        className="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/40 p-4"
+        className="msb-tier-pool"
       >
         <p className="text-sm font-medium text-zinc-400">Unranked pool</p>
         <p className="mt-1 text-xs text-zinc-600">

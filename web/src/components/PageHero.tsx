@@ -54,8 +54,8 @@ export function PageHero({
         <h1
           className={
             isPage
-              ? "text-2xl font-bold text-zinc-50"
-              : "text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl"
+              ? "msb-page-title text-2xl"
+              : "msb-page-title text-3xl tracking-tight sm:text-4xl"
           }
         >
           {title}
@@ -95,7 +95,7 @@ export function SeasonSectionHeader({
 }: SeasonSectionHeaderProps) {
   return (
     <div className="border-b border-zinc-800/50 pb-4 text-center">
-      <h2 className="text-xl font-bold text-zinc-100 sm:text-2xl">{seasonName}</h2>
+      <h2 className="msb-page-title text-xl sm:text-2xl">{seasonName}</h2>
       {statusLabel ? (
         <p className="mt-1 text-xs font-medium uppercase tracking-widest text-zinc-500">
           {statusLabel}

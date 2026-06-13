@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CopyClaimLinkButton } from "@/components/commissioner/CopyClaimLinkButton";
+import { SectionHeading } from "@/components/SectionHeading";
 import { RemoveMemberForm } from "@/components/commissioner/RemoveMemberForm";
 import type {
   CommissionerMember,
@@ -135,7 +136,7 @@ export function CommissionerPanel({
       {activeTab === "seasons" ? (
         <div className="space-y-6">
           <section className={cardClass()}>
-            <h2 className="text-lg font-semibold text-zinc-100">Create new season</h2>
+            <SectionHeading className="text-zinc-100">Create new season</SectionHeading>
             <form
               action={createSeasonAction.bind(null, leagueId)}
               className="mt-4 flex flex-wrap gap-2"
@@ -154,7 +155,7 @@ export function CommissionerPanel({
           </section>
 
           <section className={cardClass()}>
-            <h2 className="text-lg font-semibold text-zinc-100">All seasons</h2>
+            <SectionHeading className="text-zinc-100">All seasons</SectionHeading>
             {seasonRows.length === 0 ? (
               <p className="mt-3 text-sm text-zinc-500">No seasons yet.</p>
             ) : (
@@ -188,7 +189,7 @@ export function CommissionerPanel({
       {activeTab === "members" ? (
         <div className="space-y-6">
           <section className={cardClass()}>
-            <h2 className="text-lg font-semibold text-zinc-100">League members</h2>
+            <SectionHeading className="text-zinc-100">League members</SectionHeading>
             {members.length === 0 ? (
               <p className="mt-3 text-sm text-zinc-500">No members yet.</p>
             ) : (
@@ -241,7 +242,7 @@ export function CommissionerPanel({
           </section>
 
           <section className={cardClass()}>
-            <h2 className="text-lg font-semibold text-zinc-100">Add manager</h2>
+            <SectionHeading className="text-zinc-100">Add manager</SectionHeading>
             <p className="mt-1 text-sm text-zinc-500">
               User must register first. Adds them as a manager (not an admin).
             </p>
@@ -270,7 +271,7 @@ export function CommissionerPanel({
       {activeTab === "settings" ? (
         <div className="space-y-6">
           <section className={cardClass()}>
-            <h2 className="text-lg font-semibold text-zinc-100">Rename league</h2>
+            <SectionHeading className="text-zinc-100">Rename league</SectionHeading>
             <form
               action={renameLeagueAction.bind(null, leagueId)}
               className="mt-4 flex flex-wrap gap-2"
@@ -292,7 +293,7 @@ export function CommissionerPanel({
           </section>
 
           <section className={cardClass()}>
-            <h2 className="text-lg font-semibold text-zinc-100">Team claims</h2>
+            <SectionHeading className="text-zinc-100">Team claims</SectionHeading>
             <p className="mt-1 text-sm text-zinc-500">
               Send managers this link to register and claim their team.
             </p>
@@ -311,7 +312,7 @@ export function CommissionerPanel({
           </section>
 
           <section className={`${cardClass()} border-red-900/40`}>
-            <h2 className="text-lg font-semibold text-red-300">Danger zone</h2>
+            <SectionHeading className="text-red-300">Danger zone</SectionHeading>
             <p className="mt-2 text-sm text-zinc-500">
               Deleting a league removes all seasons, teams, and schedules. Uploaded
               stats cannot be recovered from the app.

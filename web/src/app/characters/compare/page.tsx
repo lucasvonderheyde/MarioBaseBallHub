@@ -8,6 +8,7 @@ import { GlobalCharactersNav } from "@/components/GlobalCharactersNav";
 import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import { getCharacterRatings } from "@/data/character-ratings";
 import {
   aggregateGlobalBattingByCharAndSeason,
@@ -146,7 +147,7 @@ export default async function CharacterComparePage({ searchParams }: Props) {
           {seasonLabels.length > 0 ? (
             <>
               <section className="msb-panel p-4 sm:p-5">
-                <h2 className="text-lg font-semibold">Hitting by season</h2>
+                <SectionHeading>Hitting by season</SectionHeading>
                 <div className="msb-table-wrap mt-4">
                   <table className="w-full text-left text-sm">
                     <thead>
@@ -216,7 +217,7 @@ export default async function CharacterComparePage({ searchParams }: Props) {
               </section>
 
               <section className="msb-panel p-4 sm:p-5">
-                <h2 className="text-lg font-semibold">Pitching by season</h2>
+                <SectionHeading>Pitching by season</SectionHeading>
                 <div className="msb-table-wrap mt-4">
                   <table className="w-full text-left text-sm">
                     <thead>

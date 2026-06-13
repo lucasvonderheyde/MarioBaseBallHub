@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SectionHeading } from "@/components/SectionHeading";
 import type { HeadToHeadComparison } from "@/lib/head-to-head";
 
 type Props = {
@@ -91,7 +92,7 @@ export function HeadToHeadComparisonView({ comparison }: Props) {
 
       {comparison.recentGames.length > 0 ? (
         <section className="msb-panel p-4 sm:p-6">
-          <h3 className="text-lg font-semibold">Game log</h3>
+          <SectionHeading>Game log</SectionHeading>
           <ul className="mt-3 space-y-2">
             {comparison.recentGames.map((game) => (
               <li

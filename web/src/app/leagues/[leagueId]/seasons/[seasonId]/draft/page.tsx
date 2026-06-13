@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { getManagedTeamInSeason } from "@/lib/manager-team";
 import { getSeasonDraftView } from "@/lib/season-draft";
+import { seasonHasReportedGames } from "@/lib/season-has-reported-games";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string }>;
@@ -29,6 +30,7 @@ export default async function SeasonDraftPage({ params }: Props) {
   if (!season) notFound();
 
   const draft = await getSeasonDraftView(seasonId);
+  const readOnly = await seasonHasReportedGames(seasonId);
   const userTeam = user ? await getManagedTeamInSeason(user.id, seasonId) : null;
 
   const available = await db
@@ -50,7 +52,11 @@ export default async function SeasonDraftPage({ params }: Props) {
       <PageHero
         eyebrow={season.name}
         title="Season draft"
-        subtitle="Snake draft for roster building. Available during season setup; locks when the season goes active."
+        subtitle={
+          readOnly
+            ? "Draft results for this season. The draft is locked once games are reported."
+            : "Snake draft for roster building. Available during season setup; locks when the first game is reported."
+        }
       >
         <Link
           href={`/leagues/${leagueId}/seasons/${seasonId}`}
@@ -68,6 +74,7 @@ export default async function SeasonDraftPage({ params }: Props) {
         userTeamId={userTeam?.id ?? null}
         draft={draft}
         available={available}
+        readOnly={readOnly}
       />
     </PageShell>
   );

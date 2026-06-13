@@ -7,6 +7,7 @@ import { BattingStatCells } from "@/components/BattingStatCells";
 import { CharacterIcon } from "@/components/CharacterIcon";
 import { GameMatchupInline } from "@/components/games/GameMatchupScore";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
+import { SectionHeading } from "@/components/SectionHeading";
 import { battingStatHeaders, pitchingStatHeaders } from "@/components/stats/stat-table-headers";
 import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { StadiumSelect } from "@/components/StadiumSelect";
@@ -268,7 +269,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
 
       <div className="mt-8 grid gap-10 lg:grid-cols-2 lg:items-start">
       <section>
-        <h2 className="text-lg font-semibold">Roster & season stats</h2>
+        <SectionHeading>Roster & season stats</SectionHeading>
         <p className="text-sm text-zinc-500">
           Batting totals from uploaded game stats this season.
         </p>
@@ -343,7 +344,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold">Schedule</h2>
+        <SectionHeading>Schedule</SectionHeading>
         <ul className="mt-3 space-y-2">
           {teamGames.map(({ game, round, isHome, opp, played, result, hadHomeField, status }) => (
             <li
@@ -414,7 +415,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
       </div>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Season pitching</h2>
+        <SectionHeading>Season pitching</SectionHeading>
         <p className="text-sm text-zinc-500">
           Pitching totals from uploaded game stats this season.
         </p>
@@ -486,7 +487,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
 
       {offRosterCharIds.length > 0 ? (
         <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
-          <h2 className="text-lg font-semibold">Former roster</h2>
+          <SectionHeading>Former roster</SectionHeading>
           <p className="mt-1 text-sm text-zinc-500">
             Characters who played for this team earlier in the season but are not on the
             current roster and did not appear in the most recent uploaded game.
@@ -618,7 +619,7 @@ export default async function TeamPage({ params, searchParams }: Props) {
 
       {isManager ? (
         <section className="mt-10 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-          <h2 className="text-lg font-semibold">Your manager profile</h2>
+          <SectionHeading>Your manager profile</SectionHeading>
           <p className="mt-1 text-sm text-zinc-500">
             Shown on your team page and anywhere your manager name appears. Paste a
             direct link to an image (Imgur, Discord CDN, etc.).

@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { SeasonAwardVotingForm } from "@/components/awards/SeasonAwardVotingForm";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import { AWARD_CATEGORIES } from "@/domain/awards/award-categories";
 import { db } from "@/db";
 import { seasons, teams } from "@/db/schema";
@@ -87,7 +88,7 @@ export default async function SeasonAwardsPage({ params }: Props) {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <section className="msb-panel p-4 sm:p-5">
-          <h2 className="text-lg font-semibold">Cast your votes</h2>
+          <SectionHeading>Cast your votes</SectionHeading>
           {user ? (
             <SeasonAwardVotingForm
               leagueId={leagueId}
@@ -106,7 +107,7 @@ export default async function SeasonAwardsPage({ params }: Props) {
         </section>
 
         <section className="msb-panel p-4 sm:p-5">
-          <h2 className="text-lg font-semibold">Live results</h2>
+          <SectionHeading>Live results</SectionHeading>
           <div className="mt-4 space-y-5">
             {AWARD_CATEGORIES.map((category) => {
               const rows = resultsByCategory.get(category.id) ?? [];

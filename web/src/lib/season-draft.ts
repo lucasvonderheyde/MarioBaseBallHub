@@ -199,7 +199,7 @@ export function draftIsEditable(
 }
 
 export function canAdminRedraft(seasonStatus: "setup" | "active" | "completed"): boolean {
-  return seasonStatus === "setup" || seasonStatus === "active";
+  return seasonStatus === "setup";
 }
 
 export { isDraftFinished, teamIdForPickIndex, totalDraftPicks };

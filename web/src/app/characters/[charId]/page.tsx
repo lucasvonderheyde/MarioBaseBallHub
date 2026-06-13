@@ -6,6 +6,7 @@ import { CharacterMugshot } from "@/components/CharacterMugshot";
 import { CharacterPitchingSummary } from "@/components/CharacterPitchingSummary";
 import { CharacterStatSummary } from "@/components/CharacterStatSummary";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import { battingStatHeaders } from "@/components/stats/stat-table-headers";
 import { getCharacterRatings } from "@/data/character-ratings";
 import { getCurrentUser } from "@/lib/auth";
@@ -114,7 +115,7 @@ export default async function GlobalCharacterDetailPage({ params }: Props) {
       ) : null}
 
       <section className="mt-10 msb-panel p-4 sm:p-5">
-        <h2 className="text-lg font-semibold">By manager</h2>
+        <SectionHeading>By manager</SectionHeading>
         <p className="mt-1 text-sm text-zinc-500">
           Who has used this character across every uploaded game.
         </p>

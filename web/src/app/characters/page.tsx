@@ -4,6 +4,7 @@ import { GlobalCharacterGrid } from "@/components/GlobalCharacterGrid";
 import { GlobalCharacterPitchingGrid } from "@/components/GlobalCharacterPitchingGrid";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import { matchesCharacterSearch } from "@/lib/character-search";
 import {
   aggregateGlobalBattingByCharId,
@@ -109,7 +110,7 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
         />
 
         <section className="mt-10">
-          <h2 className="text-lg font-semibold">Pitchers with stats</h2>
+          <SectionHeading>Pitchers with stats</SectionHeading>
           <p className="text-sm text-zinc-500">
             Aggregated from every reported league game and lifetime batch upload.
             {query ? ` Showing matches for “${query}”.` : null}
@@ -127,7 +128,9 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
 
         {withoutStats.length > 0 ? (
           <section className="mt-10">
-            <h2 className="text-lg font-semibold text-zinc-400">No pitching stats yet</h2>
+            <SectionHeading className="msb-section-title-muted">
+              No pitching stats yet
+            </SectionHeading>
             <p className="text-sm text-zinc-600">
               Characters in the catalog that have not recorded a pitching appearance in
               uploaded games.
@@ -165,7 +168,7 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
       />
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Characters with stats</h2>
+        <SectionHeading>Characters with stats</SectionHeading>
         <p className="text-sm text-zinc-500">
           Aggregated from every reported league game and lifetime batch upload.
           {query ? ` Showing matches for “${query}”.` : null}
@@ -183,7 +186,7 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
 
       {withoutStats.length > 0 ? (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-zinc-400">No stats yet</h2>
+          <SectionHeading className="msb-section-title-muted">No stats yet</SectionHeading>
           <p className="text-sm text-zinc-600">
             Characters in the catalog that have not appeared in uploaded games.
           </p>

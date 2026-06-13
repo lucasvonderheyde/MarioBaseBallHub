@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PlayoffGameCard } from "@/components/league-schedule-ui";
 import { HighlightedMatchupCard } from "@/components/matchups/HighlightedMatchupCard";
 import { PlayoffBracketSvg } from "@/components/playoffs/PlayoffBracketSvg";
+import { SectionHeading } from "@/components/SectionHeading";
 import {
   rivalryReasonLabel,
   type RivalryOfWeekPick,
@@ -100,9 +101,9 @@ export function SeasonStandingsPlayoffsView({
 
   const standingsSection = (
     <section className={playoffsPhase ? "mt-10" : "mt-8"}>
-      <h2 className="text-lg font-semibold">
+      <SectionHeading>
         {playoffsPhase ? `${seasonName} — Final standings` : "Standings"}
-      </h2>
+      </SectionHeading>
       <p className="text-sm text-zinc-500">
         Regular-season results only.
         {!playoffsPhase && playoffOddsByTeam
@@ -202,7 +203,7 @@ export function SeasonStandingsPlayoffsView({
   const bracketSection = (
     <section className={playoffsPhase ? "mt-8" : "mt-10"}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Playoff bracket</h2>
+        <SectionHeading>Playoff bracket</SectionHeading>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs ${
             isLive ? "bg-emerald-950/60 text-emerald-300" : "bg-zinc-800 text-zinc-400"
@@ -272,7 +273,7 @@ export function SeasonStandingsPlayoffsView({
 
       {playoffsPhase && showPlayIn ? (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold">Play-in games</h2>
+          <SectionHeading>Play-in games</SectionHeading>
           <p className="text-sm text-zinc-500">
             Best of {settings.playInBestOf} · Playoff schedule round{" "}
             {settings.playInRoundNumber}.{" "}
@@ -306,7 +307,7 @@ export function SeasonStandingsPlayoffsView({
 
       {playoffsPhase ? (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold">Main bracket games</h2>
+          <SectionHeading>Main bracket games</SectionHeading>
           {picture.mainBracketRounds.length === 0 ? (
             <p className="mt-3 text-sm text-zinc-500">
               No main-bracket playoff games yet. Create playoff rounds on the schedule

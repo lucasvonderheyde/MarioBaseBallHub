@@ -4,6 +4,7 @@ import { CharacterIcon } from "@/components/CharacterIcon";
 import { GlobalCharactersNav } from "@/components/GlobalCharactersNav";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import { CHARACTER_CATALOG } from "@/data/character-catalog";
 import {
   CHEMISTRY_BASE_CHARACTERS,
@@ -82,7 +83,7 @@ export default async function ChemistryPage() {
       <GlobalCharactersNav active="chemistry" />
 
       <section className="mt-8 msb-panel p-4 sm:p-5">
-        <h2 className="text-lg font-semibold">How chemistry works</h2>
+        <SectionHeading>How chemistry works</SectionHeading>
         <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-zinc-400">
           <li>Each of the 32 base identities has a compatibility score (0–100) with every other identity.</li>
           <li>Color variants share the same chemistry row (e.g. all Toad colors use Toad&apos;s links).</li>
@@ -100,7 +101,7 @@ export default async function ChemistryPage() {
       </section>
 
       <section className="mt-8 msb-panel overflow-hidden p-2 sm:p-4">
-        <h2 className="px-2 text-lg font-semibold sm:px-0">Full chemistry matrix</h2>
+        <SectionHeading className="px-2 sm:px-0">Full chemistry matrix</SectionHeading>
         <p className="mt-1 px-2 text-sm text-zinc-500 sm:px-0">
           Diagonal entries are neutral (50). Hover a cell for the full character names.
         </p>
@@ -171,7 +172,7 @@ export default async function ChemistryPage() {
       </section>
 
       <section className="mt-8 msb-panel p-4 sm:p-5">
-        <h2 className="text-lg font-semibold">Lookup a character&apos;s best links</h2>
+        <SectionHeading>Lookup a character&apos;s best links</SectionHeading>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {baseRows.map((row) => {
             const links = baseRows

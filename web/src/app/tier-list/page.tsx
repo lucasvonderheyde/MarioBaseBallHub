@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CharacterIcon } from "@/components/CharacterIcon";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import { TierListVotingForm } from "@/components/tier-list/TierListVotingForm";
 import { CHARACTER_CATALOG } from "@/data/character-catalog";
 import {
@@ -16,12 +17,7 @@ import {
 } from "@/server/actions/tier-list-actions";
 
 function tierBarClass(tier: CharacterTier): string {
-  if (tier === "S") return "bg-amber-500";
-  if (tier === "A") return "bg-emerald-500";
-  if (tier === "B") return "bg-sky-500";
-  if (tier === "C") return "bg-violet-500";
-  if (tier === "D") return "bg-orange-600";
-  return "bg-red-700";
+  return `msb-tier-bar msb-tier-bar-${tier.toLowerCase()}`;
 }
 
 export default async function TierListPage() {
@@ -49,7 +45,7 @@ export default async function TierListPage() {
       />
 
       <section className="mt-8 msb-panel p-4 sm:p-5">
-        <h2 className="text-lg font-semibold">Community results</h2>
+        <SectionHeading>Community results</SectionHeading>
         <p className="mt-1 text-sm text-zinc-500">
           {allBallots.length} ballot{allBallots.length === 1 ? "" : "s"} submitted.
         </p>
@@ -71,7 +67,9 @@ export default async function TierListPage() {
                     {character.displayName}
                   </Link>
                   {row.consensusTier ? (
-                    <span className="rounded bg-zinc-800 px-2 py-0.5 font-semibold tabular-nums">
+                    <span
+                      className={`msb-tier-badge msb-tier-badge-${row.consensusTier.toLowerCase()}`}
+                    >
                       {row.consensusTier}
                     </span>
                   ) : null}
@@ -85,7 +83,7 @@ export default async function TierListPage() {
                       return (
                         <div
                           key={tier}
-                          className={`h-2 rounded-sm ${tierBarClass(tier)}`}
+                          className={tierBarClass(tier)}
                           style={{ width: `${pct}%` }}
                           title={`${tier}: ${row.counts[tier]}`}
                         />
@@ -98,13 +96,15 @@ export default async function TierListPage() {
             })}
           </ul>
         ) : (
-          <p className="mt-3 text-sm text-zinc-500">No ballots yet — be the first.</p>
+          <div className="msb-empty-state msb-panel mt-8">
+            <p className="text-sm text-zinc-500">No ballots yet — be the first.</p>
+          </div>
         )}
       </section>
 
       {user ? (
         <section className="mt-8 msb-panel p-4 sm:p-5">
-          <h2 className="text-lg font-semibold">Your ballot</h2>
+          <SectionHeading>Your ballot</SectionHeading>
           <TierListVotingForm
             characters={CHARACTER_CATALOG.map((row) => ({
               gameCharId: row.gameCharId,

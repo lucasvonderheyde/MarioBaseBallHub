@@ -9,6 +9,7 @@ import { ManagerAvatar } from "@/components/ManagerAvatar";
 import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import {
   battingStatHeaders,
   pitchingStatHeaders,
@@ -52,7 +53,7 @@ export default async function UserProfilePage({ params }: Props) {
       </div>
 
       <section className="mt-8 msb-panel p-4 sm:p-6">
-        <h2 className="text-lg font-semibold">Lifetime hitting</h2>
+        <SectionHeading>Lifetime hitting</SectionHeading>
         <div className="msb-table-wrap mt-4">
           <table className="w-full text-left text-sm">
             <thead>
@@ -83,7 +84,7 @@ export default async function UserProfilePage({ params }: Props) {
       </section>
 
       <section className="mt-8 msb-panel p-4 sm:p-6">
-        <h2 className="text-lg font-semibold">Lifetime pitching</h2>
+        <SectionHeading>Lifetime pitching</SectionHeading>
         <div className="msb-table-wrap mt-4">
           <table className="w-full text-left text-sm">
             <thead>
@@ -102,7 +103,7 @@ export default async function UserProfilePage({ params }: Props) {
 
       {lifetime.characterBatting.length > 0 ? (
         <section className="mt-8 msb-panel p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">Hitting by character</h2>
+          <SectionHeading>Hitting by character</SectionHeading>
           <div className="msb-table-wrap mt-4">
             <table className="w-full text-left text-sm">
               <thead>
@@ -144,7 +145,7 @@ export default async function UserProfilePage({ params }: Props) {
 
       {lifetime.characterPitching.length > 0 ? (
         <section className="mt-8 msb-panel p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">Pitching by character</h2>
+          <SectionHeading>Pitching by character</SectionHeading>
           <div className="msb-table-wrap mt-4">
             <table className="w-full text-left text-sm">
               <thead>

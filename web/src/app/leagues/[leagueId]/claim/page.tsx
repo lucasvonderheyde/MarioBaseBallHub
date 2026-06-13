@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getClaimableTeamsForLeague } from "@/lib/team-claims";
 import { claimTeamAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 
 type Props = {
   params: Promise<{ leagueId: string }>;
@@ -85,7 +86,7 @@ export default async function ClaimTeamsPage({ params, searchParams }: Props) {
         <div className="mt-8 space-y-8">
           {[...bySeason.entries()].map(([seasonId, rows]) => (
             <section key={seasonId}>
-              <h2 className="text-lg font-semibold">{rows[0]!.season.name}</h2>
+              <SectionHeading>{rows[0]!.season.name}</SectionHeading>
               <ul className="mt-3 space-y-3">
                 {rows.map(({ team }) => (
                   <li

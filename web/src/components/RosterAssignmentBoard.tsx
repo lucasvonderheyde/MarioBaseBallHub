@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { CharacterIcon } from "@/components/CharacterIcon";
+import { SectionHeading } from "@/components/SectionHeading";
 import { assignRosterInstanceAction } from "@/server/actions/season-admin-actions";
 
 export type RosterBoardInstance = {
@@ -302,7 +303,7 @@ export function RosterAssignmentBoard({
               : "cursor-default"
           }`}
         >
-          <h2 className="text-lg font-semibold text-zinc-200">Unassigned</h2>
+          <SectionHeading className="text-zinc-200">Unassigned</SectionHeading>
           <p className="text-sm text-zinc-500">
             {unassigned.length} characters
             {selectedInstanceId && selectedInstance?.teamId != null ? (
@@ -325,7 +326,7 @@ export function RosterAssignmentBoard({
 
       <section>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold">Teams</h2>
+          <SectionHeading>Teams</SectionHeading>
           <span className="text-sm text-zinc-500">{teams.length} teams</span>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

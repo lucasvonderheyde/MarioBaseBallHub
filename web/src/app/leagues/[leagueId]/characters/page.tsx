@@ -6,6 +6,7 @@ import { leagues, seasons } from "@/db/schema";
 import { CharacterLibraryFilters } from "@/components/CharacterLibraryFilters";
 import { CharacterLibraryGrid } from "@/components/CharacterLibraryGrid";
 import { PageHero } from "@/components/PageHero";
+import { SectionHeading } from "@/components/SectionHeading";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 import { getLeagueCharacterLibrary } from "@/lib/league-characters";
@@ -20,6 +21,7 @@ import {
   sortCharacterLibrary,
 } from "@/lib/sort-character-library";
 import {
+  hasPitchingStats,
   parseCharacterLibraryPitchingSort,
   sortCharacterLibraryPitching,
 } from "@/lib/sort-character-library-pitching";
@@ -124,10 +126,21 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
       seasonId ? `?season=${seasonId}&tab=pitching` : "?tab=pitching"
     }`;
 
-  const viewTabClass = (active: boolean) =>
-    active
-      ? "msb-btn-nav-active text-xs"
-      : "msb-btn-nav text-xs";
+  const viewTabClass = (isActive: boolean) =>
+    isActive ? "msb-btn-nav msb-btn-nav-active text-xs" : "msb-btn-nav text-xs";
+
+  const activeWithPitching =
+    view === "pitching"
+      ? sortedActive.filter((character) =>
+          hasPitchingStats(pitching.get(character.gameCharId)),
+        )
+      : [];
+  const activeWithoutPitching =
+    view === "pitching"
+      ? sortedActive.filter(
+          (character) => !hasPitchingStats(pitching.get(character.gameCharId)),
+        )
+      : [];
 
   return (
     <PageShell width="wide">
@@ -167,7 +180,7 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
 
       {view === "table" ? (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold">Season snapshot</h2>
+          <SectionHeading>Season snapshot</SectionHeading>
           <p className="text-sm text-zinc-500">
             Every character in one sortable table for {seasonLabel} — batting
             plus core pitching.
@@ -183,29 +196,84 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
             sortHref={(nextSort) => viewHref("table", nextSort)}
           />
         </section>
+      ) : view === "pitching" ? (
+        <>
+          <section className="mt-10">
+            <SectionHeading>Pitchers with stats</SectionHeading>
+            <p className="text-sm text-zinc-500">
+              Active characters with pitching appearances for {seasonLabel}.
+              {query ? ` Showing matches for “${query}”.` : null}
+            </p>
+            {activeWithPitching.length > 0 ? (
+              <GlobalCharacterPitchingGrid
+                characters={activeWithPitching}
+                pitching={pitching}
+                hrefFor={leagueCharHref}
+              />
+            ) : (
+              <p className="mt-3 text-sm text-zinc-500">
+                {query
+                  ? "No pitchers with stats match your search."
+                  : "No pitching stats for active characters yet."}
+              </p>
+            )}
+          </section>
+
+          {activeWithoutPitching.length > 0 ? (
+            <section className="mt-10">
+              <SectionHeading className="msb-section-title-muted">
+                No pitching stats yet
+              </SectionHeading>
+              <p className="text-sm text-zinc-600">
+                Active characters in the pool that have not recorded a pitching
+                appearance for {seasonLabel}.
+              </p>
+              <GlobalCharacterPitchingGrid
+                characters={activeWithoutPitching}
+                pitching={pitching}
+                hrefFor={leagueCharHref}
+              />
+            </section>
+          ) : null}
+
+          {inactive.length > 0 ? (
+            <section className="mt-10">
+              <SectionHeading className="msb-section-title-muted">
+                Inactive characters
+              </SectionHeading>
+              <p className="text-sm text-zinc-600">
+                Not in the pool for {seasonLabel}. You can still view their
+                attributes and stats.
+              </p>
+              {sortedInactive.length > 0 ? (
+                <GlobalCharacterPitchingGrid
+                  characters={sortedInactive}
+                  pitching={pitching}
+                  hrefFor={leagueCharHref}
+                />
+              ) : query ? (
+                <p className="mt-3 text-sm text-zinc-500">
+                  No inactive characters match your search.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+        </>
       ) : (
       <>
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Active characters</h2>
+        <SectionHeading>Active characters</SectionHeading>
         <p className="text-sm text-zinc-500">
           In the league pool for {seasonLabel}.
           {query ? ` Showing matches for “${query}”.` : null}
         </p>
         {sortedActive.length > 0 ? (
-          view === "pitching" ? (
-            <GlobalCharacterPitchingGrid
-              characters={sortedActive}
-              pitching={pitching}
-              hrefFor={leagueCharHref}
-            />
-          ) : (
           <CharacterLibraryGrid
             leagueId={leagueId}
             seasonId={seasonId}
             characters={sortedActive}
             batting={batting}
           />
-          )
         ) : (
           <p className="mt-3 text-sm text-zinc-500">
             {query
@@ -217,18 +285,11 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
 
       {inactive.length > 0 ? (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-zinc-400">Inactive characters</h2>
+          <SectionHeading className="msb-section-title-muted">Inactive characters</SectionHeading>
           <p className="text-sm text-zinc-600">
             Not in the pool for {seasonLabel}. You can still view their attributes and stats.
           </p>
           {sortedInactive.length > 0 ? (
-            view === "pitching" ? (
-              <GlobalCharacterPitchingGrid
-                characters={sortedInactive}
-                pitching={pitching}
-                hrefFor={leagueCharHref}
-              />
-            ) : (
             <CharacterLibraryGrid
               leagueId={leagueId}
               seasonId={seasonId}
@@ -236,7 +297,6 @@ export default async function CharacterLibraryPage({ params, searchParams }: Pro
               batting={batting}
               inactive
             />
-            )
           ) : query ? (
             <p className="mt-3 text-sm text-zinc-500">No inactive characters match your search.</p>
           ) : null}

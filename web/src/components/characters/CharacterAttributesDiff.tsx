@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { SectionHeading } from "@/components/SectionHeading";
 import type { CharacterRatings } from "@/data/character-ratings";
 
 type Props = {
@@ -74,7 +75,7 @@ export function CharacterAttributesDiff({
 }: Props) {
   return (
     <section className="msb-panel p-4 sm:p-5">
-      <h2 className="text-lg font-semibold">Attribute differences</h2>
+      <SectionHeading>Attribute differences</SectionHeading>
       <p className="mt-1 text-sm text-zinc-500">
         Base game ratings from the character stats sheet. Highlighted rows differ
         between {charAName} and {charBName}.

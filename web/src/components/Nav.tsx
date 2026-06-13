@@ -1,13 +1,16 @@
 import Link from "next/link";
+import { LeagueSeasonSwitcher } from "@/components/LeagueSeasonSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
-import { getUserCurrentSeasonNav } from "@/lib/current-season-nav";
+import { getUserLeagueSeasonNavOptions } from "@/lib/current-season-nav";
 import { getUnreadNotificationCount } from "@/lib/notifications";
 import { logoutAction } from "@/server/actions";
 
 export async function Nav() {
   const user = await getCurrentUser();
-  const currentSeason = user ? await getUserCurrentSeasonNav(user.id) : null;
+  const leagueSeasonOptions = user
+    ? await getUserLeagueSeasonNavOptions(user.id)
+    : [];
   const unreadCount = user ? await getUnreadNotificationCount(user.id) : 0;
 
   return (
@@ -22,13 +25,8 @@ export async function Nav() {
           <span className="text-zinc-200">Hub</span>
         </Link>
 
-        {user && currentSeason ? (
-          <Link
-            href={currentSeason.href}
-            className="order-3 w-full rounded-md border border-amber-800/50 bg-amber-950/30 px-3 py-1.5 text-center text-sm font-medium text-amber-200 hover:border-amber-700/60 hover:bg-amber-950/50 sm:order-none sm:absolute sm:left-1/2 sm:w-auto sm:-translate-x-1/2"
-          >
-            {currentSeason.label}
-          </Link>
+        {user && leagueSeasonOptions.length > 0 ? (
+          <LeagueSeasonSwitcher options={leagueSeasonOptions} />
         ) : null}
 
         <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">

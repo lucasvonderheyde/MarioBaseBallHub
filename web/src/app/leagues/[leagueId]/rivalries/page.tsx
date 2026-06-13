@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { leagues } from "@/db/schema";
 import { PageHero } from "@/components/PageHero";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import { getLeagueRivalries } from "@/lib/league-rivalries";
 
 type Props = {
@@ -49,18 +50,18 @@ export default async function LeagueRivalriesPage({ params }: Props) {
             return (
               <li
                 key={`${rivalry.managerA.id}-${rivalry.managerB.id}`}
-                className="rounded-lg border border-zinc-800/80 bg-zinc-950/30 p-5"
+                className="msb-panel p-5"
               >
                 {heatLabel(index) ? (
                   <p className="text-xs font-medium uppercase tracking-wide text-amber-300">
                     {heatLabel(index)}
                   </p>
                 ) : null}
-                <h2 className="mt-1 text-lg font-semibold">
+                <SectionHeading className="mt-1">
                   {rivalry.managerA.name}
                   <span className="mx-2 text-zinc-600">vs</span>
                   {rivalry.managerB.name}
-                </h2>
+                </SectionHeading>
                 <p className="mt-2 text-3xl font-semibold tabular-nums">
                   {rivalry.aWins}
                   <span className="mx-2 text-lg text-zinc-600">–</span>

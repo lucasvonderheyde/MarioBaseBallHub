@@ -1,4 +1,5 @@
 import { ExpandableBatPreview } from "@/components/ExpandableBatPreview";
+import { SectionHeading } from "@/components/SectionHeading";
 import type { CharacterRatings } from "@/data/character-ratings";
 import { batFileForCharId } from "@/lib/character-assets";
 
@@ -20,8 +21,8 @@ export function CharacterAttributesSection({ charId, ratings }: Props) {
   const batFile = batFileForCharId(charId);
 
   return (
-    <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-      <h2 className="text-lg font-semibold">Character attributes</h2>
+    <section className="msb-panel p-4">
+      <SectionHeading>Character attributes</SectionHeading>
       <p className="mt-1 text-sm text-zinc-500">
         Base game ratings from the character stats sheet (not league game stats).
       </p>

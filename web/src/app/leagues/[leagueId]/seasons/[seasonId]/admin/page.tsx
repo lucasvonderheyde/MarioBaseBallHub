@@ -19,6 +19,7 @@ import { isPlayoffsComplete } from "@/lib/playoff-completion";
 import { getSeasonDraftView } from "@/lib/season-draft";
 import { BackfillStatsButton } from "@/components/BackfillStatsButton";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 import { PageHero } from "@/components/PageHero";
 import { StadiumSelect } from "@/components/StadiumSelect";
 import {
@@ -181,7 +182,7 @@ export default async function SeasonAdminPage({ params, searchParams }: Props) {
         </p>
       ) : null}
         <section className="mt-12 rounded-lg border border-amber-900/40 bg-amber-950/10 p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-amber-200">Admin</h2>
+          <SectionHeading className="text-amber-200">Admin</SectionHeading>
 
           <div className="msb-admin-grid mt-8">
           <div>

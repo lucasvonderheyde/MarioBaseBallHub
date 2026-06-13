@@ -7,6 +7,7 @@ import { listSqliteBackups } from "@/db/sqlite-backup";
 import { getDatabaseIntegrityReport } from "@/lib/database-integrity";
 import { leagueMembers, leagues, seasons, users } from "@/db/schema";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
+import { SectionHeading } from "@/components/SectionHeading";
 import {
   renameLeagueAction,
   renameSeasonAction,
@@ -157,7 +158,7 @@ export default async function AdminPage({
       ) : null}
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        <h2 className="text-lg font-semibold">Database persistence</h2>
+        <SectionHeading>Database persistence</SectionHeading>
         <p className="mt-1 text-sm text-zinc-500">
           League data survives redeploys only when SQLite lives on a Railway volume.
         </p>
@@ -246,7 +247,7 @@ export default async function AdminPage({
       </section>
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        <h2 className="text-lg font-semibold">Data integrity</h2>
+        <SectionHeading>Data integrity</SectionHeading>
         <p className="mt-1 text-sm text-zinc-500">
           Quick counts from the live database. A 404 on a league page means that league id is
           missing from the leagues table — game stats can still remain.
@@ -312,7 +313,7 @@ export default async function AdminPage({
       </section>
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        <h2 className="text-lg font-semibold">Database backups</h2>
+        <SectionHeading>Database backups</SectionHeading>
         <p className="mt-1 text-sm text-zinc-500">
           Snapshots live on the Railway volume and are created automatically before deploys,
           game stat uploads, backfills, and destructive admin actions. The last 50 files are
@@ -400,7 +401,7 @@ export default async function AdminPage({
       </section>
 
       <section className="mt-8 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        <h2 className="text-lg font-semibold">League backups</h2>
+        <SectionHeading>League backups</SectionHeading>
         <p className="mt-1 text-sm text-zinc-500">
           Download a JSON snapshot for each league — especially once managers start uploading
           games. Restore recreates a league (teams, pool, rosters, schedule). Uploaded game
@@ -445,7 +446,7 @@ export default async function AdminPage({
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">All leagues</h2>
+        <SectionHeading>All leagues</SectionHeading>
         <p className="mt-1 text-sm text-zinc-500">
           Deleting a league permanently removes all seasons, teams, schedules, parsed stats, and
           uploaded game JSON for that league. Type the league name to confirm.
@@ -540,7 +541,7 @@ export default async function AdminPage({
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">All seasons</h2>
+        <SectionHeading>All seasons</SectionHeading>
         <ul className="mt-4 space-y-2">
           {allSeasons.map(({ season, leagueName }) => (
             <li
@@ -600,7 +601,7 @@ export default async function AdminPage({
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">All users</h2>
+        <SectionHeading>All users</SectionHeading>
         <ul className="mt-4 space-y-2">
           {allUsers.map((u) => (
             <li

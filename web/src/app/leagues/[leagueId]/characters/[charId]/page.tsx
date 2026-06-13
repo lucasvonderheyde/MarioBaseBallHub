@@ -35,6 +35,7 @@ import {
   type PitchingLine,
 } from "@/lib/game-stats-queries";
 import { PageShell } from "@/components/PageShell";
+import { SectionHeading } from "@/components/SectionHeading";
 
 type Props = {
   params: Promise<{ leagueId: string; charId: string }>;
@@ -85,7 +86,7 @@ function ManagerStatsTable({
 }) {
   return (
     <section className="mt-10">
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <SectionHeading>{title}</SectionHeading>
       <div className="msb-table-wrap">
         <table className="mt-2 w-full text-left text-sm">
           <thead>
@@ -262,7 +263,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
           </div>
 
           <section className="mt-10">
-            <h2 className="text-lg font-semibold">By season</h2>
+            <SectionHeading>By season</SectionHeading>
             <div className="msb-table-wrap">
               <table className="mt-2 w-full text-left text-sm">
                 <thead>
@@ -311,7 +312,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
           </section>
 
           <section className="mt-10">
-            <h2 className="text-lg font-semibold">By stadium</h2>
+            <SectionHeading>By stadium</SectionHeading>
             <div className="msb-table-wrap">
               <table className="mt-2 w-full text-left text-sm">
                 <thead>
@@ -357,7 +358,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
           </section>
 
           <section className="mt-10">
-            <h2 className="text-lg font-semibold">Recent games</h2>
+            <SectionHeading>Recent games</SectionHeading>
             {recent.length > 0 ? (
               <div className="msb-table-wrap">
                 <table className="mt-2 w-full text-left text-sm">
@@ -442,7 +443,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
           </div>
 
           <section className="mt-10">
-            <h2 className="text-lg font-semibold">By season</h2>
+            <SectionHeading>By season</SectionHeading>
             <div className="msb-table-wrap">
               <table className="mt-2 w-full text-left text-sm">
                 <thead>
@@ -480,7 +481,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
           </section>
 
           <section className="mt-10">
-            <h2 className="text-lg font-semibold">Recent pitching appearances</h2>
+            <SectionHeading>Recent pitching appearances</SectionHeading>
             {recent.filter(
               (row) =>
                 row.stat.wasPitcher ||

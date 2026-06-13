@@ -8,6 +8,7 @@ import {
   type UploadSection,
 } from "@/components/AccountUploadNav";
 import { BatchGameStatsUploader } from "@/components/BatchGameStatsUploader";
+import { SectionHeading } from "@/components/SectionHeading";
 import { BattingStatCells } from "@/components/BattingStatCells";
 import {
   battingStatHeaders,
@@ -196,7 +197,7 @@ export default async function AccountPage({
           </form>
 
           <section className="mt-10 border-t border-zinc-800 pt-8">
-            <h2 className="text-lg font-semibold">Change password</h2>
+            <SectionHeading>Change password</SectionHeading>
             <p className="mt-1 text-sm text-zinc-500">
               {passwordPolicyDescription()}
             </p>
@@ -306,7 +307,7 @@ export default async function AccountPage({
               <section>
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold">Hitting by character</h2>
+                    <SectionHeading>Hitting by character</SectionHeading>
                     <p className="text-sm text-zinc-500">
                       Your lifetime batting stats with each character.
                     </p>
@@ -369,7 +370,7 @@ export default async function AccountPage({
                 <section>
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <h2 className="text-lg font-semibold">Pitching by character</h2>
+                      <SectionHeading>Pitching by character</SectionHeading>
                       <p className="text-sm text-zinc-500">
                         Lifetime pitching appearances with each character.
                       </p>
@@ -411,7 +412,7 @@ export default async function AccountPage({
 
           {statsSection === "h2h" ? (
             <section>
-              <h2 className="text-lg font-semibold">Head-to-head</h2>
+              <SectionHeading>Head-to-head</SectionHeading>
               <p className="text-sm text-zinc-500">
                 Your record vs every opponent you&apos;ve faced.
               </p>
@@ -460,7 +461,7 @@ export default async function AccountPage({
           {uploadSection === "season" ? (
             <section className="space-y-4">
               <div>
-                <h2 className="text-lg font-semibold">Your unreported season games</h2>
+                <SectionHeading>Your unreported season games</SectionHeading>
                 <p className="mt-1 text-sm text-zinc-500">
                   Matchups involving your team that still need stats uploaded. Pick
                   the exact game below and upload its JSON. This updates league
@@ -505,7 +506,7 @@ export default async function AccountPage({
           ) : (
             <section className="space-y-4">
               <div>
-                <h2 className="text-lg font-semibold">Lifetime batch</h2>
+                <SectionHeading>Lifetime batch</SectionHeading>
                 <p className="mt-1 text-sm text-zinc-500">
                   Drag and drop friendlies or extra games here. They count toward
                   your{" "}

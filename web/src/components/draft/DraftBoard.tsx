@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CharacterIcon } from "@/components/CharacterIcon";
+import { SectionHeading } from "@/components/SectionHeading";
 import {
   lockDraftAction,
   makeDraftPickAction,
@@ -55,6 +56,8 @@ type Props = {
   userTeamId: string | null;
   draft: SeasonDraftView;
   available: DraftAvailableInstance[];
+  /** True once any game has reported stats — show recap only, no live draft. */
+  readOnly?: boolean;
 };
 
 export function DraftBoard({
@@ -65,27 +68,33 @@ export function DraftBoard({
   userTeamId,
   draft,
   available,
+  readOnly = false,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [clockChoice, setClockChoice] = useState("0");
   const router = useRouter();
-  const countdown = usePickCountdown(draft.pickDeadline);
+  const countdown = usePickCountdown(readOnly ? null : draft.pickDeadline);
 
-  // Keep the board live for everyone while the draft runs.
   useEffect(() => {
-    if (draft.status !== "active") return;
+    if (readOnly || draft.status !== "active") return;
     const interval = setInterval(() => {
       if (!pending) router.refresh();
     }, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [draft.status, pending, router]);
+  }, [draft.status, pending, readOnly, router]);
 
   const canPick =
+    !readOnly &&
     draft.status === "active" &&
     seasonStatus === "setup" &&
     draft.teamOnClockId != null &&
     (isAdmin || userTeamId === draft.teamOnClockId);
+
+  const allPicks = useMemo(
+    () => [...draft.picks].sort((a, b) => a.pickNumber - b.pickNumber),
+    [draft.picks],
+  );
 
   const recentPicks = useMemo(
     () => [...draft.picks].sort((a, b) => b.pickNumber - a.pickNumber).slice(0, 8),
@@ -100,6 +109,35 @@ export function DraftBoard({
     });
   }
 
+  if (readOnly) {
+    return (
+      <div className="space-y-6">
+        <section className="msb-panel p-4 sm:p-5">
+          <SectionHeading>Draft recap</SectionHeading>
+          <p className="mt-1 text-sm text-zinc-500">
+            The season is underway — draft picks are frozen for the rest of the season.
+          </p>
+          {allPicks.length > 0 ? (
+            <ol className="mt-4 space-y-2 text-sm text-zinc-300">
+              {allPicks.map((pick) => (
+                <li key={pick.pickNumber} className="flex flex-wrap items-center gap-2">
+                  <span className="w-8 shrink-0 tabular-nums text-zinc-500">
+                    #{pick.pickNumber}
+                  </span>
+                  <CharacterIcon charId={pick.gameCharId} size={28} />
+                  <span className="font-medium text-zinc-200">{pick.displayName}</span>
+                  <span className="text-zinc-500">→ {pick.teamName}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="mt-4 text-sm text-zinc-400">No draft this season.</p>
+          )}
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {error ? (
@@ -111,10 +149,10 @@ export function DraftBoard({
       <section className="msb-panel p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Draft status</h2>
+            <SectionHeading>Draft status</SectionHeading>
             <p className="mt-1 text-sm text-zinc-500">
-              Snake draft — {draft.picksPerTeam} rounds per team. Locked once the
-              season goes active.
+              Snake draft — {draft.picksPerTeam} rounds per team. Locks when the first
+              game is reported.
             </p>
           </div>
           <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs uppercase tracking-wide text-zinc-400">
@@ -146,8 +184,8 @@ export function DraftBoard({
         ) : (
           <div className="mt-4">
             <p className="text-sm text-zinc-500">
-              Draft is locked. Admins can run the lottery and start the draft
-              during season setup.
+              Draft is locked. Admins can run the lottery and start the draft during
+              season setup.
             </p>
             {draft.teamOrderNames.length > 0 ? (
               <p className="mt-2 text-sm text-zinc-300">
@@ -221,7 +259,7 @@ export function DraftBoard({
           </div>
         ) : null}
 
-        {isAdmin && (seasonStatus === "setup" || seasonStatus === "active") ? (
+        {isAdmin && seasonStatus === "setup" ? (
           <div className="mt-3">
             <button
               type="button"
@@ -237,7 +275,7 @@ export function DraftBoard({
 
       {canPick ? (
         <section className="msb-panel p-4 sm:p-5">
-          <h2 className="text-lg font-semibold">Make your pick</h2>
+          <SectionHeading>Make your pick</SectionHeading>
           <p className="mt-1 text-sm text-zinc-500">
             {available.length} characters available in the pool.
           </p>
@@ -272,7 +310,7 @@ export function DraftBoard({
 
       {recentPicks.length > 0 ? (
         <section className="msb-panel p-4 sm:p-5">
-          <h2 className="text-lg font-semibold">Recent picks</h2>
+          <SectionHeading>Recent picks</SectionHeading>
           <ol className="mt-3 space-y-2 text-sm text-zinc-300">
             {recentPicks.map((pick) => (
               <li key={pick.pickNumber}>

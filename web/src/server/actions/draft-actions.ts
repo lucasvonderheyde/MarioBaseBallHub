@@ -29,6 +29,7 @@ import {
   getSeasonDraftView,
 } from "@/lib/season-draft";
 import { recordSeasonEvent } from "@/lib/season-events";
+import { seasonHasReportedGames } from "@/lib/season-has-reported-games";
 import { newUuid } from "@/server/ids";
 
 function parseTeamOrder(json: string): string[] {
@@ -57,6 +58,9 @@ export async function startDraftAction(input: {
   const user = await requireUser();
   const role = await getLeagueRole(input.leagueId, user);
   if (role !== "admin") return { error: "Forbidden." };
+  if (await seasonHasReportedGames(input.seasonId)) {
+    return { error: "Cannot start a draft after games have been reported." };
+  }
 
   const teamRows = await db
     .select({ id: teams.id })
@@ -225,6 +229,18 @@ export async function redraftAction(input: {
   const role = await getLeagueRole(input.leagueId, user);
   if (role !== "admin") return { error: "Forbidden." };
 
+  const [season] = await db
+    .select({ status: seasons.status })
+    .from(seasons)
+    .where(eq(seasons.id, input.seasonId))
+    .limit(1);
+  if (!season || season.status !== "setup") {
+    return { error: "Redraft is only available during season setup." };
+  }
+  if (await seasonHasReportedGames(input.seasonId)) {
+    return { error: "Cannot redraft after games have been reported." };
+  }
+
   await db.delete(draftPicks).where(eq(draftPicks.seasonId, input.seasonId));
   await db
     .update(rosterInstances)
@@ -287,6 +303,9 @@ export async function makeDraftPickAction(input: {
   const user = await requireUser();
   const role = await getLeagueRole(input.leagueId, user);
   if (!role) return { error: "Forbidden." };
+  if (await seasonHasReportedGames(input.seasonId)) {
+    return { error: "The draft is locked once games have been reported." };
+  }
 
   const draft = await getOrCreateSeasonDraft(input.seasonId);
   if (draft.status !== "active") {
