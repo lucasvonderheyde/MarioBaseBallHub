@@ -90,9 +90,20 @@ function loadRatingsByCsvName(): Map<string, CharacterRatings> {
 
 const ratingsByCsvName = loadRatingsByCsvName();
 
+/** Catalog display names that differ from the Character Stats CSV first column. */
+const CSV_NAME_OVERRIDES: Record<string, string> = {
+  "Paratroopa (Red)": "Koopa Paratroopa (Red)",
+  "Paratroopa (Green)": "Koopa Paratroopa (Green)",
+  "Dry Bones (Grey)": "Dry Bones (Gray)",
+};
+
+function csvNameForCatalogDisplay(displayName: string): string {
+  return CSV_NAME_OVERRIDES[displayName] ?? displayName;
+}
+
 const ratingsByGameCharId = new Map<string, CharacterRatings>();
 for (const row of CHARACTER_CATALOG) {
-  const ratings = ratingsByCsvName.get(row.displayName);
+  const ratings = ratingsByCsvName.get(csvNameForCatalogDisplay(row.displayName));
   if (ratings) ratingsByGameCharId.set(row.gameCharId, ratings);
 }
 
