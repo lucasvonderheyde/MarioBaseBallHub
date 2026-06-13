@@ -24,7 +24,7 @@ type PlayedGameRow = {
     awayScore: number | null;
     playedAt: Date | null;
     statsRawJson: string | null;
-    agreedPlayAt?: Date | null;
+    agreedPlayAt: Date | null;
   };
   round: { phase: "regular" | "playoffs"; roundNumber: number };
 };
