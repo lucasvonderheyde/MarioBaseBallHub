@@ -44,6 +44,11 @@ import { scheduleRoundShortLabel } from "@/lib/schedule-labels";
 import { updateTeamAction, updateProfileAction } from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
 import { PageHero } from "@/components/PageHero";
+import { SeasonTradePanel } from "@/components/season/SeasonTradePanel";
+import {
+  getPendingTradeRequestsForSeason,
+  getTradeRosterInstancesForSeason,
+} from "@/lib/trade-requests";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string; teamId: string }>;
@@ -172,6 +177,13 @@ export default async function TeamPage({ params, searchParams }: Props) {
   const isAdmin = role === "admin";
   const isManager = user != null && team.managerUserId === user.id;
   const canEdit = isAdmin || isManager;
+
+  const tradeRoster = isManager
+    ? await getTradeRosterInstancesForSeason(seasonId)
+    : [];
+  const pendingTrades = isManager
+    ? await getPendingTradeRequestsForSeason(seasonId)
+    : [];
 
   const teamNames = new Map(dash.teams.map((t) => [t.team.id, t.team.name]));
 
@@ -615,6 +627,24 @@ export default async function TeamPage({ params, searchParams }: Props) {
             </div>
           ) : null}
         </section>
+      ) : null}
+
+      {isManager && user ? (
+        <div className="mt-10">
+          <SeasonTradePanel
+            leagueId={leagueId}
+            seasonId={seasonId}
+            userId={user.id}
+            userTeam={{ id: teamId, name: team.name }}
+            teams={dash.teams.map(({ team: t, manager: mgr }) => ({
+              id: t.id,
+              name: t.name,
+              managerUserId: mgr?.id ?? null,
+            }))}
+            roster={tradeRoster}
+            pendingTrades={pendingTrades}
+          />
+        </div>
       ) : null}
 
       {isManager ? (

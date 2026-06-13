@@ -460,6 +460,13 @@ export const leaguePosts = sqliteTable("league_posts", {
   seasonId: text("season_id").references(() => seasons.id, {
     onDelete: "cascade",
   }),
+  /** Inky article type; legacy rows default to season_recap. */
+  postType: text("post_type").notNull().default("season_recap"),
+  relatedGameId: text("related_game_id").references(() => scheduleGames.id, {
+    onDelete: "set null",
+  }),
+  seriesKey: text("series_key"),
+  weekNumber: integer("week_number"),
   title: text("title").notNull(),
   body: text("body").notNull(),
   source: text("source", { enum: ["ai", "human"] }).notNull(),

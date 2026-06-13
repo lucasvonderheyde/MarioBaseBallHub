@@ -17,11 +17,13 @@ import {
 import { Card } from "@/components/ui/Card";
 import { PageShell } from "@/components/PageShell";
 import { GameStatsUploader } from "@/components/GameStatsUploader";
+import { GameInkyPanel } from "@/components/games/GameInkyPanel";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
+import { aiNewsEnabled } from "@/lib/ai-news";
 import { getCurrentUser } from "@/lib/auth";
 import { formatCharIdDisplay } from "@/lib/character-display";
 import { canUserReportGame } from "@/lib/game-report-access";
-import { getLeagueRole, leagueExists } from "@/lib/league-access";
+import { getLeagueRole, isLeagueAdmin, leagueExists } from "@/lib/league-access";
 import { getGameCharacterStats } from "@/lib/game-stats-queries";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { stadiumIconUrl } from "@/lib/asset-urls";
@@ -76,6 +78,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
   const canEdit =
     user != null &&
     canUserReportGame(user.id, role, home.manager?.id, away.manager?.id);
+  const isAdmin = isLeagueAdmin(role);
 
   const hasStats = game.statsRawJson != null;
   const played =
@@ -451,6 +454,15 @@ export default async function GameReportPage({ params, searchParams }: Props) {
             ) : null}
           </ul>
         </Card>
+
+        <GameInkyPanel
+          leagueId={leagueId}
+          seasonId={seasonId}
+          gameId={game.id}
+          isAdmin={isAdmin}
+          aiEnabled={aiNewsEnabled()}
+          hasStats={hasStats && played}
+        />
       </div>
     </PageShell>
   );

@@ -33,6 +33,15 @@ describe("applySqliteSchemaPatches", () => {
         current_pick_index integer NOT NULL,
         picks_per_team integer NOT NULL
       );
+      CREATE TABLE league_posts (
+        id text PRIMARY KEY,
+        league_id text NOT NULL,
+        season_id text,
+        title text NOT NULL,
+        body text NOT NULL,
+        source text NOT NULL,
+        status text NOT NULL DEFAULT 'draft'
+      );
     `);
 
     applySqliteSchemaPatches(sqlite);
@@ -74,6 +83,18 @@ describe("applySqliteSchemaPatches", () => {
     expect(
       draftColumns.some((column) => column.name === "current_pick_started_at"),
     ).toBe(true);
+
+    const postColumns = sqlite
+      .prepare("PRAGMA table_info(league_posts)")
+      .all() as { name: string }[];
+    for (const patched of [
+      "post_type",
+      "related_game_id",
+      "series_key",
+      "week_number",
+    ]) {
+      expect(postColumns.some((column) => column.name === patched)).toBe(true);
+    }
 
     sqlite.close();
   });

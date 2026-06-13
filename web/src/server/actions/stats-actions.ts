@@ -209,6 +209,11 @@ export async function uploadStatsAction(
     rawJson: parsed.rawJson,
   });
 
+  const { maybeAutoDraftGameRecap } = await import("@/lib/inky-service");
+  void maybeAutoDraftGameRecap({ leagueId, seasonId, gameId }).catch((error) => {
+    console.error("Inky auto-draft failed", error);
+  });
+
   const fieldAwayName =
     match.awaySideTeamId === away.id ? away.name : home.name;
   const fieldHomeName =

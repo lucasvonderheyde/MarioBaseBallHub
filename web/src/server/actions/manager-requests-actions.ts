@@ -385,7 +385,7 @@ export async function proposeTradeAction(input: {
       userId: targetTeam.managerUserId,
       type: "trade_proposal",
       message: `${userTeam.name} proposed a trade with ${targetTeam.name}.`,
-      href: `/leagues/${input.leagueId}/seasons/${input.seasonId}`,
+      href: `/leagues/${input.leagueId}/seasons/${input.seasonId}/teams/${userTeam.id}`,
     });
   }
 

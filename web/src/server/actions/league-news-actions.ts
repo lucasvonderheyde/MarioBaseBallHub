@@ -5,7 +5,22 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { leaguePosts } from "@/db/schema";
-import { generateSeasonRecap } from "@/lib/ai-news";
+import type { InkyPostType } from "@/domain/inky/post-types";
+import { isInkyPostType } from "@/domain/inky/post-types";
+import {
+  generateInkyDraftRecap,
+  generateInkyGameRecap,
+  generateInkyPreview,
+  generateInkySeasonRecap,
+  generateInkySeriesRecap,
+  generateInkyWeeklyColumn,
+  inkyEnabled,
+} from "@/lib/inky-generate";
+import {
+  createInkyDraftPost,
+  findExistingInkyDraft,
+  postInkyArticleToDiscord,
+} from "@/lib/inky-service";
 import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 
@@ -13,27 +28,157 @@ function revalidateNewsPaths(leagueId: string, seasonId: string) {
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
 }
 
+async function requireCommissioner(leagueId: string) {
+  const user = await requireUser();
+  const role = await getLeagueRole(leagueId, user);
+  if (role !== "admin") return { error: "Only commissioners can manage Inky's desk." as const };
+  return { user };
+}
+
 export async function generateSeasonRecapAction(input: {
   leagueId: string;
   seasonId: string;
 }): Promise<{ error?: string }> {
-  const user = await requireUser();
-  const role = await getLeagueRole(input.leagueId, user);
-  if (role !== "admin") return { error: "Only commissioners can generate news." };
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
 
-  const recap = await generateSeasonRecap(input.seasonId);
+  const recap = await generateInkySeasonRecap(input.seasonId);
   if ("error" in recap) return { error: recap.error };
 
-  await db.insert(leaguePosts).values({
-    id: crypto.randomUUID(),
+  await createInkyDraftPost({
     leagueId: input.leagueId,
     seasonId: input.seasonId,
+    postType: "season_recap",
     title: recap.title,
     body: recap.body,
-    source: "ai",
-    status: "draft",
-    createdByUserId: user.id,
-    createdAt: new Date(),
+    createdByUserId: auth.user.id,
+  });
+
+  revalidateNewsPaths(input.leagueId, input.seasonId);
+  return {};
+}
+
+export async function generateInkyGameRecapAction(input: {
+  leagueId: string;
+  seasonId: string;
+  gameId: string;
+}): Promise<{ error?: string }> {
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
+
+  const recap = await generateInkyGameRecap(input.seasonId, input.gameId);
+  if ("error" in recap) return { error: recap.error };
+
+  await createInkyDraftPost({
+    leagueId: input.leagueId,
+    seasonId: input.seasonId,
+    postType: "game_recap",
+    title: recap.title,
+    body: recap.body,
+    relatedGameId: input.gameId,
+    createdByUserId: auth.user.id,
+  });
+
+  revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidatePath(
+    `/leagues/${input.leagueId}/seasons/${input.seasonId}/games/${input.gameId}`,
+  );
+  return {};
+}
+
+export async function generateInkyWeeklyAction(input: {
+  leagueId: string;
+  seasonId: string;
+  weekNumber?: number;
+}): Promise<{ error?: string }> {
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
+
+  const recap = await generateInkyWeeklyColumn(input.seasonId, input.weekNumber);
+  if ("error" in recap) return { error: recap.error };
+
+  await createInkyDraftPost({
+    leagueId: input.leagueId,
+    seasonId: input.seasonId,
+    postType: "weekly",
+    title: recap.title,
+    body: recap.body,
+    weekNumber: recap.weekNumber,
+    createdByUserId: auth.user.id,
+  });
+
+  revalidateNewsPaths(input.leagueId, input.seasonId);
+  return {};
+}
+
+export async function generateInkySeriesRecapAction(input: {
+  leagueId: string;
+  seasonId: string;
+  seriesKey: string;
+}): Promise<{ error?: string }> {
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
+
+  const recap = await generateInkySeriesRecap(input.seasonId, input.seriesKey);
+  if ("error" in recap) return { error: recap.error };
+
+  await createInkyDraftPost({
+    leagueId: input.leagueId,
+    seasonId: input.seasonId,
+    postType: "series_recap",
+    title: recap.title,
+    body: recap.body,
+    seriesKey: input.seriesKey,
+    createdByUserId: auth.user.id,
+  });
+
+  revalidateNewsPaths(input.leagueId, input.seasonId);
+  return {};
+}
+
+export async function generateInkyPreviewAction(input: {
+  leagueId: string;
+  seasonId: string;
+  gameId: string;
+}): Promise<{ error?: string }> {
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
+
+  const recap = await generateInkyPreview(input.seasonId, input.gameId);
+  if ("error" in recap) return { error: recap.error };
+
+  await createInkyDraftPost({
+    leagueId: input.leagueId,
+    seasonId: input.seasonId,
+    postType: "preview",
+    title: recap.title,
+    body: recap.body,
+    relatedGameId: input.gameId,
+    createdByUserId: auth.user.id,
+  });
+
+  revalidateNewsPaths(input.leagueId, input.seasonId);
+  return {};
+}
+
+export async function generateInkyDraftRecapAction(input: {
+  leagueId: string;
+  seasonId: string;
+  variant: "lottery" | "complete";
+}): Promise<{ error?: string }> {
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
+
+  const recap = await generateInkyDraftRecap(input.seasonId, input.variant);
+  if ("error" in recap) return { error: recap.error };
+
+  await createInkyDraftPost({
+    leagueId: input.leagueId,
+    seasonId: input.seasonId,
+    postType: "draft_recap",
+    title: recap.title,
+    body: recap.body,
+    createdByUserId: auth.user.id,
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
@@ -45,16 +190,31 @@ export async function publishLeaguePostAction(input: {
   leagueId: string;
   seasonId: string;
 }): Promise<{ error?: string }> {
-  const user = await requireUser();
-  const role = await getLeagueRole(input.leagueId, user);
-  if (role !== "admin") return { error: "Only commissioners can publish news." };
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
+
+  const [post] = await db
+    .select()
+    .from(leaguePosts)
+    .where(
+      and(eq(leaguePosts.id, input.postId), eq(leaguePosts.leagueId, input.leagueId)),
+    )
+    .limit(1);
+  if (!post) return { error: "Post not found." };
 
   await db
     .update(leaguePosts)
     .set({ status: "published", publishedAt: new Date() })
-    .where(
-      and(eq(leaguePosts.id, input.postId), eq(leaguePosts.leagueId, input.leagueId)),
-    );
+    .where(eq(leaguePosts.id, input.postId));
+
+  const postType = isInkyPostType(post.postType) ? post.postType : "season_recap";
+  await postInkyArticleToDiscord({
+    postType,
+    title: post.title,
+    body: post.body,
+    leagueId: input.leagueId,
+    seasonId: input.seasonId,
+  });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
   return {};
@@ -65,9 +225,8 @@ export async function deleteLeaguePostAction(input: {
   leagueId: string;
   seasonId: string;
 }): Promise<{ error?: string }> {
-  const user = await requireUser();
-  const role = await getLeagueRole(input.leagueId, user);
-  if (role !== "admin") return { error: "Only commissioners can delete news." };
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
 
   await db
     .delete(leaguePosts)
@@ -77,4 +236,8 @@ export async function deleteLeaguePostAction(input: {
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
   return {};
+}
+
+export async function inkyConfiguredAction(): Promise<{ enabled: boolean }> {
+  return { enabled: inkyEnabled() };
 }
