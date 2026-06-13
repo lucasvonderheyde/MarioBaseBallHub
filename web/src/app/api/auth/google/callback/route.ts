@@ -5,7 +5,7 @@ import {
   googleRedirectUri,
 } from "@/lib/google-oauth";
 import { completeGoogleOAuth } from "@/lib/google-oauth-callback";
-import { getAppUrl } from "@/lib/app-url";
+import { getOAuthAppUrl } from "@/lib/app-url";
 import { getSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   const next = session.oauthNext ?? null;
 
   try {
-    const appUrl = getAppUrl(request.nextUrl.origin);
+    const appUrl = getOAuthAppUrl(request.nextUrl.origin);
     const redirectUri = googleRedirectUri(appUrl);
     const accessToken = await exchangeGoogleCode({ code, redirectUri });
     const profile = await fetchGoogleUserInfo(accessToken);

@@ -6,7 +6,7 @@ import {
   googleRedirectUri,
   type GoogleOAuthMode,
 } from "@/lib/google-oauth";
-import { getAppUrl } from "@/lib/app-url";
+import { getOAuthAppUrl } from "@/lib/app-url";
 import { getSession } from "@/lib/session";
 import { isSafeRedirectPath } from "@/lib/team-claims";
 
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const appUrl = getAppUrl(request.nextUrl.origin);
+  const appUrl = getOAuthAppUrl(request.nextUrl.origin);
   const state = createOAuthState();
   const session = await getSession();
   session.oauthState = state;
