@@ -6,8 +6,6 @@ import { scheduleGames } from "@/db/schema";
 import { CharacterLink } from "@/components/CharacterLink";
 import { InningLineScoreTable } from "@/components/games/InningLineScoreTable";
 import {
-  winnerScoreClass,
-  winnerTeamNameClass,
   gameWinnerSide,
 } from "@/components/games/GameMatchupScore";
 import {
@@ -16,12 +14,15 @@ import {
 } from "@/components/stats/stat-table-headers";
 import { Card } from "@/components/ui/Card";
 import { PageShell } from "@/components/PageShell";
+import { GameReportHero } from "@/components/games/GameReportHero";
 import { GameStatsUploader } from "@/components/GameStatsUploader";
+import { GameInkyPanel } from "@/components/games/GameInkyPanel";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
+import { aiNewsEnabled } from "@/lib/ai-news";
 import { getCurrentUser } from "@/lib/auth";
 import { formatCharIdDisplay } from "@/lib/character-display";
 import { canUserReportGame } from "@/lib/game-report-access";
-import { getLeagueRole, leagueExists } from "@/lib/league-access";
+import { getLeagueRole, isLeagueAdmin, leagueExists } from "@/lib/league-access";
 import { getGameCharacterStats } from "@/lib/game-stats-queries";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
 import { stadiumIconUrl } from "@/lib/asset-urls";
@@ -36,6 +37,7 @@ import {
   alignLineScoreToSchedule,
   parseLineScoreFromEvents,
 } from "@/domain/stats/parse-line-score";
+import { computeGameMvp } from "@/domain/stats/compute-game-mvp";
 import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
 import { resolveGameFieldSides } from "@/domain/stats/resolve-game-field-sides";
 import { normalizeStadiumId } from "@/domain/stats/stadium-id";
@@ -76,6 +78,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
   const canEdit =
     user != null &&
     canUserReportGame(user.id, role, home.manager?.id, away.manager?.id);
+  const isAdmin = isLeagueAdmin(role);
 
   const hasStats = game.statsRawJson != null;
   const played =
@@ -129,6 +132,26 @@ export default async function GameReportPage({ params, searchParams }: Props) {
   const stadiumRow = stadiumId
     ? dash.stadiums.find((s) => s.gameStadiumId === stadiumId)
     : null;
+
+  const winningTeamId =
+    played && winner === "away"
+      ? away.team.id
+      : played && winner === "home"
+        ? home.team.id
+        : null;
+  const mvp = played ? computeGameMvp(stats, winningTeamId) : null;
+  const mvpTeam =
+    mvp != null ? dash.teams.find((t) => t.team.id === mvp.teamId) : null;
+  const mvpStatRow =
+    mvp != null
+      ? stats.find((r) => r.charId === mvp.charId && r.teamId === mvp.teamId)
+      : null;
+  const mvpDisplayName =
+    mvpStatRow != null
+      ? charDisplayName(stats, mvpStatRow)
+      : mvp != null
+        ? formatCharIdDisplay(mvp.charId)
+        : null;
 
   function BoxTable({ rows }: { rows: typeof stats }) {
     return (
@@ -265,37 +288,25 @@ export default async function GameReportPage({ params, searchParams }: Props) {
       </Link>
 
       <div className="mt-4 space-y-4">
-        <Card>
-          <div className="flex flex-col items-center text-center">
-            {stadiumId && stadiumRow?.iconFile ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={stadiumIconUrl(stadiumRow.iconFile)}
-                alt=""
-                width={192}
-                height={192}
-                className="mb-4 h-32 w-32 rounded-lg object-contain sm:h-48 sm:w-48"
-              />
-            ) : null}
-            <h1 className="text-2xl font-bold sm:text-3xl">
-              <span className={winnerTeamNameClass("away", winner)}>{away.team.name}</span>
-              <span className="mx-2 font-normal text-zinc-500">@</span>
-              <span className={winnerTeamNameClass("home", winner)}>{home.team.name}</span>
-            </h1>
-            {stadiumId ? (
-              <p className="mt-1 text-sm text-zinc-500">{stadiumId}</p>
-            ) : null}
-            {played ? (
-              <p className="mt-3 text-3xl font-semibold tabular-nums sm:text-4xl">
-                <span className={winnerScoreClass("away", winner)}>{game.awayScore}</span>
-                <span className="mx-2 text-zinc-600">–</span>
-                <span className={winnerScoreClass("home", winner)}>{game.homeScore}</span>
-              </p>
-            ) : (
-              <p className="mt-2 text-zinc-500">Scheduled — stats not reported yet</p>
-            )}
-          </div>
-        </Card>
+        <GameReportHero
+          awayTeamName={away.team.name}
+          homeTeamName={home.team.name}
+          awayScore={game.awayScore}
+          homeScore={game.homeScore}
+          played={played}
+          winner={winner}
+          stadiumId={stadiumId}
+          stadiumIconUrl={
+            stadiumId && stadiumRow?.iconFile
+              ? stadiumIconUrl(stadiumRow.iconFile)
+              : null
+          }
+          mvp={mvp}
+          mvpTeamName={mvpTeam?.team.name ?? null}
+          mvpDisplayName={mvpDisplayName}
+          leagueId={leagueId}
+          seasonId={seasonId}
+        />
 
         {e ? (
           <p className="rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
@@ -451,6 +462,15 @@ export default async function GameReportPage({ params, searchParams }: Props) {
             ) : null}
           </ul>
         </Card>
+
+        <GameInkyPanel
+          leagueId={leagueId}
+          seasonId={seasonId}
+          gameId={game.id}
+          isAdmin={isAdmin}
+          aiEnabled={aiNewsEnabled()}
+          hasStats={hasStats && played}
+        />
       </div>
     </PageShell>
   );

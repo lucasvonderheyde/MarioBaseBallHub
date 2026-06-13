@@ -1,11 +1,23 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import {
+  INKY_BYLINE,
+  INKY_DISPLAY_NAME,
+  INKY_PROFILE_IMAGE,
+} from "@/domain/inky/inky-persona";
+import { inkyPostTypeLabel, isInkyPostType } from "@/domain/inky/post-types";
+import {
   deleteLeaguePostAction,
+  generateInkyDraftRecapAction,
+  generateInkyPreviewAction,
+  generateInkySeriesRecapAction,
+  generateInkyWeeklyAction,
   generateSeasonRecapAction,
   publishLeaguePostAction,
+  updateLeaguePostAction,
 } from "@/server/actions/league-news-actions";
 
 export type SeasonNewsPost = {
@@ -14,7 +26,14 @@ export type SeasonNewsPost = {
   body: string;
   source: "ai" | "human";
   status: "draft" | "published";
+  postType: string;
   createdAt: Date;
+};
+
+type SeriesOption = {
+  seriesKey: string;
+  label: string;
+  isComplete: boolean;
 };
 
 type Props = {
@@ -23,11 +42,25 @@ type Props = {
   posts: SeasonNewsPost[];
   isAdmin: boolean;
   aiEnabled: boolean;
+  seriesOptions: SeriesOption[];
+  previewGameId?: string | null;
 };
 
-export function SeasonNewsPanel({ leagueId, seasonId, posts, isAdmin, aiEnabled }: Props) {
+export function SeasonNewsPanel({
+  leagueId,
+  seasonId,
+  posts,
+  isAdmin,
+  aiEnabled,
+  seriesOptions,
+  previewGameId,
+}: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [seriesKey, setSeriesKey] = useState(seriesOptions[0]?.seriesKey ?? "");
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
 
   if (posts.length === 0 && !isAdmin) return null;
 
@@ -39,23 +72,155 @@ export function SeasonNewsPanel({ leagueId, seasonId, posts, isAdmin, aiEnabled 
     });
   }
 
+  function startEditing(post: SeasonNewsPost) {
+    setEditingPostId(post.id);
+    setEditTitle(post.title);
+    setEditBody(post.body);
+    setError(null);
+  }
+
+  function cancelEditing() {
+    setEditingPostId(null);
+    setEditTitle("");
+    setEditBody("");
+  }
+
+  function saveEdit(postId: string) {
+    run(async () => {
+      const result = await updateLeaguePostAction({
+        postId,
+        leagueId,
+        seasonId,
+        title: editTitle,
+        body: editBody,
+      });
+      if (!result.error) cancelEditing();
+      return result;
+    });
+  }
+
   return (
     <Card
-      title="League news"
+      title={
+        <div className="flex items-center gap-3">
+          <Image
+            src={INKY_PROFILE_IMAGE}
+            alt={INKY_DISPLAY_NAME}
+            width={40}
+            height={40}
+            className="rounded-full border border-zinc-700 object-cover"
+          />
+          <div>
+            <p className="font-semibold text-zinc-100">Morning Star</p>
+            <p className="text-xs font-normal text-zinc-500">{INKY_BYLINE}</p>
+          </div>
+        </div>
+      }
       action={
         isAdmin ? (
-          <button
-            type="button"
-            disabled={pending || !aiEnabled}
-            title={aiEnabled ? undefined : "Set ANTHROPIC_API_KEY to enable the AI reporter"}
-            onClick={() => run(() => generateSeasonRecapAction({ leagueId, seasonId }))}
-            className="msb-btn-outline-gold shrink-0 text-xs"
-          >
-            {pending ? "Writing…" : "Generate recap"}
-          </button>
+          <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              disabled={pending || !aiEnabled}
+              title={aiEnabled ? undefined : "Set ANTHROPIC_API_KEY to enable Inky"}
+              onClick={() => run(() => generateSeasonRecapAction({ leagueId, seasonId }))}
+              className="msb-btn-outline-gold shrink-0 text-xs"
+            >
+              Season roundup
+            </button>
+            <button
+              type="button"
+              disabled={pending || !aiEnabled}
+              onClick={() => run(() => generateInkyWeeklyAction({ leagueId, seasonId }))}
+              className="msb-btn-outline-gold shrink-0 text-xs"
+            >
+              Weekly column
+            </button>
+            {previewGameId ? (
+              <button
+                type="button"
+                disabled={pending || !aiEnabled}
+                onClick={() =>
+                  run(() =>
+                    generateInkyPreviewAction({
+                      leagueId,
+                      seasonId,
+                      gameId: previewGameId,
+                    }),
+                  )
+                }
+                className="msb-btn-outline-gold shrink-0 text-xs"
+              >
+                Rivalry preview
+              </button>
+            ) : null}
+            <button
+              type="button"
+              disabled={pending || !aiEnabled}
+              onClick={() =>
+                run(() =>
+                  generateInkyDraftRecapAction({
+                    leagueId,
+                    seasonId,
+                    variant: "lottery",
+                  }),
+                )
+              }
+              className="msb-btn-outline-gold shrink-0 text-xs"
+            >
+              Draft lottery
+            </button>
+            <button
+              type="button"
+              disabled={pending || !aiEnabled}
+              onClick={() =>
+                run(() =>
+                  generateInkyDraftRecapAction({
+                    leagueId,
+                    seasonId,
+                    variant: "complete",
+                  }),
+                )
+              }
+              className="msb-btn-outline-gold shrink-0 text-xs"
+            >
+              Draft recap
+            </button>
+          </div>
         ) : undefined
       }
     >
+      {isAdmin && seriesOptions.length > 0 ? (
+        <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-zinc-800/80 bg-zinc-950/40 p-3">
+          <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs text-zinc-500">
+            Playoff series
+            <select
+              value={seriesKey}
+              onChange={(event) => setSeriesKey(event.target.value)}
+              className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200"
+            >
+              {seriesOptions.map((option) => (
+                <option key={option.seriesKey} value={option.seriesKey}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={pending || !aiEnabled || !seriesKey}
+            onClick={() =>
+              run(() =>
+                generateInkySeriesRecapAction({ leagueId, seasonId, seriesKey }),
+              )
+            }
+            className="msb-btn-outline-gold text-xs"
+          >
+            Series recap
+          </button>
+        </div>
+      ) : null}
+
       {error ? (
         <p className="mb-3 rounded-md border border-red-900/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">
           {error}
@@ -78,21 +243,76 @@ export function SeasonNewsPanel({ leagueId, seasonId, posts, isAdmin, aiEnabled 
                   {post.title}
                 </h3>
                 {post.source === "ai" ? (
-                  <span className="msb-badge-muted">AI reporter</span>
+                  <span className="msb-badge-muted">Inky</span>
+                ) : null}
+                {isInkyPostType(post.postType) ? (
+                  <span className="rounded-md border border-zinc-700/60 bg-zinc-900/60 px-2 py-0.5 text-xs text-zinc-400">
+                    {inkyPostTypeLabel(post.postType)}
+                  </span>
                 ) : null}
                 {post.status === "draft" ? (
                   <span className="rounded-md border border-amber-800/50 bg-amber-950/30 px-2 py-0.5 text-xs text-amber-300">
-                    Draft — only commissioners see this
+                    Draft — commissioner review
                   </span>
                 ) : null}
               </div>
-              <p className="mt-2 whitespace-pre-line text-sm text-zinc-300">
-                {post.body}
-              </p>
+              {editingPostId === post.id ? (
+                <div className="mt-3 space-y-3">
+                  <label className="block text-xs text-zinc-500">
+                    Headline
+                    <input
+                      value={editTitle}
+                      onChange={(event) => setEditTitle(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+                    />
+                  </label>
+                  <label className="block text-xs text-zinc-500">
+                    Article
+                    <textarea
+                      value={editBody}
+                      onChange={(event) => setEditBody(event.target.value)}
+                      rows={10}
+                      className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm leading-relaxed text-zinc-100"
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => saveEdit(post.id)}
+                      className="msb-btn-primary text-xs"
+                    >
+                      Save edits
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={cancelEditing}
+                      className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-300">
+                  {post.body}
+                </p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-600">
                 {post.createdAt.toLocaleDateString()}
                 {isAdmin ? (
                   <>
+                    {editingPostId !== post.id ? (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => startEditing(post)}
+                        className="text-amber-400 hover:underline"
+                      >
+                        Edit
+                      </button>
+                    ) : null}
                     {post.status === "draft" ? (
                       <button
                         type="button"
@@ -127,10 +347,10 @@ export function SeasonNewsPanel({ leagueId, seasonId, posts, isAdmin, aiEnabled 
         </ul>
       ) : (
         <div className="msb-empty-state">
-          <p className="text-sm text-zinc-500">No news yet</p>
+          <p className="text-sm text-zinc-500">No stories filed yet</p>
           <p className="mt-1 text-xs text-zinc-600">
-            Generate an AI recap of the season&apos;s recent action — you review it
-            before it goes live.
+            Inky drafts every article for commissioner review before it goes live
+            {aiEnabled ? "." : " — set ANTHROPIC_API_KEY to enable generation."}
           </p>
         </div>
       )}

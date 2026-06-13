@@ -49,4 +49,25 @@ export function applySqliteSchemaPatches(sqlite: Database.Database): void {
       "ALTER TABLE season_drafts ADD COLUMN current_pick_started_at integer",
     );
   }
+
+  const postColumns = sqlite
+    .prepare("PRAGMA table_info(league_posts)")
+    .all() as { name: string }[];
+
+  if (postColumns.length > 0) {
+    if (!postColumns.some((column) => column.name === "post_type")) {
+      sqlite.exec(
+        "ALTER TABLE league_posts ADD COLUMN post_type text NOT NULL DEFAULT 'season_recap'",
+      );
+    }
+    if (!postColumns.some((column) => column.name === "related_game_id")) {
+      sqlite.exec("ALTER TABLE league_posts ADD COLUMN related_game_id text");
+    }
+    if (!postColumns.some((column) => column.name === "series_key")) {
+      sqlite.exec("ALTER TABLE league_posts ADD COLUMN series_key text");
+    }
+    if (!postColumns.some((column) => column.name === "week_number")) {
+      sqlite.exec("ALTER TABLE league_posts ADD COLUMN week_number integer");
+    }
+  }
 }

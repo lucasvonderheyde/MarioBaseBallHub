@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { getCurrentUser } from "@/lib/auth";
 import { resolvePostAuthRedirect } from "@/lib/post-auth-redirect";
 import { isSafeRedirectPath } from "@/lib/team-claims";
@@ -71,6 +72,9 @@ export default async function RegisterPage({
           Create account
         </button>
       </form>
+      <div className="mt-4">
+        <GoogleSignInButton mode="register" next={next ?? null} />
+      </div>
       <p className="mt-4 text-sm text-zinc-500">
         <Link
           href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}

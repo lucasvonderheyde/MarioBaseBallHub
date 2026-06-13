@@ -123,6 +123,22 @@ export function findHighestScoringHalfInning(
   return best;
 }
 
+/** Plain-text line score for AI briefs and logs. */
+export function formatLineScoreForBrief(
+  lineScore: InningLineScore,
+  awayLabel: string,
+  homeLabel: string,
+): string {
+  const innings = lineScore.inningNumbers.join(" ");
+  const awayLine = lineScore.awayRunsByInning.join(" ");
+  const homeLine = lineScore.homeRunsByInning.join(" ");
+  return [
+    `       ${innings}`,
+    `${awayLabel.padEnd(6)} ${awayLine} — ${lineScore.awayTotal}`,
+    `${homeLabel.padEnd(6)} ${homeLine} — ${lineScore.homeTotal}`,
+  ].join("\n");
+}
+
 export function findHighestScoringFullInning(
   lineScore: InningLineScore,
 ): FullInningScoringPeak | null {

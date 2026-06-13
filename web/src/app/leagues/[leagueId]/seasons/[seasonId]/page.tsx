@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueRole, isLeagueAdmin } from "@/lib/league-access";
 import { getSeasonDashboard } from "@/lib/season-dashboard";
@@ -7,33 +7,28 @@ import { parseTiebreakerOrder } from "@/domain/standings/tiebreakers";
 import { TiebreakerOrderDisplay } from "@/components/standings/TiebreakerOrderDisplay";
 import { PageShell } from "@/components/PageShell";
 import { PageHero } from "@/components/PageHero";
-import { SeasonActivityFeed } from "@/components/season/SeasonActivityFeed";
 import { SeasonNewsPanel } from "@/components/season/SeasonNewsPanel";
 import { aiNewsEnabled } from "@/lib/ai-news";
 import { getSeasonNewsPosts } from "@/lib/league-news";
 import { getRecentSeasonEvents } from "@/lib/season-events";
 import { SeasonHubStandings } from "@/components/season/SeasonHubStandings";
-import { SeasonHubTeamGrid } from "@/components/season/SeasonHubTeamGrid";
 import { SeasonWeekTimeline } from "@/components/season/SeasonWeekTimeline";
 import { SeasonHubFeaturedRecords } from "@/components/season/SeasonHubFeaturedRecords";
 import { SeasonHubRecordsCompact } from "@/components/season/SeasonHubRecordsCompact";
-import { SeasonTradePanel } from "@/components/season/SeasonTradePanel";
 import { ChampionshipOddsPanel } from "@/components/season/ChampionshipOddsPanel";
 import { SeasonRivalryOfWeekPanel } from "@/components/season/SeasonRivalryOfWeekPanel";
+import { SeasonScoreboard } from "@/components/season/SeasonScoreboard";
+import { SeasonHubHeadlines } from "@/components/season/SeasonHubHeadlines";
 import { getSeasonRecords } from "@/lib/season-records";
+import { listSeriesOptions } from "@/lib/inky-briefs";
 import { buildSeasonOddsSnapshot } from "@/lib/season-odds";
 import { getManagedTeamInSeason } from "@/lib/manager-team";
-import { getTeamRosterCountsForSeason } from "@/lib/roster-rules";
 import {
   pendingProposalsByGameId,
   getPendingScheduleProposalsForSeason,
 } from "@/lib/schedule-proposals";
 import { toScheduleGameDisplay } from "@/lib/schedule-display";
 import { selectUpcomingScheduleGames } from "@/lib/upcoming-schedule-games";
-import {
-  getPendingTradeRequestsForSeason,
-  getTradeRosterInstancesForSeason,
-} from "@/lib/trade-requests";
 
 type Props = {
   params: Promise<{ leagueId: string; seasonId: string }>;
@@ -55,20 +50,15 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const teamNames = new Map(teams.map((t) => [t.team.id, t.team.name]));
   const recentEvents = await getRecentSeasonEvents(seasonId, 20);
   const newsPosts = await getSeasonNewsPosts(seasonId, isAdmin);
+  const seriesOptions = isAdmin ? await listSeriesOptions(seasonId) : [];
   const scheduleProposals = await getPendingScheduleProposalsForSeason(seasonId);
   const proposalMap = pendingProposalsByGameId(scheduleProposals);
-  const { games: upcomingRaw } = selectUpcomingScheduleGames(
-    games,
-    4,
-  );
+  const { games: upcomingRaw } = selectUpcomingScheduleGames(games, 4);
   const upcomingGames = upcomingRaw.map(({ game, round }) => ({
     game: toScheduleGameDisplay(game, proposalMap.get(game.id) ?? null),
     round,
   }));
-  const rosterCounts = await getTeamRosterCountsForSeason(seasonId);
   const userTeam = user ? await getManagedTeamInSeason(user.id, seasonId) : null;
-  const tradeRoster = await getTradeRosterInstancesForSeason(seasonId);
-  const pendingTrades = await getPendingTradeRequestsForSeason(seasonId);
   const seasonRecords = await getSeasonRecords(seasonId);
   const oddsSnapshot = buildSeasonOddsSnapshot(dash);
   const gamesPlayed = dash.games.filter(
@@ -81,6 +71,16 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const rivalryHomeName = rivalry
     ? teamNames.get(rivalry.game.homeTeamId) ?? "Home"
     : null;
+
+  const mappedNewsPosts = newsPosts.map((post) => ({
+    id: post.id,
+    title: post.title,
+    body: post.body,
+    source: post.source,
+    status: post.status,
+    postType: post.postType,
+    createdAt: post.createdAt,
+  }));
 
   return (
     <PageShell width="wide">
@@ -166,112 +166,99 @@ export default async function SeasonPage({ params, searchParams }: Props) {
         </p>
       ) : null}
 
-      <div className="space-y-4">
-        {rivalry && rivalryAwayName && rivalryHomeName ? (
-          <SeasonRivalryOfWeekPanel
-            leagueId={leagueId}
-            seasonId={seasonId}
-            rivalry={rivalry}
-            awayName={rivalryAwayName}
-            homeName={rivalryHomeName}
-          />
-        ) : null}
-
-        <ChampionshipOddsPanel
+      <div className="space-y-6">
+        <SeasonScoreboard
           leagueId={leagueId}
           seasonId={seasonId}
-          gamesPlayed={gamesPlayed}
-          teams={dash.teams.map(({ team }) => ({
-            teamId: team.id,
-            name: team.name,
-            odds: oddsSnapshot.championshipOdds.get(team.id) ?? 0,
-          }))}
+          games={games}
+          upcoming={upcomingGames}
+          teamNames={teamNames}
+          gameOdds={oddsSnapshot.gameOdds}
         />
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <SeasonWeekTimeline
-            leagueId={leagueId}
-            seasonId={seasonId}
-            games={games}
-            upcoming={upcomingGames}
-            teams={teams.map(({ team, manager }) => ({
-              team,
-              manager: manager ? { id: manager.id } : null,
-            }))}
-            teamNames={teamNames}
-            userId={user?.id ?? ""}
-            userTeamId={userTeam?.id ?? null}
-            gameOdds={oddsSnapshot.gameOdds}
-          />
-          <SeasonHubStandings
-            leagueId={leagueId}
-            seasonId={seasonId}
-            standings={dash.standings}
-            userTeamId={userTeam?.id ?? null}
-          />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="space-y-6">
+            {rivalry && rivalryAwayName && rivalryHomeName ? (
+              <SeasonRivalryOfWeekPanel
+                leagueId={leagueId}
+                seasonId={seasonId}
+                rivalry={rivalry}
+                awayName={rivalryAwayName}
+                homeName={rivalryHomeName}
+              />
+            ) : null}
+
+            <SeasonNewsPanel
+              leagueId={leagueId}
+              seasonId={seasonId}
+              posts={mappedNewsPosts}
+              isAdmin={isAdmin}
+              aiEnabled={aiNewsEnabled()}
+              seriesOptions={seriesOptions}
+              previewGameId={rivalry?.game.gameId ?? null}
+            />
+
+            <SeasonHubFeaturedRecords
+              leagueId={leagueId}
+              seasonId={seasonId}
+              records={seasonRecords}
+            />
+
+            <SeasonWeekTimeline
+              leagueId={leagueId}
+              seasonId={seasonId}
+              games={games}
+              upcoming={upcomingGames}
+              teams={teams.map(({ team, manager }) => ({
+                team,
+                manager: manager ? { id: manager.id } : null,
+              }))}
+              teamNames={teamNames}
+              userId={user?.id ?? ""}
+              userTeamId={userTeam?.id ?? null}
+              gameOdds={oddsSnapshot.gameOdds}
+            />
+
+          </div>
+
+          <aside className="space-y-4">
+            <SeasonHubHeadlines
+              posts={mappedNewsPosts}
+              events={recentEvents.map((event) => ({
+                id: event.id,
+                message: event.message,
+                createdAt: event.createdAt,
+              }))}
+            />
+
+            <SeasonHubStandings
+              leagueId={leagueId}
+              seasonId={seasonId}
+              standings={dash.standings}
+              userTeamId={userTeam?.id ?? null}
+              variant="compact"
+            />
+
+            <ChampionshipOddsPanel
+              leagueId={leagueId}
+              seasonId={seasonId}
+              gamesPlayed={gamesPlayed}
+              variant="compact"
+              teams={dash.teams.map(({ team }) => ({
+                teamId: team.id,
+                name: team.name,
+                odds: oddsSnapshot.championshipOdds.get(team.id) ?? 0,
+              }))}
+            />
+
+            <SeasonHubRecordsCompact
+              leagueId={leagueId}
+              seasonId={seasonId}
+              records={seasonRecords}
+            />
+          </aside>
         </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <SeasonHubFeaturedRecords
-            leagueId={leagueId}
-            seasonId={seasonId}
-            records={seasonRecords}
-          />
-          <SeasonHubRecordsCompact
-            leagueId={leagueId}
-            seasonId={seasonId}
-            records={seasonRecords}
-          />
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <SeasonHubTeamGrid
-            leagueId={leagueId}
-            seasonId={seasonId}
-            teams={teams}
-            standings={dash.standings}
-            rosterCounts={rosterCounts}
-          />
-
-          <SeasonTradePanel
-            leagueId={leagueId}
-            seasonId={seasonId}
-            userId={user?.id ?? ""}
-            userTeam={userTeam}
-            teams={teams.map(({ team, manager }) => ({
-              id: team.id,
-              name: team.name,
-              managerUserId: manager?.id ?? null,
-            }))}
-            roster={tradeRoster}
-            pendingTrades={pendingTrades}
-          />
-        </div>
-
-        <SeasonNewsPanel
-          leagueId={leagueId}
-          seasonId={seasonId}
-          posts={newsPosts.map((post) => ({
-            id: post.id,
-            title: post.title,
-            body: post.body,
-            source: post.source,
-            status: post.status,
-            createdAt: post.createdAt,
-          }))}
-          isAdmin={isAdmin}
-          aiEnabled={aiNewsEnabled()}
-        />
-
-        <SeasonActivityFeed
-          events={recentEvents.map((event) => ({
-            id: event.id,
-            message: event.message,
-            createdAt: event.createdAt,
-          }))}
-        />
       </div>
     </PageShell>
   );
 }
-

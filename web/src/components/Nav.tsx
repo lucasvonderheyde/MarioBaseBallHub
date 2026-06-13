@@ -15,10 +15,10 @@ export async function Nav() {
 
   return (
     <header className="border-b-2 border-msb-grass bg-zinc-950/90 shadow-[0_4px_24px_rgb(10_34_64/0.15)] backdrop-blur dark:shadow-[0_4px_24px_rgb(10_34_64/0.6)]">
-      <div className="relative mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:px-6 lg:px-8">
         <Link
           href={user ? "/leagues" : "/"}
-          className="text-lg font-bold tracking-tight sm:text-xl"
+          className="justify-self-start text-lg font-bold tracking-tight sm:text-xl"
         >
           <span className="text-msb-mario">Mario</span>{" "}
           <span className="text-msb-gold-bright">Baseball</span>{" "}
@@ -27,9 +27,11 @@ export async function Nav() {
 
         {user && leagueSeasonOptions.length > 0 ? (
           <LeagueSeasonSwitcher options={leagueSeasonOptions} />
-        ) : null}
+        ) : (
+          <div className="hidden sm:block" aria-hidden />
+        )}
 
-        <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <nav className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm sm:justify-self-end">
           <ThemeToggle />
           {user ? (
             <>

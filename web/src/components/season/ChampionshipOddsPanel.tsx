@@ -12,6 +12,7 @@ type Props = {
   seasonId: string;
   teams: TeamRow[];
   gamesPlayed: number;
+  variant?: "full" | "compact";
 };
 
 export function ChampionshipOddsPanel({
@@ -19,22 +20,27 @@ export function ChampionshipOddsPanel({
   seasonId,
   teams,
   gamesPlayed,
+  variant = "full",
 }: Props) {
   const sorted = [...teams].sort((a, b) => b.odds - a.odds);
   const leader = sorted[0];
+  const compact = variant === "compact";
+  const displayTeams = compact ? sorted.slice(0, 6) : sorted;
 
   return (
     <Card title="Championship odds">
-      <p className="text-sm text-zinc-500">
-        Projected title chances from roster ratings, chemistry, and season results.
-        {gamesPlayed === 0
-          ? " Preseason projection — updates every week as games are reported."
-          : ` Based on ${gamesPlayed} reported game${gamesPlayed === 1 ? "" : "s"} so far.`}
-      </p>
+      {!compact ? (
+        <p className="text-sm text-zinc-500">
+          Projected title chances from roster ratings, chemistry, and season results.
+          {gamesPlayed === 0
+            ? " Preseason projection — updates every week as games are reported."
+            : ` Based on ${gamesPlayed} reported game${gamesPlayed === 1 ? "" : "s"} so far.`}
+        </p>
+      ) : null}
 
       {leader ? (
-        <p className="mt-3 text-sm text-zinc-300">
-          Current favorite:{" "}
+        <p className={`text-sm text-zinc-300 ${compact ? "" : "mt-3"}`}>
+          Favorite:{" "}
           <Link
             href={`/leagues/${leagueId}/seasons/${seasonId}/teams/${leader.teamId}`}
             className="font-medium text-amber-400 hover:underline"
@@ -45,8 +51,8 @@ export function ChampionshipOddsPanel({
         </p>
       ) : null}
 
-      <div className="mt-4 space-y-2">
-        {sorted.map((row) => (
+      <div className={`space-y-2 ${compact ? "mt-3" : "mt-4"}`}>
+        {displayTeams.map((row) => (
           <div key={row.teamId} className="flex items-center gap-3 text-sm">
             <Link
               href={`/leagues/${leagueId}/seasons/${seasonId}/teams/${row.teamId}`}

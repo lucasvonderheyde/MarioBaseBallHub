@@ -69,6 +69,7 @@ async function ensureUser(
     id,
     username,
     passwordHash: hash,
+    passwordSetAt: new Date(),
     displayName: displayName ?? username,
     isSiteAdmin: options?.isSiteAdmin ?? false,
   });

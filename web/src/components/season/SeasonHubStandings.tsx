@@ -7,6 +7,7 @@ type Props = {
   seasonId: string;
   standings: TeamStandingRow[];
   userTeamId: string | null;
+  variant?: "full" | "compact";
 };
 
 export function SeasonHubStandings({
@@ -14,9 +15,22 @@ export function SeasonHubStandings({
   seasonId,
   standings,
   userTeamId,
+  variant = "full",
 }: Props) {
+  const compact = variant === "compact";
+
   return (
-    <Card title="Standings">
+    <Card
+      title="Standings"
+      action={
+        <Link
+          href={`/leagues/${leagueId}/standings?season=${seasonId}`}
+          className="msb-link shrink-0 text-xs"
+        >
+          Full table →
+        </Link>
+      }
+    >
       {standings.length > 0 ? (
         <div className="msb-table-wrap -mx-1">
           <table className="w-full text-sm">
@@ -25,9 +39,15 @@ export function SeasonHubStandings({
                 <th className="pb-2 pr-2 font-medium">#</th>
                 <th className="pb-2 pr-2 font-medium">Team</th>
                 <th className="pb-2 pr-2 text-right font-medium tabular-nums">W</th>
-                <th className="pb-2 pr-2 text-right font-medium tabular-nums">L</th>
-                <th className="pb-2 pr-2 text-right font-medium tabular-nums">RF</th>
-                <th className="pb-2 text-right font-medium tabular-nums">RA</th>
+                <th className={`pb-2 text-right font-medium tabular-nums ${compact ? "" : "pr-2"}`}>
+                  L
+                </th>
+                {!compact ? (
+                  <>
+                    <th className="pb-2 pr-2 text-right font-medium tabular-nums">RF</th>
+                    <th className="pb-2 text-right font-medium tabular-nums">RA</th>
+                  </>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -56,15 +76,21 @@ export function SeasonHubStandings({
                     <td className="py-2.5 pr-2 text-right tabular-nums text-zinc-300">
                       {row.wins}
                     </td>
-                    <td className="py-2.5 pr-2 text-right tabular-nums text-zinc-300">
+                    <td
+                      className={`py-2.5 text-right tabular-nums text-zinc-300 ${compact ? "" : "pr-2"}`}
+                    >
                       {row.losses}
                     </td>
-                    <td className="py-2.5 pr-2 text-right tabular-nums text-zinc-400">
-                      {row.runsFor}
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums text-zinc-400">
-                      {row.runsAgainst}
-                    </td>
+                    {!compact ? (
+                      <>
+                        <td className="py-2.5 pr-2 text-right tabular-nums text-zinc-400">
+                          {row.runsFor}
+                        </td>
+                        <td className="py-2.5 text-right tabular-nums text-zinc-400">
+                          {row.runsAgainst}
+                        </td>
+                      </>
+                    ) : null}
                   </tr>
                 );
               })}
