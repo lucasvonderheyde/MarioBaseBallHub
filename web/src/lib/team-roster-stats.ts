@@ -7,7 +7,12 @@ import {
 } from "@/domain/stats/batting-metrics";
 import { type BattingLine, battingStatKey, type PitchingLine, pitchingStatKey } from "@/lib/game-stats-queries";
 
-function withRates(charId: string, charOccurrenceIndex: number, totals: BattingTotals): BattingLine {
+function withRates(
+  charId: string,
+  charOccurrenceIndex: number,
+  totals: BattingTotals,
+  longestHrDistance: number | null = null,
+): BattingLine {
   return {
     charId,
     charOccurrenceIndex,
@@ -15,6 +20,7 @@ function withRates(charId: string, charOccurrenceIndex: number, totals: BattingT
     ba: battingAverage(totals),
     obp: onBasePercentage(totals),
     slg: sluggingPercentage(totals),
+    longestHrDistance,
   };
 }
 
@@ -43,7 +49,16 @@ export function resolveBattingLineForRosterCopy(
   }
 
   if (occurrenceLines.length > 1) {
-    return withRates(charId, occurrenceIndex, sumBattingTotals(occurrenceLines));
+    const longestHrDistance = occurrenceLines.reduce<number | null>((max, line) => {
+      if (line.longestHrDistance == null) return max;
+      return max == null ? line.longestHrDistance : Math.max(max, line.longestHrDistance);
+    }, null);
+    return withRates(
+      charId,
+      occurrenceIndex,
+      sumBattingTotals(occurrenceLines),
+      longestHrDistance,
+    );
   }
 
   return byCharId.get(charId);

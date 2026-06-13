@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  CHARACTER_LIBRARY_FIELDING_SORT_OPTIONS,
+  type CharacterLibraryFieldingSort,
+} from "@/lib/sort-character-library-fielding";
+import {
   CHARACTER_LIBRARY_PITCHING_SORT_OPTIONS,
   type CharacterLibraryPitchingSort,
 } from "@/lib/sort-character-library-pitching";
@@ -11,7 +15,7 @@ import {
   type CharacterLibrarySort,
 } from "@/lib/sort-character-library";
 
-export type CharacterLibraryView = "batting" | "pitching";
+export type CharacterLibraryView = "batting" | "pitching" | "fielding";
 
 type Props = {
   view: CharacterLibraryView;
@@ -19,6 +23,7 @@ type Props = {
   searchQuery?: string;
   battingSort: CharacterLibrarySort;
   pitchingSort: CharacterLibraryPitchingSort;
+  fieldingSort: CharacterLibraryFieldingSort;
   managers: { id: string; username: string; displayName: string | null }[];
 };
 
@@ -28,11 +33,13 @@ export function GlobalCharacterFilters({
   searchQuery,
   battingSort,
   pitchingSort,
+  fieldingSort,
   managers,
 }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState(searchQuery ?? "");
-  const sort = view === "pitching" ? pitchingSort : battingSort;
+  const sort =
+    view === "pitching" ? pitchingSort : view === "fielding" ? fieldingSort : battingSort;
 
   useEffect(() => {
     setSearch(searchQuery ?? "");
@@ -44,13 +51,17 @@ export function GlobalCharacterFilters({
     nextSearch: string,
     nextBattingSort: CharacterLibrarySort,
     nextPitchingSort: CharacterLibraryPitchingSort,
+    nextFieldingSort: CharacterLibraryFieldingSort,
   ) {
     const params = new URLSearchParams();
     if (nextView === "pitching") params.set("view", "pitching");
+    if (nextView === "fielding") params.set("view", "fielding");
     if (nextPlayer) params.set("player", nextPlayer);
     if (nextSearch.trim()) params.set("q", nextSearch.trim());
     if (nextView === "pitching") {
       if (nextPitchingSort !== "name") params.set("sort", nextPitchingSort);
+    } else if (nextView === "fielding") {
+      if (nextFieldingSort !== "name") params.set("sort", nextFieldingSort);
     } else if (nextBattingSort !== "name") {
       params.set("sort", nextBattingSort);
     }
@@ -61,15 +72,17 @@ export function GlobalCharacterFilters({
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       if (search === (searchQuery ?? "")) return;
-      navigate(view, managerUserId ?? "", search, battingSort, pitchingSort);
+      navigate(view, managerUserId ?? "", search, battingSort, pitchingSort, fieldingSort);
     }, 300);
     return () => window.clearTimeout(timeout);
-  }, [search, searchQuery, managerUserId, view, battingSort, pitchingSort]);
+  }, [search, searchQuery, managerUserId, view, battingSort, pitchingSort, fieldingSort]);
 
   const sortOptions =
     view === "pitching"
       ? CHARACTER_LIBRARY_PITCHING_SORT_OPTIONS
-      : CHARACTER_LIBRARY_SORT_OPTIONS;
+      : view === "fielding"
+        ? CHARACTER_LIBRARY_FIELDING_SORT_OPTIONS
+        : CHARACTER_LIBRARY_SORT_OPTIONS;
 
   return (
     <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -89,7 +102,14 @@ export function GlobalCharacterFilters({
           defaultValue={managerUserId ?? ""}
           className="min-w-[10rem] rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
           onChange={(event) =>
-            navigate(view, event.target.value, search, battingSort, pitchingSort)
+            navigate(
+              view,
+              event.target.value,
+              search,
+              battingSort,
+              pitchingSort,
+              fieldingSort,
+            )
           }
         >
           <option value="">All managers</option>
@@ -114,6 +134,16 @@ export function GlobalCharacterFilters({
                 search,
                 battingSort,
                 nextSort as CharacterLibraryPitchingSort,
+                fieldingSort,
+              );
+            } else if (view === "fielding") {
+              navigate(
+                view,
+                managerUserId ?? "",
+                search,
+                battingSort,
+                pitchingSort,
+                nextSort as CharacterLibraryFieldingSort,
               );
             } else {
               navigate(
@@ -122,6 +152,7 @@ export function GlobalCharacterFilters({
                 search,
                 nextSort as CharacterLibrarySort,
                 pitchingSort,
+                fieldingSort,
               );
             }
           }}

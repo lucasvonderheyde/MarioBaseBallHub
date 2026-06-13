@@ -32,6 +32,7 @@ function batting(
       ba: null,
       obp: null,
       slg: null,
+      longestHrDistance: null,
       ...overrides,
     },
   };

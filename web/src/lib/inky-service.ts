@@ -113,6 +113,9 @@ export async function maybeAutoDraftGameRecap(input: {
   });
 
   revalidatePath(`/leagues/${input.leagueId}/seasons/${input.seasonId}`);
+  revalidatePath(
+    `/leagues/${input.leagueId}/seasons/${input.seasonId}/games/${input.gameId}`,
+  );
 }
 
 export async function postInkyArticleToDiscord(input: {

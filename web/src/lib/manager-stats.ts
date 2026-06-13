@@ -61,6 +61,7 @@ function emptyLifetimeBatting(): BattingLine {
     ba: null,
     obp: null,
     slg: null,
+    longestHrDistance: null,
   };
 }
 
@@ -146,6 +147,10 @@ export async function getManagerLifetimeStats(
   );
 
   const pitchingLines = [...pitchingMap.values()];
+  const longestHrDistance = [...battingMap.values()].reduce<number | null>((max, line) => {
+    if (line.longestHrDistance == null) return max;
+    return max == null ? line.longestHrDistance : Math.max(max, line.longestHrDistance);
+  }, null);
   const batting: BattingLine =
     battingTotals.ab > 0
       ? {
@@ -156,6 +161,7 @@ export async function getManagerLifetimeStats(
           ba: battingAverage(battingTotals),
           obp: onBasePercentage(battingTotals),
           slg: sluggingPercentage(battingTotals),
+          longestHrDistance,
         }
       : { ...emptyLifetimeBatting(), games: uploadedGames };
 

@@ -77,27 +77,8 @@ function emptyPitchingLine(charId: string): PitchingLine {
   };
 }
 
-function emptyFieldingLine(charId: string): FieldingLine {
-  return {
-    charId,
-    charOccurrenceIndex: 0,
-    games: 0,
-    outs: 0,
-    bigPlays: 0,
-    battersInField: 0,
-    longestHrDistance: null,
-    outsByPosition: {},
-    battersByPosition: {},
-    primaryPosition: null,
-  };
-}
-
 function getPitchingLine(map: Map<string, PitchingLine>, charId: string): PitchingLine {
   return map.get(charId) ?? emptyPitchingLine(charId);
-}
-
-function getFieldingLineFromMap(map: Map<string, FieldingLine>, charId: string): FieldingLine {
-  return getFieldingLine(map, charId);
 }
 
 function ManagerStatsTable({
@@ -236,9 +217,9 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
   const seasonPitchingLine = seasonId ? getPitchingLine(seasonPitchingMap, charId) : null;
   const allTimePitchingLine = getPitchingLine(allTimePitchingMap, charId);
   const seasonFieldingLine = seasonId
-    ? getFieldingLineFromMap(seasonFieldingMap, charId)
+    ? getFieldingLine(seasonFieldingMap, charId)
     : null;
-  const allTimeFieldingLine = getFieldingLineFromMap(allTimeFieldingMap, charId);
+  const allTimeFieldingLine = getFieldingLine(allTimeFieldingMap, charId);
 
   const teamNames = new Map<string, string>();
   const seasonTeamRows = await db.select().from(teams);
@@ -308,7 +289,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                 <thead>
                   <tr className="border-b border-zinc-800 text-zinc-500">
                     <th className="py-1 pr-2">Season</th>
-                    {battingStatHeaders({ includeG: true, includeObpSlg: true })}
+                    {battingStatHeaders({ includeG: true, includeObpSlg: true, includeLongHr: true })}
                   </tr>
                 </thead>
                 <tbody>
@@ -329,6 +310,8 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                           doubles={row.line.doubles}
                           triples={row.line.triples}
                           showObpSlg
+                          showLongHr
+                          longestHrDistance={row.line.longestHrDistance}
                         />
                       </tr>
                     ))
@@ -340,6 +323,7 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                       <td className="py-1 pr-2 tabular-nums">0</td>
                       <td className="py-1 pr-2 tabular-nums">0</td>
                       <td className="py-1 pr-2 tabular-nums">0</td>
+                      <td className="py-1 pr-2 tabular-nums">—</td>
                       <td className="py-1 pr-2 tabular-nums">—</td>
                       <td className="py-1 pr-2 tabular-nums">—</td>
                       <td className="py-1 pr-2 tabular-nums">—</td>
@@ -638,8 +622,6 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
                   ) : (
                     <tr className="border-b border-zinc-900 text-zinc-500">
                       <td className="py-1 pr-2">—</td>
-                      <td className="py-1 pr-2 tabular-nums">0</td>
-                      <td className="py-1 pr-2 tabular-nums">—</td>
                       <td className="py-1 pr-2 tabular-nums">0</td>
                       <td className="py-1 pr-2 tabular-nums">—</td>
                       <td className="py-1 pr-2 tabular-nums">0</td>

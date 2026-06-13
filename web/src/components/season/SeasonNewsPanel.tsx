@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import {
@@ -9,6 +10,8 @@ import {
   INKY_PROFILE_IMAGE,
 } from "@/domain/inky/inky-persona";
 import { inkyPostTypeLabel, isInkyPostType } from "@/domain/inky/post-types";
+import { InkyWritingIndicator } from "@/components/inky/InkyWritingIndicator";
+import { gameRecapPageHref } from "@/lib/league-news-links";
 import {
   deleteLeaguePostAction,
   generateInkyDraftRecapAction,
@@ -27,6 +30,7 @@ export type SeasonNewsPost = {
   source: "ai" | "human";
   status: "draft" | "published";
   postType: string;
+  relatedGameId?: string | null;
   createdAt: Date;
 };
 
@@ -56,6 +60,7 @@ export function SeasonNewsPanel({
   previewGameId,
 }: Props) {
   const [pending, startTransition] = useTransition();
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seriesKey, setSeriesKey] = useState(seriesOptions[0]?.seriesKey ?? "");
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
@@ -69,6 +74,19 @@ export function SeasonNewsPanel({
     startTransition(async () => {
       const result = await action();
       if (result.error) setError(result.error);
+    });
+  }
+
+  function runGenerate(action: () => Promise<{ error?: string }>) {
+    setError(null);
+    setGenerating(true);
+    startTransition(async () => {
+      try {
+        const result = await action();
+        if (result.error) setError(result.error);
+      } finally {
+        setGenerating(false);
+      }
     });
   }
 
@@ -123,7 +141,7 @@ export function SeasonNewsPanel({
               type="button"
               disabled={pending || !aiEnabled}
               title={aiEnabled ? undefined : "Set ANTHROPIC_API_KEY to enable Inky"}
-              onClick={() => run(() => generateSeasonRecapAction({ leagueId, seasonId }))}
+              onClick={() => runGenerate(() => generateSeasonRecapAction({ leagueId, seasonId }))}
               className="msb-btn-outline-gold shrink-0 text-xs"
             >
               Season roundup
@@ -131,7 +149,7 @@ export function SeasonNewsPanel({
             <button
               type="button"
               disabled={pending || !aiEnabled}
-              onClick={() => run(() => generateInkyWeeklyAction({ leagueId, seasonId }))}
+              onClick={() => runGenerate(() => generateInkyWeeklyAction({ leagueId, seasonId }))}
               className="msb-btn-outline-gold shrink-0 text-xs"
             >
               Weekly column
@@ -141,7 +159,7 @@ export function SeasonNewsPanel({
                 type="button"
                 disabled={pending || !aiEnabled}
                 onClick={() =>
-                  run(() =>
+                  runGenerate(() =>
                     generateInkyPreviewAction({
                       leagueId,
                       seasonId,
@@ -158,7 +176,7 @@ export function SeasonNewsPanel({
               type="button"
               disabled={pending || !aiEnabled}
               onClick={() =>
-                run(() =>
+                runGenerate(() =>
                   generateInkyDraftRecapAction({
                     leagueId,
                     seasonId,
@@ -174,7 +192,7 @@ export function SeasonNewsPanel({
               type="button"
               disabled={pending || !aiEnabled}
               onClick={() =>
-                run(() =>
+                runGenerate(() =>
                   generateInkyDraftRecapAction({
                     leagueId,
                     seasonId,
@@ -210,7 +228,7 @@ export function SeasonNewsPanel({
             type="button"
             disabled={pending || !aiEnabled || !seriesKey}
             onClick={() =>
-              run(() =>
+              runGenerate(() =>
                 generateInkySeriesRecapAction({ leagueId, seasonId, seriesKey }),
               )
             }
@@ -227,9 +245,65 @@ export function SeasonNewsPanel({
         </p>
       ) : null}
 
+      {generating ? (
+        <InkyWritingIndicator compact={posts.length > 0} />
+      ) : null}
+
       {posts.length > 0 ? (
         <ul className="space-y-4">
-          {posts.map((post) => (
+          {posts.map((post) => {
+            const isGameRecap =
+              post.postType === "game_recap" && post.relatedGameId != null;
+            const gameRecapHref = isGameRecap
+              ? gameRecapPageHref(leagueId, seasonId, post.relatedGameId!)
+              : null;
+
+            if (isGameRecap && gameRecapHref) {
+              return (
+                <li
+                  key={post.id}
+                  className={`rounded-lg border p-4 ${
+                    post.status === "draft"
+                      ? "border-amber-900/50 bg-amber-950/15"
+                      : "border-zinc-800/80 bg-zinc-950/30"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="min-w-0 flex-1 font-semibold text-zinc-100">
+                      <Link href={gameRecapHref} className="hover:text-amber-300">
+                        {post.title}
+                      </Link>
+                    </h3>
+                    {post.source === "ai" ? (
+                      <span className="msb-badge-muted">Inky</span>
+                    ) : null}
+                    <span className="rounded-md border border-zinc-700/60 bg-zinc-900/60 px-2 py-0.5 text-xs text-zinc-400">
+                      {inkyPostTypeLabel("game_recap")}
+                    </span>
+                    {post.status === "draft" ? (
+                      <span className="rounded-md border border-amber-800/50 bg-amber-950/30 px-2 py-0.5 text-xs text-amber-300">
+                        Draft — commissioner review
+                      </span>
+                    ) : null}
+                  </div>
+                  {post.body ? (
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-400">
+                      {post.body}
+                    </p>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-600">
+                    {post.createdAt.toLocaleDateString()}
+                    <Link href={gameRecapHref} className="text-amber-400 hover:underline">
+                      {isAdmin && post.status === "draft"
+                        ? "Review on game page →"
+                        : "Read on game page →"}
+                    </Link>
+                  </div>
+                </li>
+              );
+            }
+
+            return (
             <li
               key={post.id}
               className={`rounded-lg border p-4 ${
@@ -343,9 +417,10 @@ export function SeasonNewsPanel({
                 ) : null}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
-      ) : (
+      ) : !generating ? (
         <div className="msb-empty-state">
           <p className="text-sm text-zinc-500">No stories filed yet</p>
           <p className="mt-1 text-xs text-zinc-600">
@@ -353,7 +428,7 @@ export function SeasonNewsPanel({
             {aiEnabled ? "." : " — set ANTHROPIC_API_KEY to enable generation."}
           </p>
         </div>
-      )}
+      ) : null}
     </Card>
   );
 }

@@ -34,6 +34,7 @@ function battingLine(
     ba: null,
     obp: null,
     slg: null,
+    longestHrDistance: null,
     ...overrides,
   };
 }

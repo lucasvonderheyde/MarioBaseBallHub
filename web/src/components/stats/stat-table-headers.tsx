@@ -9,10 +9,12 @@ export function battingStatHeaders({
   includeG = false,
   includeH = true,
   includeObpSlg = true,
+  includeLongHr = false,
 }: HeaderOptions & {
   includeG?: boolean;
   includeH?: boolean;
   includeObpSlg?: boolean;
+  includeLongHr?: boolean;
 } = {}) {
   return (
     <>
@@ -27,6 +29,13 @@ export function battingStatHeaders({
           <StatColumnHeader abbr="OBP" className={className} />
           <StatColumnHeader abbr="SLG" className={className} />
         </>
+      ) : null}
+      {includeLongHr ? (
+        <StatColumnHeader
+          abbr="Long HR"
+          className={className}
+          description="Longest home run"
+        />
       ) : null}
     </>
   );
@@ -74,7 +83,6 @@ export function fieldingStatHeaders({ className = "py-1 pr-2" }: HeaderOptions =
       <StatColumnHeader abbr="BF" className={className} description="Batters faced while fielding" />
       <StatColumnHeader abbr="BF/G" className={className} description="Batters faced per game in field" />
       <StatColumnHeader abbr="BP" className={className} description="Big Plays" />
-      <StatColumnHeader abbr="Long HR" className={className} description="Longest home run" />
     </>
   );
 }

@@ -261,6 +261,10 @@ export function mergeBattingMaps(
       ba: battingAverage(totals),
       obp: onBasePercentage(totals),
       slg: sluggingPercentage(totals),
+      longestHrDistance:
+        existing.longestHrDistance != null || line.longestHrDistance != null
+          ? Math.max(existing.longestHrDistance ?? 0, line.longestHrDistance ?? 0)
+          : null,
     });
   }
   return merged;

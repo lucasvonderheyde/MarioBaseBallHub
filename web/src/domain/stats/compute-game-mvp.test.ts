@@ -57,6 +57,10 @@ function statRow(
     strikeoutsDef: overrides.strikeoutsDef ?? 0,
     starPitches: 0,
     bigPlays: overrides.bigPlays ?? 0,
+    fieldingByPositionJson: null,
+    fieldingOuts: 0,
+    fieldingBatters: 0,
+    longestHrDistance: null,
   };
 }
 

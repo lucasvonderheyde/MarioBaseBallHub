@@ -3,6 +3,7 @@ import { SectionHeading } from "@/components/SectionHeading";
 import { battingStatHeaders } from "@/components/stats/stat-table-headers";
 import type { BattingLine } from "@/lib/game-stats-queries";
 import { formatRate } from "@/domain/stats/batting-metrics";
+import { formatHomerunDistance } from "@/domain/stats/fielding-metrics";
 
 type Props = {
   title: string;
@@ -18,6 +19,9 @@ export function CharacterStatSummary({ title, line, compact = false }: Props) {
         <p className="mt-2 text-sm text-zinc-400">
           {line.games}G · {line.ab} AB · {formatRate(line.ba)} AVG · {line.hr} HR ·{" "}
           {line.rbi} RBI · OBP {formatRate(line.obp)} · SLG {formatRate(line.slg)}
+          {line.longestHrDistance != null
+            ? ` · longest HR ${formatHomerunDistance(line.longestHrDistance)}`
+            : ""}
         </p>
       </section>
     );
@@ -30,7 +34,7 @@ export function CharacterStatSummary({ title, line, compact = false }: Props) {
         <table className="mt-2 w-full text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-800 text-zinc-500">
-              {battingStatHeaders({ includeG: true, includeObpSlg: true })}
+              {battingStatHeaders({ includeG: true, includeObpSlg: true, includeLongHr: true })}
             </tr>
           </thead>
           <tbody>
@@ -48,6 +52,8 @@ export function CharacterStatSummary({ title, line, compact = false }: Props) {
                 doubles={line.doubles}
                 triples={line.triples}
                 showObpSlg
+                showLongHr
+                longestHrDistance={line.longestHrDistance}
               />
             </tr>
           </tbody>

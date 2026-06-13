@@ -12,8 +12,10 @@ import {
   users,
 } from "@/db/schema";
 import {
+  aggregateFieldingByCharId,
   toBattingLine,
   type BattingLine,
+  type FieldingLine,
   type PitchingLine,
 } from "@/lib/game-stats-queries";
 import {
@@ -85,6 +87,9 @@ async function aggregateLeagueBattingByCharId(
       walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
       sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
       rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+      longestHrDistance: sql<number | null>`max(${characterGameStats.longestHrDistance})`.mapWith(
+        Number,
+      ),
     })
     .from(characterGameStats)
     .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
@@ -257,6 +262,12 @@ export async function aggregateGlobalPitchingByCharId(
   return mergePitchingMaps(league, personal);
 }
 
+export async function aggregateGlobalFieldingByCharId(
+  managerUserId?: string,
+): Promise<Map<string, FieldingLine>> {
+  return aggregateFieldingByCharId({ managerUserId });
+}
+
 export async function getGlobalManagers(): Promise<
   { id: string; username: string; displayName: string | null }[]
 > {
@@ -311,6 +322,9 @@ export async function aggregateGlobalBattingByCharAndManager(
       walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
       sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
       rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+      longestHrDistance: sql<number | null>`max(${characterGameStats.longestHrDistance})`.mapWith(
+        Number,
+      ),
     })
     .from(characterGameStats)
     .innerJoin(teams, eq(characterGameStats.teamId, teams.id))
@@ -375,7 +389,13 @@ export async function aggregateGlobalBattingByCharAndManager(
     };
     byManager.set(row.managerUserId, {
       username: row.username,
-      line: toBattingLine(charId, 0, totals),
+      line: toBattingLine(charId, 0, {
+        ...totals,
+        longestHrDistance:
+          existing.line.longestHrDistance != null || line.longestHrDistance != null
+            ? Math.max(existing.line.longestHrDistance ?? 0, line.longestHrDistance ?? 0)
+            : null,
+      }),
     });
   }
 
@@ -419,6 +439,9 @@ export async function aggregateGlobalBattingByCharAndSeason(
       walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
       sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
       rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+      longestHrDistance: sql<number | null>`max(${characterGameStats.longestHrDistance})`.mapWith(
+        Number,
+      ),
     })
     .from(characterGameStats)
     .innerJoin(seasons, eq(characterGameStats.seasonId, seasons.id))

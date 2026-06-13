@@ -4,7 +4,6 @@ import { fieldingStatHeaders } from "@/components/stats/stat-table-headers";
 import {
   fieldingRatePerGame,
   formatFieldingRate,
-  formatHomerunDistance,
   formatPrimaryPosition,
 } from "@/domain/stats/fielding-metrics";
 import type { FieldingLine } from "@/lib/game-stats-queries";
@@ -24,9 +23,6 @@ export function CharacterFieldingSummary({ title, line, compact = false }: Props
           {line.games}G · {formatPrimaryPosition(line.battersByPosition)} · {line.outs} outs ·{" "}
           {formatFieldingRate(fieldingRatePerGame(line.outs, line.games))} O/G · {line.bigPlays}{" "}
           big plays
-          {line.longestHrDistance != null
-            ? ` · longest HR ${formatHomerunDistance(line.longestHrDistance)}`
-            : ""}
         </p>
       </section>
     );

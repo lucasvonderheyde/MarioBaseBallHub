@@ -1,7 +1,8 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { leaguePosts } from "@/db/schema";
 
+export { gameRecapPageHref } from "@/lib/league-news-links";
 /** Drafts are commissioner-only — pass includeDrafts from a server-checked role. */
 export async function getSeasonNewsPosts(seasonId: string, includeDrafts: boolean) {
   const rows = await db
@@ -11,4 +12,22 @@ export async function getSeasonNewsPosts(seasonId: string, includeDrafts: boolea
     .orderBy(desc(leaguePosts.createdAt))
     .limit(20);
   return includeDrafts ? rows : rows.filter((row) => row.status === "published");
+}
+
+export async function getGameRecapPost(gameId: string, includeDrafts: boolean) {
+  const [post] = await db
+    .select()
+    .from(leaguePosts)
+    .where(
+      and(
+        eq(leaguePosts.relatedGameId, gameId),
+        eq(leaguePosts.postType, "game_recap"),
+      ),
+    )
+    .orderBy(desc(leaguePosts.createdAt))
+    .limit(1);
+
+  if (!post) return null;
+  if (!includeDrafts && post.status !== "published") return null;
+  return post;
 }

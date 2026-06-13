@@ -79,6 +79,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
     source: post.source,
     status: post.status,
     postType: post.postType,
+    relatedGameId: post.relatedGameId,
     createdAt: post.createdAt,
   }));
 
@@ -223,6 +224,8 @@ export default async function SeasonPage({ params, searchParams }: Props) {
 
           <aside className="space-y-4">
             <SeasonHubHeadlines
+              leagueId={leagueId}
+              seasonId={seasonId}
               posts={mappedNewsPosts}
               events={recentEvents.map((event) => ({
                 id: event.id,

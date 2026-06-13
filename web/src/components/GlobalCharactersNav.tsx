@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type Section = "library" | "library-pitching" | "chemistry" | "compare";
+type Section = "library" | "library-pitching" | "library-fielding" | "chemistry" | "compare";
 
 type Props = {
   active: Section;
@@ -28,6 +28,12 @@ export function GlobalCharactersNav({ active }: Props) {
         className={tabClass(active === "library-pitching")}
       >
         Pitching
+      </Link>
+      <Link
+        href="/characters?view=fielding"
+        className={tabClass(active === "library-fielding")}
+      >
+        Fielding
       </Link>
       <Link href="/characters/chemistry" className={tabClass(active === "chemistry")}>
         Chemistry

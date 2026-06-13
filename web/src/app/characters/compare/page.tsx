@@ -18,7 +18,7 @@ import {
   getGlobalCharacterByGameCharId,
   getGlobalCharacterCatalog,
 } from "@/lib/global-character-stats";
-import type { BattingLine, PitchingLine } from "@/lib/game-stats-queries";
+import { emptyBattingLine, type BattingLine, type PitchingLine } from "@/lib/game-stats-queries";
 
 type Props = {
   searchParams: Promise<{ a?: string; b?: string }>;
@@ -40,27 +40,6 @@ function emptyPitchingLine(charId: string): PitchingLine {
     strikeouts: 0,
     hrAllowed: 0,
     pitchesThrown: 0,
-  };
-}
-
-function emptyBattingLine(charId: string): BattingLine {
-  return {
-    charId,
-    charOccurrenceIndex: 0,
-    games: 0,
-    ab: 0,
-    hits: 0,
-    singles: 0,
-    doubles: 0,
-    triples: 0,
-    hr: 0,
-    walks4ball: 0,
-    walksHbp: 0,
-    sacFly: 0,
-    rbi: 0,
-    ba: null,
-    obp: null,
-    slg: null,
   };
 }
 

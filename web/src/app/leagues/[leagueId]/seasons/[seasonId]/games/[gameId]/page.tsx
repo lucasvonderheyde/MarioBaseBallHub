@@ -42,6 +42,7 @@ import { parseDecodedGameFile } from "@/domain/stats/decode-game-file";
 import { resolveGameFieldSides } from "@/domain/stats/resolve-game-field-sides";
 import { normalizeStadiumId } from "@/domain/stats/stadium-id";
 import { managerDisplayName } from "@/lib/manager-profile";
+import { getGameRecapPost } from "@/lib/league-news";
 import { saveYoutubeFormAction } from "@/server/actions";
 
 type Props = {
@@ -152,6 +153,17 @@ export default async function GameReportPage({ params, searchParams }: Props) {
       : mvp != null
         ? formatCharIdDisplay(mvp.charId)
         : null;
+
+  const gameRecapPost = await getGameRecapPost(gameId, isAdmin);
+  const mappedGameRecap = gameRecapPost
+    ? {
+        id: gameRecapPost.id,
+        title: gameRecapPost.title,
+        body: gameRecapPost.body,
+        status: gameRecapPost.status,
+        createdAt: gameRecapPost.createdAt,
+      }
+    : null;
 
   function BoxTable({ rows }: { rows: typeof stats }) {
     return (
@@ -470,6 +482,7 @@ export default async function GameReportPage({ params, searchParams }: Props) {
           isAdmin={isAdmin}
           aiEnabled={aiNewsEnabled()}
           hasStats={hasStats && played}
+          post={mappedGameRecap}
         />
       </div>
     </PageShell>

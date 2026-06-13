@@ -5,7 +5,6 @@ import {
 import {
   fieldingRatePerGame,
   formatFieldingRate,
-  formatHomerunDistance,
   formatPrimaryPosition,
 } from "@/domain/stats/fielding-metrics";
 import type { FieldingLine } from "@/lib/game-stats-queries";
@@ -27,9 +26,6 @@ export function FieldingTableRow({ line }: Props) {
       <td className="py-1 pr-2 tabular-nums">{line.battersInField}</td>
       <td className="py-1 pr-2 tabular-nums">{formatFieldingRate(battersPerGame)}</td>
       <td className="py-1 pr-2 tabular-nums">{line.bigPlays}</td>
-      <td className="py-1 pr-2 tabular-nums">
-        {formatHomerunDistance(line.longestHrDistance)}
-      </td>
     </>
   );
 }

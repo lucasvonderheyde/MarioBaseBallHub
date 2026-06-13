@@ -1,4 +1,5 @@
 import { formatRate } from "@/domain/stats/batting-metrics";
+import { formatHomerunDistance } from "@/domain/stats/fielding-metrics";
 
 type Props = {
   ab: number;
@@ -12,6 +13,8 @@ type Props = {
   doubles: number;
   triples: number;
   showObpSlg?: boolean;
+  showLongHr?: boolean;
+  longestHrDistance?: number | null;
   cellClassName?: string;
 };
 
@@ -27,6 +30,8 @@ export function BattingStatCells({
   doubles,
   triples,
   showObpSlg = false,
+  showLongHr = false,
+  longestHrDistance = null,
   cellClassName = "py-1 pr-2 tabular-nums",
 }: Props) {
   const ba = ab === 0 ? null : hits / ab;
@@ -49,6 +54,9 @@ export function BattingStatCells({
           <td className={cellClassName}>{formatRate(obp)}</td>
           <td className={cellClassName}>{formatRate(slg)}</td>
         </>
+      ) : null}
+      {showLongHr ? (
+        <td className={cellClassName}>{formatHomerunDistance(longestHrDistance)}</td>
       ) : null}
     </>
   );

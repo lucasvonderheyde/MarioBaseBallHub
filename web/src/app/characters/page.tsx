@@ -1,3 +1,4 @@
+import { GlobalCharacterFieldingGrid } from "@/components/GlobalCharacterFieldingGrid";
 import { GlobalCharacterFilters } from "@/components/GlobalCharacterFilters";
 import { GlobalCharactersNav } from "@/components/GlobalCharactersNav";
 import { GlobalCharacterGrid } from "@/components/GlobalCharacterGrid";
@@ -8,6 +9,7 @@ import { SectionHeading } from "@/components/SectionHeading";
 import { matchesCharacterSearch } from "@/lib/character-search";
 import {
   aggregateGlobalBattingByCharId,
+  aggregateGlobalFieldingByCharId,
   aggregateGlobalPitchingByCharId,
   getGlobalCharacterCatalog,
   getGlobalManagers,
@@ -16,6 +18,11 @@ import {
   parseCharacterLibrarySort,
   sortCharacterLibrary,
 } from "@/lib/sort-character-library";
+import {
+  hasFieldingStats,
+  parseCharacterLibraryFieldingSort,
+  sortCharacterLibraryFielding,
+} from "@/lib/sort-character-library-fielding";
 import {
   hasPitchingStats,
   parseCharacterLibraryPitchingSort,
@@ -44,6 +51,14 @@ function toSortableEntry(
   };
 }
 
+function parseView(
+  viewParam: string | undefined,
+): "batting" | "pitching" | "fielding" {
+  if (viewParam === "pitching") return "pitching";
+  if (viewParam === "fielding") return "fielding";
+  return "batting";
+}
+
 export default async function GlobalCharactersPage({ searchParams }: Props) {
   const {
     player: managerUserId,
@@ -52,13 +67,16 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
     view: viewParam,
   } = await searchParams;
 
-  const view = viewParam === "pitching" ? "pitching" : "batting";
+  const view = parseView(viewParam);
 
-  const [catalog, batting, pitching, managers] = await Promise.all([
+  const [catalog, batting, pitching, fielding, managers] = await Promise.all([
     getGlobalCharacterCatalog(),
     aggregateGlobalBattingByCharId(managerUserId || undefined),
     view === "pitching"
       ? aggregateGlobalPitchingByCharId(managerUserId || undefined)
+      : Promise.resolve(new Map()),
+    view === "fielding"
+      ? aggregateGlobalFieldingByCharId(managerUserId || undefined)
       : Promise.resolve(new Map()),
     getGlobalManagers(),
   ]);
@@ -70,12 +88,15 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
 
   const battingSort = parseCharacterLibrarySort(sortParam);
   const pitchingSort = parseCharacterLibraryPitchingSort(sortParam);
+  const fieldingSort = parseCharacterLibraryFieldingSort(sortParam);
   const sortable = filtered.map(toSortableEntry);
 
   const sorted =
     view === "pitching"
       ? sortCharacterLibraryPitching(sortable, pitching, pitchingSort)
-      : sortCharacterLibrary(sortable, batting, battingSort);
+      : view === "fielding"
+        ? sortCharacterLibraryFielding(sortable, fielding, fieldingSort)
+        : sortCharacterLibrary(sortable, batting, battingSort);
 
   const sortedCatalog = sorted.map((entry) => ({
     gameCharId: entry.gameCharId,
@@ -106,6 +127,7 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
           searchQuery={query}
           battingSort={battingSort}
           pitchingSort={pitchingSort}
+          fieldingSort={fieldingSort}
           managers={managers}
         />
 
@@ -142,6 +164,66 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
     );
   }
 
+  if (view === "fielding") {
+    const withStats = sortedCatalog.filter((character) =>
+      hasFieldingStats(fielding.get(character.gameCharId)),
+    );
+    const withoutStats = sortedCatalog.filter(
+      (character) => !hasFieldingStats(fielding.get(character.gameCharId)),
+    );
+
+    return (
+      <PageShell width="wide">
+        <PageHero
+          title="All-time characters"
+          subtitle="Lifetime fielding stats for every Mario Superstar Baseball character across all reported league games."
+        />
+
+        <GlobalCharactersNav active="library-fielding" />
+
+        <GlobalCharacterFilters
+          view="fielding"
+          managerUserId={managerUserId}
+          searchQuery={query}
+          battingSort={battingSort}
+          pitchingSort={pitchingSort}
+          fieldingSort={fieldingSort}
+          managers={managers}
+        />
+
+        <section className="mt-10">
+          <SectionHeading>Fielders with stats</SectionHeading>
+          <p className="text-sm text-zinc-500">
+            Aggregated from every reported league game with defensive stats.
+            {query ? ` Showing matches for “${query}”.` : null}
+          </p>
+          {withStats.length > 0 ? (
+            <GlobalCharacterFieldingGrid characters={withStats} fielding={fielding} />
+          ) : (
+            <p className="mt-3 text-sm text-zinc-500">
+              {query
+                ? "No fielders with stats match your search."
+                : "No fielding stats uploaded yet."}
+            </p>
+          )}
+        </section>
+
+        {withoutStats.length > 0 ? (
+          <section className="mt-10">
+            <SectionHeading className="msb-section-title-muted">
+              No fielding stats yet
+            </SectionHeading>
+            <p className="text-sm text-zinc-600">
+              Characters in the catalog that have not recorded defensive stats in uploaded
+              league games.
+            </p>
+            <GlobalCharacterFieldingGrid characters={withoutStats} fielding={fielding} />
+          </section>
+        ) : null}
+      </PageShell>
+    );
+  }
+
   const withStats = sortedCatalog.filter(
     (character) => (batting.get(character.gameCharId)?.games ?? 0) > 0,
   );
@@ -164,6 +246,7 @@ export default async function GlobalCharactersPage({ searchParams }: Props) {
         searchQuery={query}
         battingSort={battingSort}
         pitchingSort={pitchingSort}
+        fieldingSort={fieldingSort}
         managers={managers}
       />
 

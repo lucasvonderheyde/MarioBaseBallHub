@@ -29,6 +29,7 @@ export type BattingLine = BattingTotals & {
   ba: number | null;
   obp: number | null;
   slg: number | null;
+  longestHrDistance: number | null;
 };
 
 export function emptyBattingLine(charId: string): BattingLine {
@@ -49,6 +50,7 @@ export function emptyBattingLine(charId: string): BattingLine {
     ba: null,
     obp: null,
     slg: null,
+    longestHrDistance: null,
   };
 }
 
@@ -78,6 +80,7 @@ function toBattingLine(
     walksHbp: number;
     sacFly: number;
     rbi: number;
+    longestHrDistance?: number | null;
   },
 ): BattingLine {
   const totals: BattingTotals = {
@@ -100,6 +103,7 @@ function toBattingLine(
     ba: battingAverage(totals),
     obp: onBasePercentage(totals),
     slg: sluggingPercentage(totals),
+    longestHrDistance: row.longestHrDistance ?? null,
   };
 }
 
@@ -161,6 +165,9 @@ export async function aggregateBattingByCharId(
       walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
       sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
       rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+      longestHrDistance: sql<number | null>`max(${characterGameStats.longestHrDistance})`.mapWith(
+        Number,
+      ),
     })
     .from(characterGameStats)
     .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
@@ -212,6 +219,9 @@ export async function aggregateBattingByCharOccurrence(
       walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
       sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
       rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+      longestHrDistance: sql<number | null>`max(${characterGameStats.longestHrDistance})`.mapWith(
+        Number,
+      ),
     })
     .from(characterGameStats)
     .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
@@ -425,7 +435,6 @@ export type FieldingLine = {
   outs: number;
   bigPlays: number;
   battersInField: number;
-  longestHrDistance: number | null;
   outsByPosition: FieldingPositionMap;
   battersByPosition: FieldingPositionMap;
   primaryPosition: ReturnType<typeof primaryFieldingPosition>;
@@ -439,7 +448,6 @@ export function emptyFieldingLine(charId: string): FieldingLine {
     outs: 0,
     bigPlays: 0,
     battersInField: 0,
-    longestHrDistance: null,
     outsByPosition: {},
     battersByPosition: {},
     primaryPosition: null,
@@ -470,7 +478,6 @@ function toFieldingLine(
     outs: number;
     bigPlays: number;
     battersInField: number;
-    longestHrDistance: number | null;
     outsByPosition: FieldingPositionMap;
     battersByPosition: FieldingPositionMap;
   },
@@ -482,7 +489,6 @@ function toFieldingLine(
     outs: row.outs,
     bigPlays: row.bigPlays,
     battersInField: row.battersInField,
-    longestHrDistance: row.longestHrDistance,
     outsByPosition: row.outsByPosition,
     battersByPosition: row.battersByPosition,
     primaryPosition: primaryFieldingPosition(row.battersByPosition),
@@ -518,7 +524,6 @@ async function aggregateFieldingRows(filter: StatFilter) {
       fieldingOuts: characterGameStats.fieldingOuts,
       fieldingBatters: characterGameStats.fieldingBatters,
       bigPlays: characterGameStats.bigPlays,
-      longestHrDistance: characterGameStats.longestHrDistance,
       fieldingByPositionJson: characterGameStats.fieldingByPositionJson,
     })
     .from(characterGameStats)
@@ -539,7 +544,6 @@ function foldFieldingRows(
       outs: number;
       bigPlays: number;
       battersInField: number;
-      longestHrDistance: number | null;
       outsByPosition: FieldingPositionMap;
       battersByPosition: FieldingPositionMap;
     }
@@ -555,7 +559,6 @@ function foldFieldingRows(
       outs: 0,
       bigPlays: 0,
       battersInField: 0,
-      longestHrDistance: null,
       outsByPosition: {},
       battersByPosition: {},
     };
@@ -564,12 +567,6 @@ function foldFieldingRows(
     current.outs += row.fieldingOuts;
     current.bigPlays += row.bigPlays;
     current.battersInField += row.fieldingBatters;
-    if (row.longestHrDistance != null) {
-      current.longestHrDistance = Math.max(
-        current.longestHrDistance ?? 0,
-        row.longestHrDistance,
-      );
-    }
     if (parsed) {
       current.outsByPosition = mergePositionMaps(
         current.outsByPosition,
@@ -593,7 +590,6 @@ function foldFieldingRows(
         outs: entry.outs,
         bigPlays: entry.bigPlays,
         battersInField: entry.battersInField,
-        longestHrDistance: entry.longestHrDistance,
         outsByPosition: entry.outsByPosition,
         battersByPosition: entry.battersByPosition,
       }),
@@ -627,10 +623,6 @@ export async function aggregateFieldingByCharId(
       outs: existing.outs + line.outs,
       bigPlays: existing.bigPlays + line.bigPlays,
       battersInField: existing.battersInField + line.battersInField,
-      longestHrDistance:
-        existing.longestHrDistance != null || line.longestHrDistance != null
-          ? Math.max(existing.longestHrDistance ?? 0, line.longestHrDistance ?? 0)
-          : null,
       outsByPosition: mergePositionMaps(existing.outsByPosition, line.outsByPosition),
       battersByPosition: mergePositionMaps(
         existing.battersByPosition,
@@ -656,7 +648,6 @@ export async function aggregateFieldingByCharAndSeason(
       fieldingOuts: characterGameStats.fieldingOuts,
       fieldingBatters: characterGameStats.fieldingBatters,
       bigPlays: characterGameStats.bigPlays,
-      longestHrDistance: characterGameStats.longestHrDistance,
       fieldingByPositionJson: characterGameStats.fieldingByPositionJson,
     })
     .from(characterGameStats)
@@ -697,10 +688,6 @@ export async function aggregateFieldingByCharAndSeason(
         outs: line.outs + entry.outs,
         bigPlays: line.bigPlays + entry.bigPlays,
         battersInField: line.battersInField + entry.battersInField,
-        longestHrDistance:
-          line.longestHrDistance != null || entry.longestHrDistance != null
-            ? Math.max(line.longestHrDistance ?? 0, entry.longestHrDistance ?? 0)
-            : null,
         outsByPosition: mergePositionMaps(line.outsByPosition, entry.outsByPosition),
         battersByPosition: mergePositionMaps(
           line.battersByPosition,
@@ -845,6 +832,9 @@ export async function aggregateBattingByCharAndManager(
       walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
       sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
       rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+      longestHrDistance: sql<number | null>`max(${characterGameStats.longestHrDistance})`.mapWith(
+        Number,
+      ),
     })
     .from(characterGameStats)
     .innerJoin(teams, eq(characterGameStats.teamId, teams.id))
@@ -879,6 +869,9 @@ export async function aggregateBattingByCharAndSeason(
       walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
       sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
       rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+      longestHrDistance: sql<number | null>`max(${characterGameStats.longestHrDistance})`.mapWith(
+        Number,
+      ),
     })
     .from(characterGameStats)
     .innerJoin(seasons, eq(characterGameStats.seasonId, seasons.id))
@@ -919,6 +912,9 @@ export async function aggregateBattingByCharAndStadium(
       walksHbp: sql<number>`sum(${characterGameStats.walksHbp})`.mapWith(Number),
       sacFly: sql<number>`sum(${characterGameStats.sacFly})`.mapWith(Number),
       rbi: sql<number>`sum(${characterGameStats.rbi})`.mapWith(Number),
+      longestHrDistance: sql<number | null>`max(${characterGameStats.longestHrDistance})`.mapWith(
+        Number,
+      ),
     })
     .from(characterGameStats)
     .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
@@ -945,15 +941,31 @@ export async function aggregateBattingByCharAndStadium(
           rbi: row.rbi,
         };
         const existing = acc.get(canonicalId);
-        acc.set(canonicalId, existing ? sumBattingTotals([existing, totals]) : totals);
+        if (!existing) {
+          acc.set(canonicalId, {
+            totals,
+            longestHrDistance: row.longestHrDistance ?? null,
+          });
+          return acc;
+        }
+        acc.set(canonicalId, {
+          totals: sumBattingTotals([existing.totals, totals]),
+          longestHrDistance:
+            existing.longestHrDistance != null || row.longestHrDistance != null
+              ? Math.max(existing.longestHrDistance ?? 0, row.longestHrDistance ?? 0)
+              : null,
+        });
         return acc;
       },
-      new Map<string, BattingTotals>(),
+      new Map<string, { totals: BattingTotals; longestHrDistance: number | null }>(),
     );
 
-  return [...merged.entries()].map(([stadiumId, totals]) => ({
+  return [...merged.entries()].map(([stadiumId, entry]) => ({
     stadiumId,
-    line: toBattingLine(charId, 0, totals),
+    line: toBattingLine(charId, 0, {
+      ...entry.totals,
+      longestHrDistance: entry.longestHrDistance,
+    }),
   }));
 }
 

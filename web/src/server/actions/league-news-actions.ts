@@ -28,6 +28,17 @@ function revalidateNewsPaths(leagueId: string, seasonId: string) {
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
 }
 
+function revalidateGameRecapPath(
+  leagueId: string,
+  seasonId: string,
+  gameId: string | null | undefined,
+) {
+  if (!gameId) return;
+  revalidatePath(
+    `/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`,
+  );
+}
+
 async function requireCommissioner(leagueId: string) {
   const user = await requireUser();
   const role = await getLeagueRole(leagueId, user);
@@ -217,6 +228,7 @@ export async function publishLeaguePostAction(input: {
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidateGameRecapPath(input.leagueId, input.seasonId, post.relatedGameId);
   return {};
 }
 
@@ -236,7 +248,7 @@ export async function updateLeaguePostAction(input: {
   if (!body) return { error: "Article body is required." };
 
   const [post] = await db
-    .select({ id: leaguePosts.id })
+    .select({ id: leaguePosts.id, relatedGameId: leaguePosts.relatedGameId })
     .from(leaguePosts)
     .where(
       and(eq(leaguePosts.id, input.postId), eq(leaguePosts.leagueId, input.leagueId)),
@@ -250,6 +262,7 @@ export async function updateLeaguePostAction(input: {
     .where(eq(leaguePosts.id, input.postId));
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidateGameRecapPath(input.leagueId, input.seasonId, post.relatedGameId);
   return {};
 }
 
@@ -261,6 +274,14 @@ export async function deleteLeaguePostAction(input: {
   const auth = await requireCommissioner(input.leagueId);
   if ("error" in auth) return auth;
 
+  const [post] = await db
+    .select({ relatedGameId: leaguePosts.relatedGameId })
+    .from(leaguePosts)
+    .where(
+      and(eq(leaguePosts.id, input.postId), eq(leaguePosts.leagueId, input.leagueId)),
+    )
+    .limit(1);
+
   await db
     .delete(leaguePosts)
     .where(
@@ -268,6 +289,7 @@ export async function deleteLeaguePostAction(input: {
     );
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidateGameRecapPath(input.leagueId, input.seasonId, post?.relatedGameId);
   return {};
 }
 
