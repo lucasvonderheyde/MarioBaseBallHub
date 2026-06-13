@@ -173,6 +173,11 @@
 
 html {
   overflow-x: clip;
+  background-color: #f0f8ff;
+}
+
+html.dark {
+  background-color: #061828;
 }
 
 body {
@@ -188,6 +193,8 @@ body {
       #e8f4fc 55%,
       #f0f8ff 100%
     );
+  background-repeat: no-repeat;
+  background-position: top center;
   background-attachment: fixed;
 }
 
@@ -195,6 +202,31 @@ body {
   body {
     /* fixed backgrounds cause scroll jank and overflow on iOS Safari */
     background-attachment: scroll;
+    background-size: 100% max(100svh, 36rem);
+    background-image:
+      radial-gradient(ellipse 150% 90% at 50% 0%, rgb(74 159 232 / 0.45), transparent 68%),
+      linear-gradient(
+        180deg,
+        #b8dcfc 0%,
+        #d8ecfc 20%,
+        #e8f4fc 45%,
+        #f0f8ff 70%,
+        #f0f8ff 100%
+      );
+  }
+
+  .dark body {
+    background-size: 100% max(100svh, 36rem);
+    background-image:
+      radial-gradient(ellipse 150% 90% at 50% 0%, rgb(74 159 232 / 0.35), transparent 68%),
+      linear-gradient(
+        180deg,
+        #1e5a8f 0%,
+        #123d6b 16%,
+        #0a2240 38%,
+        #061828 62%,
+        #061828 100%
+      );
   }
 }
 
