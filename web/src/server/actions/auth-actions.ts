@@ -16,6 +16,8 @@ import { redirectWithFormError } from "@/server/flash-redirect";
 import { newUuid } from "@/server/ids";
 import { BCRYPT_COST, validatePassword } from "@/lib/password-policy";
 import { isSafeRedirectPath } from "@/lib/team-claims";
+import { loginFailureMessage } from "@/lib/auth-login";
+import { getGoogleAccountForUser } from "@/lib/oauth-accounts";
 import { resolvePostAuthRedirect } from "@/lib/post-auth-redirect";
 
 async function redirectAfterAuth(userId: string, next: string | null) {
@@ -68,14 +70,22 @@ export async function loginAction(formData: FormData) {
   if (!u) {
     redirectWithFormError("/login", "Invalid credentials.");
   }
-  if (!u.passwordSetAt) {
+  const passwordMatches = await bcrypt.compare(password, u.passwordHash);
+  if (!passwordMatches) {
+    const googleAccount = await getGoogleAccountForUser(u.id);
     redirectWithFormError(
       "/login",
-      "This account uses Google sign-in. Continue with Google instead.",
+      loginFailureMessage({
+        hasPasswordSetAt: u.passwordSetAt != null,
+        hasGoogleLink: googleAccount != null,
+      }),
     );
   }
-  if (!(await bcrypt.compare(password, u.passwordHash))) {
-    redirectWithFormError("/login", "Invalid credentials.");
+  if (!u.passwordSetAt) {
+    await db
+      .update(users)
+      .set({ passwordSetAt: new Date() })
+      .where(eq(users.id, u.id));
   }
   await maybeGrantSiteAdminOnAuth(u.id, u.username);
   const session = await getSession();
