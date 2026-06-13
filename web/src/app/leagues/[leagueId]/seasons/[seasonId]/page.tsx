@@ -12,7 +12,6 @@ import { aiNewsEnabled } from "@/lib/ai-news";
 import { getSeasonNewsPosts } from "@/lib/league-news";
 import { getRecentSeasonEvents } from "@/lib/season-events";
 import { SeasonHubStandings } from "@/components/season/SeasonHubStandings";
-import { SeasonHubTeamGrid } from "@/components/season/SeasonHubTeamGrid";
 import { SeasonWeekTimeline } from "@/components/season/SeasonWeekTimeline";
 import { SeasonHubFeaturedRecords } from "@/components/season/SeasonHubFeaturedRecords";
 import { SeasonHubRecordsCompact } from "@/components/season/SeasonHubRecordsCompact";
@@ -24,7 +23,6 @@ import { getSeasonRecords } from "@/lib/season-records";
 import { listSeriesOptions } from "@/lib/inky-briefs";
 import { buildSeasonOddsSnapshot } from "@/lib/season-odds";
 import { getManagedTeamInSeason } from "@/lib/manager-team";
-import { getTeamRosterCountsForSeason } from "@/lib/roster-rules";
 import {
   pendingProposalsByGameId,
   getPendingScheduleProposalsForSeason,
@@ -60,7 +58,6 @@ export default async function SeasonPage({ params, searchParams }: Props) {
     game: toScheduleGameDisplay(game, proposalMap.get(game.id) ?? null),
     round,
   }));
-  const rosterCounts = await getTeamRosterCountsForSeason(seasonId);
   const userTeam = user ? await getManagedTeamInSeason(user.id, seasonId) : null;
   const seasonRecords = await getSeasonRecords(seasonId);
   const oddsSnapshot = buildSeasonOddsSnapshot(dash);
@@ -222,13 +219,6 @@ export default async function SeasonPage({ params, searchParams }: Props) {
               gameOdds={oddsSnapshot.gameOdds}
             />
 
-            <SeasonHubTeamGrid
-              leagueId={leagueId}
-              seasonId={seasonId}
-              teams={teams}
-              standings={dash.standings}
-              rosterCounts={rosterCounts}
-            />
           </div>
 
           <aside className="space-y-4">

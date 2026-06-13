@@ -42,6 +42,7 @@ export async function registerAction(formData: FormData) {
       id,
       username,
       passwordHash: hash,
+      passwordSetAt: new Date(),
       displayName: displayName || null,
       isSiteAdmin: isConfiguredSiteAdminUsername(username),
     });
@@ -64,7 +65,16 @@ export async function loginAction(formData: FormData) {
     .from(users)
     .where(eq(users.username, username))
     .limit(1);
-  if (!u || !(await bcrypt.compare(password, u.passwordHash))) {
+  if (!u) {
+    redirectWithFormError("/login", "Invalid credentials.");
+  }
+  if (!u.passwordSetAt) {
+    redirectWithFormError(
+      "/login",
+      "This account uses Google sign-in. Continue with Google instead.",
+    );
+  }
+  if (!(await bcrypt.compare(password, u.passwordHash))) {
     redirectWithFormError("/login", "Invalid credentials.");
   }
   await maybeGrantSiteAdminOnAuth(u.id, u.username);
@@ -144,6 +154,13 @@ export async function changePasswordAction(formData: FormData) {
   const newPassword = String(formData.get("newPassword") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
+  if (!current.passwordSetAt) {
+    redirectWithFormError(
+      "/account",
+      "Set a password first — your account currently uses Google sign-in only.",
+    );
+  }
+
   if (!(await bcrypt.compare(currentPassword, current.passwordHash))) {
     redirectWithFormError("/account", "Current password is incorrect.");
   }
@@ -165,7 +182,7 @@ export async function changePasswordAction(formData: FormData) {
   const hash = await bcrypt.hash(newPassword, BCRYPT_COST);
   await db
     .update(users)
-    .set({ passwordHash: hash })
+    .set({ passwordHash: hash, passwordSetAt: new Date() })
     .where(eq(users.id, current.id));
 
   revalidatePath("/account");

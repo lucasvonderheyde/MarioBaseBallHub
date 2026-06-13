@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { getCurrentUser } from "@/lib/auth";
 import { resolvePostAuthRedirect } from "@/lib/post-auth-redirect";
 import { isSafeRedirectPath } from "@/lib/team-claims";
@@ -9,10 +10,10 @@ import { PageShell } from "@/components/PageShell";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ e?: string; next?: string }>;
+  searchParams: Promise<{ e?: string; m?: string; next?: string }>;
 }) {
   const user = await getCurrentUser();
-  const { e, next } = await searchParams;
+  const { e, m, next } = await searchParams;
   if (user) {
     redirect(
       isSafeRedirectPath(next) ? next : await resolvePostAuthRedirect(user.id),
@@ -26,6 +27,11 @@ export default async function LoginPage({
           {e}
         </p>
       ) : null}
+      {m === "password-reset" ? (
+        <p className="mt-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Password updated. Log in with your new password.
+        </p>
+      ) : null}
       <form action={loginAction} className="mt-6 space-y-4">
         {next ? <input type="hidden" name="next" value={next} /> : null}
         <div>
@@ -37,7 +43,15 @@ export default async function LoginPage({
           />
         </div>
         <div>
-          <label className="text-sm text-zinc-400">Password</label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-sm text-zinc-400">Password</label>
+            <Link
+              href="/forgot-password"
+              className="text-xs text-amber-400 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input
             name="password"
             type="password"
@@ -53,6 +67,9 @@ export default async function LoginPage({
           Log in
         </button>
       </form>
+      <div className="mt-4">
+        <GoogleSignInButton next={next ?? null} />
+      </div>
       <p className="mt-4 text-sm text-zinc-500">
         No account?{" "}
         <Link

@@ -119,6 +119,11 @@ All root-level `npm run …` commands forward to `web/` (see root `package.json`
 | `DISCORD_WEBHOOK_URL` | Optional | Discord webhook; posts game reports, agreed times, and trades to your server |
 | `ANTHROPIC_API_KEY` | Optional | Enables the AI news reporter (commissioner-reviewed season recaps) |
 | `AI_NEWS_MODEL` | Optional | Claude model for recaps (default `claude-opus-4-8`) |
+| `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID — enables sign-in and email linking |
+| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret |
+| `APP_URL` | Optional | Public site URL for OAuth redirects and password-reset links (e.g. `https://your-app.up.railway.app`) |
+| `RESEND_API_KEY` | Optional | Sends password-reset emails via [Resend](https://resend.com); without it, dev logs reset links to the console |
+| `EMAIL_FROM` | With Resend | Sender address, e.g. `Mario Baseball Hub <noreply@yourdomain.com>` |
 | `DEV_ADMIN_USERNAME` | Scripts only | Bootstrap script default user (not read by Next.js) |
 | `DEV_ADMIN_PASSWORD` | Scripts only | Bootstrap script default password |
 

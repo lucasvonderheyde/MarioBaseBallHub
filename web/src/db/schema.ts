@@ -10,6 +10,11 @@ export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   username: text("username").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  /** Set when the user chooses a password (register, set initial, or change). */
+  passwordSetAt: integer("password_set_at", { mode: "timestamp" }),
+  /** Verified email from a linked Google account. */
+  email: text("email").unique(),
+  emailVerifiedAt: integer("email_verified_at", { mode: "timestamp" }),
   displayName: text("display_name"),
   /** Rio / Dolphin netplay name used to match decoded game stats uploads. */
   netplayUsername: text("netplay_username"),
@@ -17,6 +22,38 @@ export const users = sqliteTable("users", {
   isSiteAdmin: integer("is_site_admin", { mode: "boolean" })
     .notNull()
     .default(false),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const oauthAccounts = sqliteTable(
+  "oauth_accounts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider", { enum: ["google"] }).notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    email: text("email"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("oauth_provider_account").on(t.provider, t.providerAccountId),
+  ],
+);
+
+export const passwordResetTokens = sqliteTable("password_reset_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  usedAt: integer("used_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

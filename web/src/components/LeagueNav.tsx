@@ -43,6 +43,9 @@ export function LeagueNav({
   const standingsHref = contextSeasonId
     ? `/leagues/${leagueId}/standings?season=${contextSeasonId}`
     : `/leagues/${leagueId}/standings`;
+  const teamsHref = contextSeasonId
+    ? `/leagues/${leagueId}/teams?season=${contextSeasonId}`
+    : `/leagues/${leagueId}/teams`;
   const charactersHref = contextSeasonId
     ? `/leagues/${leagueId}/characters?season=${contextSeasonId}`
     : `/leagues/${leagueId}/characters`;
@@ -61,7 +64,8 @@ export function LeagueNav({
           path.startsWith(`${leagueHome}/seasons/${activeSeasonId}`) &&
           !path.includes("/admin") &&
           !path.includes("/rosters") &&
-          !path.includes("/draft"),
+          !path.includes("/draft") &&
+          !path.includes("/teams/"),
       });
     }
 
@@ -99,6 +103,14 @@ export function LeagueNav({
         href: standingsHref,
         label: "Standings",
         match: (path) => path.startsWith(`${leagueHome}/standings`),
+      },
+      {
+        href: teamsHref,
+        label: "Teams",
+        match: (path) =>
+          path.startsWith(`${leagueHome}/teams`) ||
+          (contextSeasonId != null &&
+            path.includes(`/seasons/${contextSeasonId}/teams/`)),
       },
       {
         href: charactersHref,

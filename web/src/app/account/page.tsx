@@ -19,7 +19,10 @@ import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { CharacterIcon } from "@/components/CharacterIcon";
 import { GameStatsUploader } from "@/components/GameStatsUploader";
 import { ManagerAvatar } from "@/components/ManagerAvatar";
+import { GoogleLinkButton } from "@/components/GoogleSignInButton";
 import { getCurrentUser, userIsSiteAdmin } from "@/lib/auth";
+import { googleOAuthEnabled } from "@/lib/google-oauth";
+import { getGoogleAccountForUser } from "@/lib/oauth-accounts";
 import { formatCharIdDisplay } from "@/lib/character-display";
 import {
   getManagerHeadToHeadRecords,
@@ -35,7 +38,12 @@ import {
 } from "@/lib/sort-manager-character-stats";
 import { getReportableGamesForUser } from "@/lib/manager-upload-games";
 import { passwordPolicyDescription } from "@/lib/password-policy";
-import { changePasswordAction, updateProfileAction } from "@/server/actions";
+import {
+  changePasswordAction,
+  setInitialPasswordAction,
+  unlinkGoogleAction,
+  updateProfileAction,
+} from "@/server/actions";
 import { PageShell } from "@/components/PageShell";
 
 type Tab = "profile" | "stats" | "upload";
@@ -71,6 +79,8 @@ export default async function AccountPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const googleAccount = await getGoogleAccountForUser(user.id);
+  const hasPassword = user.passwordSetAt != null;
   const { e, m, tab: tabParam, section: sectionParam, batSort, pitSort } =
     await searchParams;
   const activeTab = parseTab(tabParam);
@@ -119,6 +129,26 @@ export default async function AccountPage({
       {m === "password-updated" ? (
         <p className="mt-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
           Password updated.
+        </p>
+      ) : null}
+      {m === "password-set" ? (
+        <p className="mt-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Password set. You can now log in with username and password.
+        </p>
+      ) : null}
+      {m === "google-linked" ? (
+        <p className="mt-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Google account linked. Your verified email can be used for password recovery.
+        </p>
+      ) : null}
+      {m === "google-unlinked" ? (
+        <p className="mt-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Google account unlinked.
+        </p>
+      ) : null}
+      {m === "google-created" ? (
+        <p className="mt-4 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-200">
+          Account created with Google. Set a password below if you also want username login.
         </p>
       ) : null}
 
@@ -197,47 +227,125 @@ export default async function AccountPage({
           </form>
 
           <section className="mt-10 border-t border-zinc-800 pt-8">
-            <SectionHeading>Change password</SectionHeading>
+            <SectionHeading>Email &amp; sign-in</SectionHeading>
             <p className="mt-1 text-sm text-zinc-500">
-              {passwordPolicyDescription()}
+              Link Google to verify an email for password recovery and optional
+              Google sign-in.
             </p>
-            <form action={changePasswordAction} className="mt-4 space-y-4">
-              <div>
-                <label className="text-sm text-zinc-400">Current password</label>
-                <input
-                  name="currentPassword"
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
-                />
+
+            {user.email ? (
+              <div className="mt-4 rounded-md border border-zinc-800 bg-zinc-950/40 px-3 py-3 text-sm">
+                <p className="text-zinc-400">Linked email</p>
+                <p className="mt-1 font-medium text-zinc-100">{user.email}</p>
+                {googleAccount ? (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Connected via Google
+                    {user.emailVerifiedAt
+                      ? ` · verified ${user.emailVerifiedAt.toLocaleDateString()}`
+                      : ""}
+                  </p>
+                ) : null}
               </div>
-              <div>
-                <label className="text-sm text-zinc-400">New password</label>
-                <input
-                  name="newPassword"
-                  type="password"
-                  required
-                  minLength={10}
-                  autoComplete="new-password"
-                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-zinc-400">Confirm new password</label>
-                <input
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  minLength={10}
-                  autoComplete="new-password"
-                  className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
-                />
-              </div>
-              <button type="submit" className="msb-btn-primary w-full py-2">
-                Update password
-              </button>
-            </form>
+            ) : (
+              <p className="mt-4 text-sm text-zinc-500">
+                No email linked yet.
+                {googleOAuthEnabled()
+                  ? " Link Google to enable password recovery."
+                  : " Google sign-in is not configured on this server."}
+              </p>
+            )}
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              {!googleAccount && googleOAuthEnabled() ? <GoogleLinkButton /> : null}
+              {googleAccount ? (
+                <form action={unlinkGoogleAction}>
+                  <button
+                    type="submit"
+                    className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
+                  >
+                    Unlink Google
+                  </button>
+                </form>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="mt-10 border-t border-zinc-800 pt-8">
+            <SectionHeading>
+              {hasPassword ? "Change password" : "Set a password"}
+            </SectionHeading>
+            <p className="mt-1 text-sm text-zinc-500">
+              {hasPassword
+                ? passwordPolicyDescription()
+                : "Optional if you use Google sign-in. Adds username/password login and lets you unlink Google later."}
+            </p>
+            {hasPassword ? (
+              <form action={changePasswordAction} className="mt-4 space-y-4">
+                <div>
+                  <label className="text-sm text-zinc-400">Current password</label>
+                  <input
+                    name="currentPassword"
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-zinc-400">New password</label>
+                  <input
+                    name="newPassword"
+                    type="password"
+                    required
+                    minLength={10}
+                    autoComplete="new-password"
+                    className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-zinc-400">Confirm new password</label>
+                  <input
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    minLength={10}
+                    autoComplete="new-password"
+                    className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+                  />
+                </div>
+                <button type="submit" className="msb-btn-primary w-full py-2">
+                  Update password
+                </button>
+              </form>
+            ) : (
+              <form action={setInitialPasswordAction} className="mt-4 space-y-4">
+                <div>
+                  <label className="text-sm text-zinc-400">New password</label>
+                  <input
+                    name="newPassword"
+                    type="password"
+                    required
+                    minLength={10}
+                    autoComplete="new-password"
+                    className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-zinc-400">Confirm new password</label>
+                  <input
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    minLength={10}
+                    autoComplete="new-password"
+                    className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2"
+                  />
+                </div>
+                <button type="submit" className="msb-btn-primary w-full py-2">
+                  Set password
+                </button>
+              </form>
+            )}
           </section>
         </>
       ) : null}

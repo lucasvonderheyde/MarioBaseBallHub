@@ -17,6 +17,7 @@ import {
   generateInkyWeeklyAction,
   generateSeasonRecapAction,
   publishLeaguePostAction,
+  updateLeaguePostAction,
 } from "@/server/actions/league-news-actions";
 
 export type SeasonNewsPost = {
@@ -57,6 +58,9 @@ export function SeasonNewsPanel({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [seriesKey, setSeriesKey] = useState(seriesOptions[0]?.seriesKey ?? "");
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
 
   if (posts.length === 0 && !isAdmin) return null;
 
@@ -65,6 +69,33 @@ export function SeasonNewsPanel({
     startTransition(async () => {
       const result = await action();
       if (result.error) setError(result.error);
+    });
+  }
+
+  function startEditing(post: SeasonNewsPost) {
+    setEditingPostId(post.id);
+    setEditTitle(post.title);
+    setEditBody(post.body);
+    setError(null);
+  }
+
+  function cancelEditing() {
+    setEditingPostId(null);
+    setEditTitle("");
+    setEditBody("");
+  }
+
+  function saveEdit(postId: string) {
+    run(async () => {
+      const result = await updateLeaguePostAction({
+        postId,
+        leagueId,
+        seasonId,
+        title: editTitle,
+        body: editBody,
+      });
+      if (!result.error) cancelEditing();
+      return result;
     });
   }
 
@@ -225,13 +256,63 @@ export function SeasonNewsPanel({
                   </span>
                 ) : null}
               </div>
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-300">
-                {post.body}
-              </p>
+              {editingPostId === post.id ? (
+                <div className="mt-3 space-y-3">
+                  <label className="block text-xs text-zinc-500">
+                    Headline
+                    <input
+                      value={editTitle}
+                      onChange={(event) => setEditTitle(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100"
+                    />
+                  </label>
+                  <label className="block text-xs text-zinc-500">
+                    Article
+                    <textarea
+                      value={editBody}
+                      onChange={(event) => setEditBody(event.target.value)}
+                      rows={10}
+                      className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm leading-relaxed text-zinc-100"
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => saveEdit(post.id)}
+                      className="msb-btn-primary text-xs"
+                    >
+                      Save edits
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={cancelEditing}
+                      className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-300">
+                  {post.body}
+                </p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-600">
                 {post.createdAt.toLocaleDateString()}
                 {isAdmin ? (
                   <>
+                    {editingPostId !== post.id ? (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => startEditing(post)}
+                        className="text-amber-400 hover:underline"
+                      >
+                        Edit
+                      </button>
+                    ) : null}
                     {post.status === "draft" ? (
                       <button
                         type="button"

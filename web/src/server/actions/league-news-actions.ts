@@ -220,6 +220,39 @@ export async function publishLeaguePostAction(input: {
   return {};
 }
 
+export async function updateLeaguePostAction(input: {
+  postId: string;
+  leagueId: string;
+  seasonId: string;
+  title: string;
+  body: string;
+}): Promise<{ error?: string }> {
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
+
+  const title = input.title.trim();
+  const body = input.body.trim();
+  if (!title) return { error: "Title is required." };
+  if (!body) return { error: "Article body is required." };
+
+  const [post] = await db
+    .select({ id: leaguePosts.id })
+    .from(leaguePosts)
+    .where(
+      and(eq(leaguePosts.id, input.postId), eq(leaguePosts.leagueId, input.leagueId)),
+    )
+    .limit(1);
+  if (!post) return { error: "Post not found." };
+
+  await db
+    .update(leaguePosts)
+    .set({ title, body })
+    .where(eq(leaguePosts.id, input.postId));
+
+  revalidateNewsPaths(input.leagueId, input.seasonId);
+  return {};
+}
+
 export async function deleteLeaguePostAction(input: {
   postId: string;
   leagueId: string;

@@ -50,7 +50,7 @@ export function LeagueSeasonSwitcher({ options }: Props) {
 
   if (options.length === 1) {
     return (
-      <div className="order-3 flex w-full justify-center sm:order-0 sm:absolute sm:left-1/2 sm:w-auto sm:-translate-x-1/2">
+      <div className="flex w-full justify-center sm:w-auto sm:justify-self-center">
         <Link href={current.href} className={`${triggerClass} max-w-[14rem]`}>
           <span className="truncate">{current.leagueName}</span>
         </Link>
@@ -61,7 +61,7 @@ export function LeagueSeasonSwitcher({ options }: Props) {
   return (
     <div
       ref={rootRef}
-      className="relative order-3 flex w-full justify-center sm:order-0 sm:absolute sm:left-1/2 sm:w-auto sm:-translate-x-1/2"
+      className="relative flex w-full justify-center sm:w-auto sm:justify-self-center"
     >
       <button
         type="button"

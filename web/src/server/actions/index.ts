@@ -6,6 +6,12 @@ export {
   changePasswordAction,
 } from "./auth-actions";
 export {
+  requestPasswordResetAction,
+  resetPasswordAction,
+  unlinkGoogleAction,
+  setInitialPasswordAction,
+} from "./password-reset-actions";
+export {
   createLeagueAction,
   createSeasonAction,
   addMemberAction,

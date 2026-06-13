@@ -1,8 +1,12 @@
 import { getIronSession, type SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
+import type { GoogleOAuthMode } from "@/lib/google-oauth";
 
 export type SessionData = {
   userId?: string;
+  oauthState?: string;
+  oauthMode?: GoogleOAuthMode;
+  oauthNext?: string;
 };
 
 export const sessionOptions: SessionOptions = {
