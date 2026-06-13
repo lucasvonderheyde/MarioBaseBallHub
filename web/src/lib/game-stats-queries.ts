@@ -15,6 +15,12 @@ import {
   sluggingPercentage,
   sumBattingTotals,
 } from "@/domain/stats/batting-metrics";
+import {
+  mergePositionMaps,
+  primaryFieldingPosition,
+  type FieldingByPosition,
+  type FieldingPositionMap,
+} from "@/domain/stats/fielding-by-position";
 import { normalizeStadiumId, stadiumIdVariants } from "@/domain/stats/stadium-id";
 
 export type BattingLine = BattingTotals & {
@@ -410,6 +416,300 @@ export async function aggregatePitchingByCharAndSeason(
     seasonName: row.seasonName,
     line: toPitchingLine(charId, 0, row),
   }));
+}
+
+export type FieldingLine = {
+  charId: string;
+  charOccurrenceIndex: number;
+  games: number;
+  outs: number;
+  bigPlays: number;
+  battersInField: number;
+  longestHrDistance: number | null;
+  outsByPosition: FieldingPositionMap;
+  battersByPosition: FieldingPositionMap;
+  primaryPosition: ReturnType<typeof primaryFieldingPosition>;
+};
+
+export function emptyFieldingLine(charId: string): FieldingLine {
+  return {
+    charId,
+    charOccurrenceIndex: 0,
+    games: 0,
+    outs: 0,
+    bigPlays: 0,
+    battersInField: 0,
+    longestHrDistance: null,
+    outsByPosition: {},
+    battersByPosition: {},
+    primaryPosition: null,
+  };
+}
+
+export function getFieldingLine(
+  map: Map<string, FieldingLine>,
+  charId: string,
+): FieldingLine {
+  return map.get(charId) ?? emptyFieldingLine(charId);
+}
+
+function parseFieldingJson(raw: string | null): FieldingByPosition | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as FieldingByPosition;
+  } catch {
+    return null;
+  }
+}
+
+function toFieldingLine(
+  charId: string,
+  charOccurrenceIndex: number,
+  row: {
+    games: number;
+    outs: number;
+    bigPlays: number;
+    battersInField: number;
+    longestHrDistance: number | null;
+    outsByPosition: FieldingPositionMap;
+    battersByPosition: FieldingPositionMap;
+  },
+): FieldingLine {
+  return {
+    charId,
+    charOccurrenceIndex,
+    games: row.games,
+    outs: row.outs,
+    bigPlays: row.bigPlays,
+    battersInField: row.battersInField,
+    longestHrDistance: row.longestHrDistance,
+    outsByPosition: row.outsByPosition,
+    battersByPosition: row.battersByPosition,
+    primaryPosition: primaryFieldingPosition(row.battersByPosition),
+  };
+}
+
+const appearedInField = sql`(${characterGameStats.fieldingOuts} > 0 OR ${characterGameStats.fieldingBatters} > 0)`;
+
+async function buildFieldingStatConditions(filter: StatFilter) {
+  const conditions = [seasonFilter(filter), appearedInField];
+  if (filter.teamId) conditions.push(eq(characterGameStats.teamId, filter.teamId));
+  if (filter.charId) conditions.push(eq(characterGameStats.charId, filter.charId));
+  if (filter.managerUserId) {
+    conditions.push(eq(teams.managerUserId, filter.managerUserId));
+  }
+  if (filter.leagueId && !filter.seasonId) {
+    const seasonIds = await getSeasonIdsForLeague(filter.leagueId);
+    if (seasonIds.length === 0) return null;
+    conditions.push(inArray(characterGameStats.seasonId, seasonIds));
+  }
+  return conditions;
+}
+
+async function aggregateFieldingRows(filter: StatFilter) {
+  const conditions = await buildFieldingStatConditions(filter);
+  if (!conditions) return [];
+
+  return db
+    .select({
+      charId: characterGameStats.charId,
+      charOccurrenceIndex: characterGameStats.charOccurrenceIndex,
+      gameId: characterGameStats.gameId,
+      fieldingOuts: characterGameStats.fieldingOuts,
+      fieldingBatters: characterGameStats.fieldingBatters,
+      bigPlays: characterGameStats.bigPlays,
+      longestHrDistance: characterGameStats.longestHrDistance,
+      fieldingByPositionJson: characterGameStats.fieldingByPositionJson,
+    })
+    .from(characterGameStats)
+    .innerJoin(scheduleGames, eq(characterGameStats.gameId, scheduleGames.id))
+    .innerJoin(teams, eq(characterGameStats.teamId, teams.id))
+    .where(and(...conditions));
+}
+
+function foldFieldingRows(
+  rows: Awaited<ReturnType<typeof aggregateFieldingRows>>,
+): Map<string, FieldingLine> {
+  const grouped = new Map<
+    string,
+    {
+      charId: string;
+      charOccurrenceIndex: number;
+      gameIds: Set<string>;
+      outs: number;
+      bigPlays: number;
+      battersInField: number;
+      longestHrDistance: number | null;
+      outsByPosition: FieldingPositionMap;
+      battersByPosition: FieldingPositionMap;
+    }
+  >();
+
+  for (const row of rows) {
+    const key = battingStatKey(row.charId, row.charOccurrenceIndex);
+    const parsed = parseFieldingJson(row.fieldingByPositionJson);
+    const current = grouped.get(key) ?? {
+      charId: row.charId,
+      charOccurrenceIndex: row.charOccurrenceIndex,
+      gameIds: new Set<string>(),
+      outs: 0,
+      bigPlays: 0,
+      battersInField: 0,
+      longestHrDistance: null,
+      outsByPosition: {},
+      battersByPosition: {},
+    };
+
+    current.gameIds.add(row.gameId);
+    current.outs += row.fieldingOuts;
+    current.bigPlays += row.bigPlays;
+    current.battersInField += row.fieldingBatters;
+    if (row.longestHrDistance != null) {
+      current.longestHrDistance = Math.max(
+        current.longestHrDistance ?? 0,
+        row.longestHrDistance,
+      );
+    }
+    if (parsed) {
+      current.outsByPosition = mergePositionMaps(
+        current.outsByPosition,
+        parsed.outs,
+      );
+      current.battersByPosition = mergePositionMaps(
+        current.battersByPosition,
+        parsed.batters,
+      );
+    }
+
+    grouped.set(key, current);
+  }
+
+  const map = new Map<string, FieldingLine>();
+  for (const entry of grouped.values()) {
+    map.set(
+      battingStatKey(entry.charId, entry.charOccurrenceIndex),
+      toFieldingLine(entry.charId, entry.charOccurrenceIndex, {
+        games: entry.gameIds.size,
+        outs: entry.outs,
+        bigPlays: entry.bigPlays,
+        battersInField: entry.battersInField,
+        longestHrDistance: entry.longestHrDistance,
+        outsByPosition: entry.outsByPosition,
+        battersByPosition: entry.battersByPosition,
+      }),
+    );
+  }
+  return map;
+}
+
+export async function aggregateFieldingByCharOccurrence(
+  filter: StatFilter,
+): Promise<Map<string, FieldingLine>> {
+  const rows = await aggregateFieldingRows(filter);
+  return foldFieldingRows(rows);
+}
+
+export async function aggregateFieldingByCharId(
+  filter: StatFilter,
+): Promise<Map<string, FieldingLine>> {
+  const byOccurrence = await aggregateFieldingByCharOccurrence(filter);
+  const merged = new Map<string, FieldingLine>();
+
+  for (const line of byOccurrence.values()) {
+    const existing = merged.get(line.charId);
+    if (!existing) {
+      merged.set(line.charId, { ...line, charOccurrenceIndex: 0 });
+      continue;
+    }
+
+    merged.set(line.charId, toFieldingLine(line.charId, 0, {
+      games: existing.games + line.games,
+      outs: existing.outs + line.outs,
+      bigPlays: existing.bigPlays + line.bigPlays,
+      battersInField: existing.battersInField + line.battersInField,
+      longestHrDistance:
+        existing.longestHrDistance != null || line.longestHrDistance != null
+          ? Math.max(existing.longestHrDistance ?? 0, line.longestHrDistance ?? 0)
+          : null,
+      outsByPosition: mergePositionMaps(existing.outsByPosition, line.outsByPosition),
+      battersByPosition: mergePositionMaps(
+        existing.battersByPosition,
+        line.battersByPosition,
+      ),
+    }));
+  }
+
+  return merged;
+}
+
+export async function aggregateFieldingByCharAndSeason(
+  charId: string,
+  leagueId: string,
+): Promise<{ seasonId: string; seasonName: string; line: FieldingLine }[]> {
+  const rows = await db
+    .select({
+      seasonId: seasons.id,
+      seasonName: seasons.name,
+      charId: characterGameStats.charId,
+      charOccurrenceIndex: characterGameStats.charOccurrenceIndex,
+      gameId: characterGameStats.gameId,
+      fieldingOuts: characterGameStats.fieldingOuts,
+      fieldingBatters: characterGameStats.fieldingBatters,
+      bigPlays: characterGameStats.bigPlays,
+      longestHrDistance: characterGameStats.longestHrDistance,
+      fieldingByPositionJson: characterGameStats.fieldingByPositionJson,
+    })
+    .from(characterGameStats)
+    .innerJoin(seasons, eq(characterGameStats.seasonId, seasons.id))
+    .where(
+      and(
+        eq(characterGameStats.charId, charId),
+        eq(seasons.leagueId, leagueId),
+        appearedInField,
+      ),
+    )
+    .orderBy(asc(seasons.createdAt));
+
+  const bySeason = new Map<
+    string,
+    {
+      seasonName: string;
+      rows: typeof rows;
+    }
+  >();
+
+  for (const row of rows) {
+    const bucket = bySeason.get(row.seasonId) ?? {
+      seasonName: row.seasonName,
+      rows: [],
+    };
+    bucket.rows.push(row);
+    bySeason.set(row.seasonId, bucket);
+  }
+
+  return [...bySeason.entries()].map(([seasonId, bucket]) => {
+    const folded = foldFieldingRows(bucket.rows);
+    let line = emptyFieldingLine(charId);
+    for (const entry of folded.values()) {
+      if (entry.charId !== charId) continue;
+      line = toFieldingLine(charId, 0, {
+        games: line.games + entry.games,
+        outs: line.outs + entry.outs,
+        bigPlays: line.bigPlays + entry.bigPlays,
+        battersInField: line.battersInField + entry.battersInField,
+        longestHrDistance:
+          line.longestHrDistance != null || entry.longestHrDistance != null
+            ? Math.max(line.longestHrDistance ?? 0, entry.longestHrDistance ?? 0)
+            : null,
+        outsByPosition: mergePositionMaps(line.outsByPosition, entry.outsByPosition),
+        battersByPosition: mergePositionMaps(
+          line.battersByPosition,
+          entry.battersByPosition,
+        ),
+      });
+    }
+    return { seasonId, seasonName: bucket.seasonName, line };
+  });
 }
 
 /**

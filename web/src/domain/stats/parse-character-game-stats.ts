@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  parseFieldingByPosition,
+  type FieldingByPosition,
+} from "./fielding-by-position";
 import { normalizeStadiumId } from "./stadium-id";
 
 const offensiveSchema = z.object({
@@ -32,6 +36,9 @@ const defensiveSchema = z.object({
   "Star Pitches Thrown": z.coerce.number(),
   "Big Plays": z.coerce.number(),
   "Outs Pitched": z.coerce.number(),
+  "Batters Per Position": z.array(z.record(z.string(), z.coerce.number())).optional(),
+  "Batter Outs Per Position": z.array(z.record(z.string(), z.coerce.number())).optional(),
+  "Outs Per Position": z.array(z.record(z.string(), z.coerce.number())).optional(),
 });
 
 const rosterEntrySchema = z.object({
@@ -93,6 +100,7 @@ export type ParsedCharacterGameStat = {
   strikeoutsDef: number;
   starPitches: number;
   bigPlays: number;
+  fieldingByPosition: FieldingByPosition;
 };
 
 export type ParsedGameStats = {
@@ -198,6 +206,7 @@ export function parseCharacterGameStats(data: unknown): ParsedGameStats {
       strikeoutsDef: def.Strikeouts,
       starPitches: def["Star Pitches Thrown"],
       bigPlays: def["Big Plays"],
+      fieldingByPosition: parseFieldingByPosition(def as Record<string, unknown>),
     });
   }
 

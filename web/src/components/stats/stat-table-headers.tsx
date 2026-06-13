@@ -64,6 +64,21 @@ export function pitchingStatHeaders({ className = "py-1 pr-2", includeG = true }
   );
 }
 
+export function fieldingStatHeaders({ className = "py-1 pr-2" }: HeaderOptions = {}) {
+  return (
+    <>
+      <StatColumnHeader abbr="G" className={className} description="Games in the field" />
+      <StatColumnHeader abbr="Pos" className={className} description="Primary position" />
+      <StatColumnHeader abbr="Outs" className={className} description="Outs recorded" />
+      <StatColumnHeader abbr="O/G" className={className} description="Outs per game" />
+      <StatColumnHeader abbr="BF" className={className} description="Batters faced while fielding" />
+      <StatColumnHeader abbr="BF/G" className={className} description="Batters faced per game in field" />
+      <StatColumnHeader abbr="BP" className={className} description="Big Plays" />
+      <StatColumnHeader abbr="Long HR" className={className} description="Longest home run" />
+    </>
+  );
+}
+
 export function standingsStatHeaders({ className = "py-2 pr-2" }: HeaderOptions = {}) {
   return (
     <>

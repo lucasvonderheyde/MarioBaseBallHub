@@ -6,6 +6,11 @@ import {
   assignCharOccurrenceIndexes,
   parseCharacterGameStats,
 } from "@/domain/stats/parse-character-game-stats";
+import { sumPositionMap } from "@/domain/stats/fielding-by-position";
+import {
+  homerunDistanceForRosterSlot,
+  parseHomerunDistancesByRoster,
+} from "@/domain/stats/parse-homerun-distance";
 import {
   classifyPitchingRoles,
   pitchingRoleKey,
@@ -34,51 +39,67 @@ export async function persistCharacterGameStats(input: PersistGameStatsInput): P
   const data = JSON.parse(input.rawJson) as unknown;
   const parsed = parseCharacterGameStats(data);
   const pitchingRoles = classifyPitchingRoles(parsed.characterStats, data);
+  const homerunDistances = parseHomerunDistancesByRoster(data);
 
   await db.delete(characterGameStats).where(eq(characterGameStats.gameId, input.gameId));
 
-  const rows = parsed.characterStats.map((s) => ({
-    id: newId(),
-    gameId: input.gameId,
-    seasonId: input.seasonId,
-    teamId: s.teamSide === "Away" ? input.awaySideTeamId : input.homeSideTeamId,
-    teamSide: s.teamSide,
-    rosterSlot: s.rosterSlot,
-    charOccurrenceIndex: s.charOccurrenceIndex,
-    charId: s.charId,
-    isCaptain: s.isCaptain,
-    isSuperstar: s.isSuperstar,
-    battingHand: s.battingHand,
-    fieldingHand: s.fieldingHand,
-    ab: s.ab,
-    hits: s.hits,
-    singles: s.singles,
-    doubles: s.doubles,
-    triples: s.triples,
-    hr: s.hr,
-    walks4ball: s.walks4ball,
-    walksHbp: s.walksHbp,
-    strikeoutsOff: s.strikeoutsOff,
-    rbi: s.rbi,
-    basesStolen: s.basesStolen,
-    sacFly: s.sacFly,
-    bunts: s.bunts,
-    starHits: s.starHits,
-    wasPitcher: s.wasPitcher,
-    pitchingRole: pitchingRoles.get(pitchingRoleKey(s.teamSide, s.rosterSlot)) ?? null,
-    battersFaced: s.battersFaced,
-    runsAllowed: s.runsAllowed,
-    earnedRuns: s.earnedRuns,
-    pitchingWalks: s.pitchingWalks,
-    battersHit: s.battersHit,
-    hitsAllowed: s.hitsAllowed,
-    hrAllowed: s.hrAllowed,
-    pitchesThrown: s.pitchesThrown,
-    outsPitched: s.outsPitched,
-    strikeoutsDef: s.strikeoutsDef,
-    starPitches: s.starPitches,
-    bigPlays: s.bigPlays,
-  }));
+  const rows = parsed.characterStats.map((s) => {
+    const fieldingOuts = sumPositionMap(s.fieldingByPosition.outs);
+    const fieldingBatters = sumPositionMap(s.fieldingByPosition.batters);
+    const longestHrDistance = homerunDistanceForRosterSlot(
+      homerunDistances,
+      s.teamSide,
+      s.rosterSlot,
+    );
+
+    return {
+      id: newId(),
+      gameId: input.gameId,
+      seasonId: input.seasonId,
+      teamId: s.teamSide === "Away" ? input.awaySideTeamId : input.homeSideTeamId,
+      teamSide: s.teamSide,
+      rosterSlot: s.rosterSlot,
+      charOccurrenceIndex: s.charOccurrenceIndex,
+      charId: s.charId,
+      isCaptain: s.isCaptain,
+      isSuperstar: s.isSuperstar,
+      battingHand: s.battingHand,
+      fieldingHand: s.fieldingHand,
+      ab: s.ab,
+      hits: s.hits,
+      singles: s.singles,
+      doubles: s.doubles,
+      triples: s.triples,
+      hr: s.hr,
+      walks4ball: s.walks4ball,
+      walksHbp: s.walksHbp,
+      strikeoutsOff: s.strikeoutsOff,
+      rbi: s.rbi,
+      basesStolen: s.basesStolen,
+      sacFly: s.sacFly,
+      bunts: s.bunts,
+      starHits: s.starHits,
+      wasPitcher: s.wasPitcher,
+      pitchingRole: pitchingRoles.get(pitchingRoleKey(s.teamSide, s.rosterSlot)) ?? null,
+      battersFaced: s.battersFaced,
+      runsAllowed: s.runsAllowed,
+      earnedRuns: s.earnedRuns,
+      pitchingWalks: s.pitchingWalks,
+      battersHit: s.battersHit,
+      hitsAllowed: s.hitsAllowed,
+      hrAllowed: s.hrAllowed,
+      pitchesThrown: s.pitchesThrown,
+      outsPitched: s.outsPitched,
+      strikeoutsDef: s.strikeoutsDef,
+      starPitches: s.starPitches,
+      bigPlays: s.bigPlays,
+      fieldingByPositionJson: JSON.stringify(s.fieldingByPosition),
+      fieldingOuts,
+      fieldingBatters,
+      longestHrDistance:
+        longestHrDistance != null ? Math.round(longestHrDistance) : null,
+    };
+  });
 
   if (rows.length > 0) {
     await db.insert(characterGameStats).values(rows);
@@ -172,6 +193,7 @@ export async function backfillCharacterGameStats(seasonId: string): Promise<numb
   await resyncStadiumIdsFromGameJson(seasonId);
   await backfillStatsFieldSides(seasonId);
   await backfillPitchingRoles(seasonId);
+  await backfillFieldingAndHomerunStats(seasonId);
   return count;
 }
 
@@ -214,6 +236,73 @@ export async function backfillPitchingRoles(seasonId: string): Promise<number> {
     }
     count++;
   }
+  return count;
+}
+
+/** Re-reads fielding position splits and HR distance from stored game JSON. */
+export async function backfillFieldingAndHomerunStats(seasonId: string): Promise<number> {
+  const games = await db
+    .select({ id: scheduleGames.id, statsRawJson: scheduleGames.statsRawJson })
+    .from(scheduleGames)
+    .innerJoin(rounds, eq(scheduleGames.roundId, rounds.id))
+    .where(and(eq(rounds.seasonId, seasonId), isNotNull(scheduleGames.statsRawJson)));
+
+  let count = 0;
+  for (const game of games) {
+    if (!game.statsRawJson) continue;
+
+    let data: unknown;
+    try {
+      data = JSON.parse(game.statsRawJson);
+    } catch {
+      continue;
+    }
+
+    const parsed = parseCharacterGameStats(data);
+    const homerunDistances = parseHomerunDistancesByRoster(data);
+    const parsedBySideSlot = new Map(
+      parsed.characterStats.map((row) => [
+        `${row.teamSide}\0${row.rosterSlot}`,
+        row,
+      ]),
+    );
+
+    const rows = await db
+      .select({
+        id: characterGameStats.id,
+        teamSide: characterGameStats.teamSide,
+        rosterSlot: characterGameStats.rosterSlot,
+      })
+      .from(characterGameStats)
+      .where(eq(characterGameStats.gameId, game.id));
+
+    for (const row of rows) {
+      const stat = parsedBySideSlot.get(`${row.teamSide}\0${row.rosterSlot}`);
+      if (!stat) continue;
+
+      const fieldingOuts = sumPositionMap(stat.fieldingByPosition.outs);
+      const fieldingBatters = sumPositionMap(stat.fieldingByPosition.batters);
+      const longestHrDistance = homerunDistanceForRosterSlot(
+        homerunDistances,
+        row.teamSide,
+        row.rosterSlot,
+      );
+
+      await db
+        .update(characterGameStats)
+        .set({
+          fieldingByPositionJson: JSON.stringify(stat.fieldingByPosition),
+          fieldingOuts,
+          fieldingBatters,
+          longestHrDistance:
+            longestHrDistance != null ? Math.round(longestHrDistance) : null,
+        })
+        .where(eq(characterGameStats.id, row.id));
+    }
+
+    count++;
+  }
+
   return count;
 }
 

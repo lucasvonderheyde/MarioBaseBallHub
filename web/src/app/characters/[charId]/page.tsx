@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { BattingStatCells } from "@/components/BattingStatCells";
 import { CharacterAttributesSection } from "@/components/CharacterAttributesSection";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterFieldingSummary } from "@/components/CharacterFieldingSummary";
 import { CharacterPitchingSummary } from "@/components/CharacterPitchingSummary";
 import { CharacterStatSummary } from "@/components/CharacterStatSummary";
 import { PageShell } from "@/components/PageShell";
@@ -17,7 +18,12 @@ import {
   aggregateGlobalPitchingByCharId,
   getGlobalCharacterByGameCharId,
 } from "@/lib/global-character-stats";
-import type { BattingLine, PitchingLine } from "@/lib/game-stats-queries";
+import {
+  aggregateFieldingByCharId,
+  type BattingLine,
+  type FieldingLine,
+  type PitchingLine,
+} from "@/lib/game-stats-queries";
 
 type Props = {
   params: Promise<{ charId: string }>;
@@ -63,6 +69,21 @@ function emptyBattingLine(charId: string): BattingLine {
   };
 }
 
+function emptyFieldingLine(charId: string): FieldingLine {
+  return {
+    charId,
+    charOccurrenceIndex: 0,
+    games: 0,
+    outs: 0,
+    bigPlays: 0,
+    battersInField: 0,
+    longestHrDistance: null,
+    outsByPosition: {},
+    battersByPosition: {},
+    primaryPosition: null,
+  };
+}
+
 export default async function GlobalCharacterDetailPage({ params }: Props) {
   const user = await getCurrentUser();
 
@@ -72,14 +93,16 @@ export default async function GlobalCharacterDetailPage({ params }: Props) {
   const character = await getGlobalCharacterByGameCharId(gameCharId);
   if (!character) notFound();
 
-  const [battingMap, pitchingMap, managerRows] = await Promise.all([
+  const [battingMap, pitchingMap, fieldingMap, managerRows] = await Promise.all([
     aggregateGlobalBattingByCharId(),
     aggregateGlobalPitchingByCharId(),
+    aggregateFieldingByCharId({ charId: gameCharId }),
     aggregateGlobalBattingByCharAndManager(gameCharId),
   ]);
 
   const batting = battingMap.get(gameCharId) ?? emptyBattingLine(gameCharId);
   const pitching = pitchingMap.get(gameCharId) ?? emptyPitchingLine(gameCharId);
+  const fielding = fieldingMap.get(gameCharId) ?? emptyFieldingLine(gameCharId);
   const ratings = getCharacterRatings(gameCharId);
 
   return (
@@ -106,6 +129,10 @@ export default async function GlobalCharacterDetailPage({ params }: Props) {
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <CharacterStatSummary title="Lifetime hitting" line={batting} />
         <CharacterPitchingSummary title="Lifetime pitching" line={pitching} />
+      </div>
+
+      <div className="mt-10">
+        <CharacterFieldingSummary title="Lifetime fielding" line={fielding} />
       </div>
 
       {ratings ? (

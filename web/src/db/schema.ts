@@ -333,6 +333,10 @@ export const characterGameStats = sqliteTable(
     strikeoutsDef: integer("strikeouts_def").notNull().default(0),
     starPitches: integer("star_pitches").notNull().default(0),
     bigPlays: integer("big_plays").notNull().default(0),
+    fieldingByPositionJson: text("fielding_by_position_json"),
+    fieldingOuts: integer("fielding_outs").notNull().default(0),
+    fieldingBatters: integer("fielding_batters").notNull().default(0),
+    longestHrDistance: integer("longest_hr_distance"),
   },
   (t) => [uniqueIndex("cgs_game_side_slot").on(t.gameId, t.teamSide, t.rosterSlot)],
 );

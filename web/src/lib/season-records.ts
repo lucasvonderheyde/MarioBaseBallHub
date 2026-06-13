@@ -40,7 +40,8 @@ type CharacterStatField =
   | "strikeoutsOff"
   | "basesStolen"
   | "strikeoutsDef"
-  | "runsAllowed";
+  | "runsAllowed"
+  | "longestHrDistance";
 
 const CHARACTER_RECORDS: {
   field: CharacterStatField;
@@ -97,6 +98,13 @@ const CHARACTER_RECORDS: {
     title: "Most runs allowed (game)",
     format: (v) => String(v),
     detail: (v, char) => `${char} allowed ${v} runs`,
+  },
+  {
+    field: "longestHrDistance",
+    category: "longest_hr",
+    title: "Longest home run",
+    format: (v) => `${v} ft`,
+    detail: (v, char) => `${char} hit a ${v}-foot bomb`,
   },
 ];
 
@@ -170,7 +178,7 @@ async function topCharacterRecord(
     .where(and(eq(characterGameStats.seasonId, seasonId), sql`${column} > 0`))
     .orderBy(desc(column))
     .limit(1);
-  if (!top || top.value <= 0) return null;
+  if (!top || top.value == null || top.value <= 0) return null;
 
   const rows = await db
     .select({
@@ -204,7 +212,7 @@ async function topCharacterRecord(
   );
 
   const row = rows[0];
-  if (!row) return null;
+  if (!row || row.value == null) return null;
 
   const charName = formatCharIdDisplay(row.charId);
   const awayName = teamNames.get(row.awayTeamId) ?? "Away";

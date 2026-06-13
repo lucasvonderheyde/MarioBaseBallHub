@@ -7,14 +7,17 @@ import { BattingStatCells } from "@/components/BattingStatCells";
 import { CharacterAttributesSection } from "@/components/CharacterAttributesSection";
 import { CharacterDetailNav } from "@/components/CharacterDetailNav";
 import { CharacterMugshot } from "@/components/CharacterMugshot";
+import { CharacterFieldingSummary } from "@/components/CharacterFieldingSummary";
 import { CharacterPitchingSummary } from "@/components/CharacterPitchingSummary";
 import { CharacterStatSummary } from "@/components/CharacterStatSummary";
 import { GameMatchupInline } from "@/components/games/GameMatchupScore";
 import {
   battingStatHeaders,
+  fieldingStatHeaders,
   pitchingStatHeaders,
   stadiumBattingStatHeaders,
 } from "@/components/stats/stat-table-headers";
+import { FieldingTableRow } from "@/components/FieldingStatCells";
 import { PitchingTableRow } from "@/components/PitchingStatCells";
 import { getCharacterRatings } from "@/data/character-ratings";
 import { formatRate } from "@/domain/stats/batting-metrics";
@@ -27,11 +30,15 @@ import {
   aggregateBattingByCharAndSeason,
   aggregateBattingByCharAndStadium,
   aggregateBattingByCharId,
+  aggregateFieldingByCharAndSeason,
+  aggregateFieldingByCharId,
   aggregatePitchingByCharAndSeason,
   aggregatePitchingByCharId,
   getBattingLine,
+  getFieldingLine,
   getRecentGamesForChar,
   type BattingLine,
+  type FieldingLine,
   type PitchingLine,
 } from "@/lib/game-stats-queries";
 import { PageShell } from "@/components/PageShell";
@@ -42,10 +49,11 @@ type Props = {
   searchParams: Promise<{ season?: string; tab?: string }>;
 };
 
-type Tab = "hitting" | "pitching" | "attributes";
+type Tab = "hitting" | "pitching" | "fielding" | "attributes";
 
 function parseTab(value: string | undefined, hasAttributes: boolean): Tab {
   if (value === "pitching") return "pitching";
+  if (value === "fielding") return "fielding";
   if (value === "attributes" && hasAttributes) return "attributes";
   return "hitting";
 }
@@ -69,8 +77,27 @@ function emptyPitchingLine(charId: string): PitchingLine {
   };
 }
 
+function emptyFieldingLine(charId: string): FieldingLine {
+  return {
+    charId,
+    charOccurrenceIndex: 0,
+    games: 0,
+    outs: 0,
+    bigPlays: 0,
+    battersInField: 0,
+    longestHrDistance: null,
+    outsByPosition: {},
+    battersByPosition: {},
+    primaryPosition: null,
+  };
+}
+
 function getPitchingLine(map: Map<string, PitchingLine>, charId: string): PitchingLine {
   return map.get(charId) ?? emptyPitchingLine(charId);
+}
+
+function getFieldingLineFromMap(map: Map<string, FieldingLine>, charId: string): FieldingLine {
+  return getFieldingLine(map, charId);
 }
 
 function ManagerStatsTable({
@@ -169,10 +196,13 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
     allTimeStatsMap,
     seasonPitchingMap,
     allTimePitchingMap,
+    seasonFieldingMap,
+    allTimeFieldingMap,
     byManagerSeason,
     byManagerAllTime,
     bySeason,
     bySeasonPitching,
+    bySeasonFielding,
     byStadium,
     recent,
     poolSeasonCount,
@@ -186,11 +216,16 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
       : Promise.resolve(new Map()),
     aggregatePitchingByCharId({ leagueId, charId }),
     seasonId
+      ? aggregateFieldingByCharId({ leagueId, charId, seasonId })
+      : Promise.resolve(new Map()),
+    aggregateFieldingByCharId({ leagueId, charId }),
+    seasonId
       ? aggregateBattingByCharAndManager({ leagueId, charId, seasonId })
       : Promise.resolve([]),
     aggregateBattingByCharAndManager({ leagueId, charId }),
     aggregateBattingByCharAndSeason(charId, leagueId),
     aggregatePitchingByCharAndSeason(charId, leagueId),
+    aggregateFieldingByCharAndSeason(charId, leagueId),
     aggregateBattingByCharAndStadium(charId, leagueId, seasonId || undefined),
     getRecentGamesForChar(charId, leagueId, 15),
     countPoolSeasonsForChar(charId, leagueId),
@@ -200,6 +235,10 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
   const allTimeLine = getBattingLine(allTimeStatsMap, charId);
   const seasonPitchingLine = seasonId ? getPitchingLine(seasonPitchingMap, charId) : null;
   const allTimePitchingLine = getPitchingLine(allTimePitchingMap, charId);
+  const seasonFieldingLine = seasonId
+    ? getFieldingLineFromMap(seasonFieldingMap, charId)
+    : null;
+  const allTimeFieldingLine = getFieldingLineFromMap(allTimeFieldingMap, charId);
 
   const teamNames = new Map<string, string>();
   const seasonTeamRows = await db.select().from(teams);
@@ -558,6 +597,60 @@ export default async function CharacterDetailPage({ params, searchParams }: Prop
             ) : (
               <p className="mt-2 text-sm text-zinc-500">No pitching stats recorded yet.</p>
             )}
+          </section>
+        </>
+      ) : null}
+
+      {activeTab === "fielding" ? (
+        <>
+          <div className="mt-8 space-y-10">
+            {seasonFieldingLine && selectedSeason ? (
+              <CharacterFieldingSummary
+                title={`${selectedSeason.name} fielding`}
+                line={seasonFieldingLine}
+              />
+            ) : null}
+
+            <CharacterFieldingSummary
+              title="All-time league fielding"
+              line={allTimeFieldingLine}
+            />
+          </div>
+
+          <section className="mt-10">
+            <SectionHeading>By season</SectionHeading>
+            <div className="msb-table-wrap">
+              <table className="mt-2 w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-zinc-500">
+                    <th className="py-1 pr-2">Season</th>
+                    {fieldingStatHeaders()}
+                  </tr>
+                </thead>
+                <tbody>
+                  {bySeasonFielding.length > 0 ? (
+                    bySeasonFielding.map((row) => (
+                      <tr key={row.seasonId} className="border-b border-zinc-900">
+                        <td className="py-1 pr-2">{row.seasonName}</td>
+                        <FieldingTableRow line={row.line} />
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-b border-zinc-900 text-zinc-500">
+                      <td className="py-1 pr-2">—</td>
+                      <td className="py-1 pr-2 tabular-nums">0</td>
+                      <td className="py-1 pr-2 tabular-nums">—</td>
+                      <td className="py-1 pr-2 tabular-nums">0</td>
+                      <td className="py-1 pr-2 tabular-nums">—</td>
+                      <td className="py-1 pr-2 tabular-nums">0</td>
+                      <td className="py-1 pr-2 tabular-nums">—</td>
+                      <td className="py-1 pr-2 tabular-nums">0</td>
+                      <td className="py-1 pr-2 tabular-nums">—</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </section>
         </>
       ) : null}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type Tab = "hitting" | "pitching" | "attributes";
+type Tab = "hitting" | "pitching" | "fielding" | "attributes";
 
 type Props = {
   leagueId: string;
@@ -41,6 +41,7 @@ export function CharacterDetailNav({
   const tabs: { id: Tab; label: string; show: boolean }[] = [
     { id: "hitting", label: "Hitting", show: true },
     { id: "pitching", label: "Pitching", show: true },
+    { id: "fielding", label: "Fielding", show: true },
     { id: "attributes", label: "Attributes", show: hasAttributes },
   ];
 

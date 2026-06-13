@@ -36,6 +36,22 @@ export function applySqliteSchemaPatches(sqlite: Database.Database): void {
   if (!statColumns.some((column) => column.name === "pitching_role")) {
     sqlite.exec("ALTER TABLE character_game_stats ADD COLUMN pitching_role text");
   }
+  if (!statColumns.some((column) => column.name === "fielding_by_position_json")) {
+    sqlite.exec("ALTER TABLE character_game_stats ADD COLUMN fielding_by_position_json text");
+  }
+  if (!statColumns.some((column) => column.name === "fielding_outs")) {
+    sqlite.exec(
+      "ALTER TABLE character_game_stats ADD COLUMN fielding_outs integer NOT NULL DEFAULT 0",
+    );
+  }
+  if (!statColumns.some((column) => column.name === "fielding_batters")) {
+    sqlite.exec(
+      "ALTER TABLE character_game_stats ADD COLUMN fielding_batters integer NOT NULL DEFAULT 0",
+    );
+  }
+  if (!statColumns.some((column) => column.name === "longest_hr_distance")) {
+    sqlite.exec("ALTER TABLE character_game_stats ADD COLUMN longest_hr_distance integer");
+  }
 
   const draftColumns = sqlite
     .prepare("PRAGMA table_info(season_drafts)")
