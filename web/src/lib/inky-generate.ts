@@ -31,6 +31,22 @@ function briefPrompt(postType: InkyPostType, brief: string): string {
   );
 }
 
+function apiErrorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message: unknown }).message);
+    if (message.includes("credit balance is too low")) {
+      return "Anthropic account has no API credits. Add billing at console.anthropic.com.";
+    }
+    if (message.includes("invalid x-api-key") || message.includes("authentication")) {
+      return "Anthropic API key is invalid. Check ANTHROPIC_API_KEY.";
+    }
+    if (message.includes("not_found_error") && message.includes("model")) {
+      return "Configured AI model is unavailable. Set AI_NEWS_MODEL to a valid Claude model.";
+    }
+  }
+  return "Story generation failed. Check the server logs.";
+}
+
 async function callInkyModel(
   postType: InkyPostType,
   brief: string,
@@ -52,7 +68,7 @@ async function callInkyModel(
     return response.parsed_output;
   } catch (error) {
     console.error("generateInkyArticle failed", { postType, error });
-    return { error: "Story generation failed. Check the server logs." };
+    return { error: apiErrorMessage(error) };
   }
 }
 
