@@ -5,16 +5,16 @@ import {
   googleRedirectUri,
 } from "@/lib/google-oauth";
 import { completeGoogleOAuth } from "@/lib/google-oauth-callback";
-import { getOAuthAppUrl } from "@/lib/app-url";
+import { getPublicOrigin, publicUrlForRequest } from "@/lib/app-url";
 import { getSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   const error = request.nextUrl.searchParams.get("error");
   if (error) {
     return NextResponse.redirect(
-      new URL(
+      publicUrlForRequest(
+        request,
         `/login?e=${encodeURIComponent("Google sign-in was cancelled.")}`,
-        request.url,
       ),
     );
   }
@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || !session.oauthState || state !== session.oauthState) {
     return NextResponse.redirect(
-      new URL(
+      publicUrlForRequest(
+        request,
         `/login?e=${encodeURIComponent("Invalid Google sign-in state. Try again.")}`,
-        request.url,
       ),
     );
   }
@@ -36,18 +36,18 @@ export async function GET(request: NextRequest) {
   const next = session.oauthNext ?? null;
 
   try {
-    const appUrl = getOAuthAppUrl(request.nextUrl.origin);
+    const appUrl = getPublicOrigin(request);
     const redirectUri = googleRedirectUri(appUrl);
     const accessToken = await exchangeGoogleCode({ code, redirectUri });
     const profile = await fetchGoogleUserInfo(accessToken);
     const result = await completeGoogleOAuth({ mode, profile, next });
-    return NextResponse.redirect(new URL(result.redirectTo, request.url));
+    return NextResponse.redirect(publicUrlForRequest(request, result.redirectTo));
   } catch (caught) {
     const message =
       caught instanceof Error ? caught.message : "Google sign-in failed.";
     const base = mode === "link" ? "/account" : "/login";
     return NextResponse.redirect(
-      new URL(`${base}?e=${encodeURIComponent(message)}`, request.url),
+      publicUrlForRequest(request, `${base}?e=${encodeURIComponent(message)}`),
     );
   }
 }

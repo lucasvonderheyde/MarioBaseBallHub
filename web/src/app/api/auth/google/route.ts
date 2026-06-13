@@ -6,7 +6,7 @@ import {
   googleRedirectUri,
   type GoogleOAuthMode,
 } from "@/lib/google-oauth";
-import { getOAuthAppUrl } from "@/lib/app-url";
+import { getPublicOrigin, publicUrlForRequest } from "@/lib/app-url";
 import { getSession } from "@/lib/session";
 import { isSafeRedirectPath } from "@/lib/team-claims";
 
@@ -17,7 +17,10 @@ function parseMode(value: string | null): GoogleOAuthMode {
 export async function GET(request: NextRequest) {
   if (!googleOAuthEnabled()) {
     return NextResponse.redirect(
-      new URL("/login?e=Google%20sign-in%20is%20not%20configured.", request.url),
+      publicUrlForRequest(
+        request,
+        "/login?e=Google%20sign-in%20is%20not%20configured.",
+      ),
     );
   }
 
@@ -28,14 +31,14 @@ export async function GET(request: NextRequest) {
   if (mode === "link") {
     const session = await getSession();
     if (!session.userId) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = publicUrlForRequest(request, "/login");
       loginUrl.searchParams.set("e", "Log in before linking Google.");
       if (safeNext) loginUrl.searchParams.set("next", safeNext);
       return NextResponse.redirect(loginUrl);
     }
   }
 
-  const appUrl = getOAuthAppUrl(request.nextUrl.origin);
+  const appUrl = getPublicOrigin(request);
   const state = createOAuthState();
   const session = await getSession();
   session.oauthState = state;

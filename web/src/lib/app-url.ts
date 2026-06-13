@@ -16,9 +16,8 @@ function isInternalDevOrigin(origin: string): boolean {
 }
 
 /**
- * OAuth redirect/callback URI base URL.
- * Prefer the browser origin locally; on Railway the request origin is often
- * an internal bind address (e.g. localhost:8080), so fall back to APP_URL.
+ * OAuth redirect/callback URI base URL from a raw origin string.
+ * On Railway the origin is often an internal bind address (localhost:8080).
  */
 export function getOAuthAppUrl(requestOrigin: string): string {
   const origin = requestOrigin.replace(/\/$/, "");
@@ -29,4 +28,26 @@ export function getOAuthAppUrl(requestOrigin: string): string {
   }
 
   return origin;
+}
+
+type PublicUrlRequest = {
+  headers: { get(name: string): string | null };
+  nextUrl: { origin: string };
+};
+
+/** Public site origin behind Railway/proxy headers, for redirects and OAuth. */
+export function getPublicOrigin(request: PublicUrlRequest): string {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const forwardedProto =
+    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ?? "https";
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  return getOAuthAppUrl(request.nextUrl.origin);
+}
+
+export function publicUrlForRequest(request: PublicUrlRequest, path: string): URL {
+  return new URL(path, `${getPublicOrigin(request)}/`);
 }
