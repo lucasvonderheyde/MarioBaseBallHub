@@ -61,32 +61,78 @@ export function parseLineScoreFromEvents(data: unknown): InningLineScore | null 
   };
 }
 
+export type AlignLineScoreOptions = {
+  scheduleAwayTeamId?: string | null;
+  scheduleHomeTeamId?: string | null;
+  statsAwayTeamId?: string | null;
+};
+
+function swapLineScoreSides(lineScore: InningLineScore): InningLineScore {
+  return {
+    ...lineScore,
+    awayRunsByInning: lineScore.homeRunsByInning,
+    homeRunsByInning: lineScore.awayRunsByInning,
+    awayTotal: lineScore.homeTotal,
+    homeTotal: lineScore.awayTotal,
+  };
+}
+
+function lineScoreMatchesScheduleTotals(
+  lineScore: InningLineScore,
+  scheduleAwayScore: number,
+  scheduleHomeScore: number,
+): boolean {
+  return (
+    lineScore.awayTotal === scheduleAwayScore &&
+    lineScore.homeTotal === scheduleHomeScore
+  );
+}
+
+function lineScoreTotalsAreSwappedFromSchedule(
+  lineScore: InningLineScore,
+  scheduleAwayScore: number,
+  scheduleHomeScore: number,
+): boolean {
+  return (
+    lineScore.awayTotal === scheduleHomeScore &&
+    lineScore.homeTotal === scheduleAwayScore
+  );
+}
+
 /**
- * Maps JSON away/home line score rows onto schedule away/home when upload reversed sides.
+ * Maps JSON away/home line score rows onto schedule away/home.
+ *
+ * Prefers stored stats field sides when present (reliable in prod when uploads
+ * flip home/away). Falls back to comparing final totals for legacy rows.
  */
 export function alignLineScoreToSchedule(
   lineScore: InningLineScore,
   scheduleAwayScore: number,
   scheduleHomeScore: number,
+  options?: AlignLineScoreOptions,
 ): InningLineScore {
+  const { scheduleAwayTeamId, scheduleHomeTeamId, statsAwayTeamId } =
+    options ?? {};
+
   if (
-    lineScore.awayTotal === scheduleAwayScore &&
-    lineScore.homeTotal === scheduleHomeScore
+    scheduleAwayTeamId &&
+    scheduleHomeTeamId &&
+    statsAwayTeamId
   ) {
+    if (statsAwayTeamId === scheduleAwayTeamId) {
+      return lineScore;
+    }
+    if (statsAwayTeamId === scheduleHomeTeamId) {
+      return swapLineScoreSides(lineScore);
+    }
+  }
+
+  if (lineScoreMatchesScheduleTotals(lineScore, scheduleAwayScore, scheduleHomeScore)) {
     return lineScore;
   }
 
-  if (
-    lineScore.awayTotal === scheduleHomeScore &&
-    lineScore.homeTotal === scheduleAwayScore
-  ) {
-    return {
-      ...lineScore,
-      awayRunsByInning: lineScore.homeRunsByInning,
-      homeRunsByInning: lineScore.awayRunsByInning,
-      awayTotal: lineScore.homeTotal,
-      homeTotal: lineScore.awayTotal,
-    };
+  if (lineScoreTotalsAreSwappedFromSchedule(lineScore, scheduleAwayScore, scheduleHomeScore)) {
+    return swapLineScoreSides(lineScore);
   }
 
   return lineScore;

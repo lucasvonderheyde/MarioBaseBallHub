@@ -11,7 +11,7 @@ import {
 } from "@/domain/inky/inky-persona";
 import { inkyPostTypeLabel, isInkyPostType } from "@/domain/inky/post-types";
 import { InkyWritingIndicator } from "@/components/inky/InkyWritingIndicator";
-import { gameRecapPageHref } from "@/lib/league-news-links";
+import { gameRecapPageHref, leaguePostPageHref } from "@/lib/league-news-links";
 import {
   deleteLeaguePostAction,
   generateInkyDraftRecapAction,
@@ -40,6 +40,12 @@ type SeriesOption = {
   isComplete: boolean;
 };
 
+type PreviewGameOption = {
+  gameId: string;
+  label: string;
+  isPlayoff: boolean;
+};
+
 type Props = {
   leagueId: string;
   seasonId: string;
@@ -47,7 +53,7 @@ type Props = {
   isAdmin: boolean;
   aiEnabled: boolean;
   seriesOptions: SeriesOption[];
-  previewGameId?: string | null;
+  previewGames?: PreviewGameOption[];
 };
 
 export function SeasonNewsPanel({
@@ -57,12 +63,13 @@ export function SeasonNewsPanel({
   isAdmin,
   aiEnabled,
   seriesOptions,
-  previewGameId,
+  previewGames = [],
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seriesKey, setSeriesKey] = useState(seriesOptions[0]?.seriesKey ?? "");
+  const [previewGameId, setPreviewGameId] = useState(previewGames[0]?.gameId ?? "");
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
@@ -154,10 +161,10 @@ export function SeasonNewsPanel({
             >
               Weekly column
             </button>
-            {previewGameId ? (
+            {previewGames.length > 0 ? (
               <button
                 type="button"
-                disabled={pending || !aiEnabled}
+                disabled={pending || !aiEnabled || !previewGameId}
                 onClick={() =>
                   runGenerate(() =>
                     generateInkyPreviewAction({
@@ -169,7 +176,7 @@ export function SeasonNewsPanel({
                 }
                 className="msb-btn-outline-gold shrink-0 text-xs"
               >
-                Rivalry preview
+                Matchup preview
               </button>
             ) : null}
             <button
@@ -208,6 +215,25 @@ export function SeasonNewsPanel({
         ) : undefined
       }
     >
+      {isAdmin && previewGames.length > 0 ? (
+        <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-zinc-800/80 bg-zinc-950/40 p-3">
+          <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs text-zinc-500">
+            Upcoming matchup preview
+            <select
+              value={previewGameId}
+              onChange={(event) => setPreviewGameId(event.target.value)}
+              className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200"
+            >
+              {previewGames.map((option) => (
+                <option key={option.gameId} value={option.gameId}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
+
       {isAdmin && seriesOptions.length > 0 ? (
         <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-zinc-800/80 bg-zinc-950/40 p-3">
           <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs text-zinc-500">
@@ -257,6 +283,9 @@ export function SeasonNewsPanel({
             const gameRecapHref = isGameRecap
               ? gameRecapPageHref(leagueId, seasonId, post.relatedGameId!)
               : null;
+            const articleHref = leaguePostPageHref(leagueId, seasonId, post.id);
+            const titleHref =
+              post.status === "published" ? articleHref : gameRecapHref;
 
             if (isGameRecap && gameRecapHref) {
               return (
@@ -270,9 +299,13 @@ export function SeasonNewsPanel({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="min-w-0 flex-1 font-semibold text-zinc-100">
-                      <Link href={gameRecapHref} className="hover:text-amber-300">
-                        {post.title}
-                      </Link>
+                      {titleHref ? (
+                        <Link href={titleHref} className="hover:text-amber-300">
+                          {post.title}
+                        </Link>
+                      ) : (
+                        post.title
+                      )}
                     </h3>
                     {post.source === "ai" ? (
                       <span className="msb-badge-muted">Inky</span>
@@ -293,10 +326,15 @@ export function SeasonNewsPanel({
                   ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-600">
                     {post.createdAt.toLocaleDateString()}
+                    {post.status === "published" ? (
+                      <Link href={articleHref} className="text-amber-400 hover:underline">
+                        Read full article →
+                      </Link>
+                    ) : null}
                     <Link href={gameRecapHref} className="text-amber-400 hover:underline">
                       {isAdmin && post.status === "draft"
                         ? "Review on game page →"
-                        : "Read on game page →"}
+                        : "Box score →"}
                     </Link>
                   </div>
                 </li>
@@ -314,7 +352,13 @@ export function SeasonNewsPanel({
             >
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="min-w-0 flex-1 font-semibold text-zinc-100">
-                  {post.title}
+                  {post.status === "published" ? (
+                    <Link href={articleHref} className="hover:text-amber-300">
+                      {post.title}
+                    </Link>
+                  ) : (
+                    post.title
+                  )}
                 </h3>
                 {post.source === "ai" ? (
                   <span className="msb-badge-muted">Inky</span>
@@ -375,6 +419,11 @@ export function SeasonNewsPanel({
               )}
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-600">
                 {post.createdAt.toLocaleDateString()}
+                {post.status === "published" ? (
+                  <Link href={articleHref} className="text-amber-400 hover:underline">
+                    Read full article →
+                  </Link>
+                ) : null}
                 {isAdmin ? (
                   <>
                     {editingPostId !== post.id ? (

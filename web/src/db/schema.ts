@@ -518,6 +518,8 @@ export const leaguePosts = sqliteTable("league_posts", {
     onDelete: "set null",
   }),
   publishedAt: integer("published_at", { mode: "timestamp" }),
+  /** Source brief sent to the model; used for commissioner review and continuity. */
+  briefJson: text("brief_json"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

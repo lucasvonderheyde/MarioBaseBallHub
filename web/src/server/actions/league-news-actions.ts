@@ -1,6 +1,5 @@
 "use server";
 
-import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
@@ -21,11 +20,22 @@ import {
   findExistingInkyDraft,
   postInkyArticleToDiscord,
 } from "@/lib/inky-service";
+import { leaguePostPageHref } from "@/lib/league-news-links";
 import { requireUser } from "@/lib/auth";
 import { getLeagueRole } from "@/lib/league-access";
 
 function revalidateNewsPaths(leagueId: string, seasonId: string) {
   revalidatePath(`/leagues/${leagueId}/seasons/${seasonId}`);
+}
+
+function revalidatePostPaths(
+  leagueId: string,
+  seasonId: string,
+  postId: string,
+  relatedGameId?: string | null,
+) {
+  revalidatePath(leaguePostPageHref(leagueId, seasonId, postId));
+  revalidateGameRecapPath(leagueId, seasonId, relatedGameId);
 }
 
 function revalidateGameRecapPath(
@@ -56,16 +66,18 @@ export async function generateSeasonRecapAction(input: {
   const recap = await generateInkySeasonRecap(input.seasonId);
   if ("error" in recap) return { error: recap.error };
 
-  await createInkyDraftPost({
+  const postId = await createInkyDraftPost({
     leagueId: input.leagueId,
     seasonId: input.seasonId,
     postType: "season_recap",
     title: recap.title,
     body: recap.body,
+    briefJson: recap.brief,
     createdByUserId: auth.user.id,
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidatePostPaths(input.leagueId, input.seasonId, postId);
   return {};
 }
 
@@ -80,20 +92,19 @@ export async function generateInkyGameRecapAction(input: {
   const recap = await generateInkyGameRecap(input.seasonId, input.gameId);
   if ("error" in recap) return { error: recap.error };
 
-  await createInkyDraftPost({
+  const postId = await createInkyDraftPost({
     leagueId: input.leagueId,
     seasonId: input.seasonId,
     postType: "game_recap",
     title: recap.title,
     body: recap.body,
+    briefJson: recap.brief,
     relatedGameId: input.gameId,
     createdByUserId: auth.user.id,
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
-  revalidatePath(
-    `/leagues/${input.leagueId}/seasons/${input.seasonId}/games/${input.gameId}`,
-  );
+  revalidatePostPaths(input.leagueId, input.seasonId, postId, input.gameId);
   return {};
 }
 
@@ -108,17 +119,19 @@ export async function generateInkyWeeklyAction(input: {
   const recap = await generateInkyWeeklyColumn(input.seasonId, input.weekNumber);
   if ("error" in recap) return { error: recap.error };
 
-  await createInkyDraftPost({
+  const postId = await createInkyDraftPost({
     leagueId: input.leagueId,
     seasonId: input.seasonId,
     postType: "weekly",
     title: recap.title,
     body: recap.body,
+    briefJson: recap.brief,
     weekNumber: recap.weekNumber,
     createdByUserId: auth.user.id,
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidatePostPaths(input.leagueId, input.seasonId, postId);
   return {};
 }
 
@@ -133,17 +146,19 @@ export async function generateInkySeriesRecapAction(input: {
   const recap = await generateInkySeriesRecap(input.seasonId, input.seriesKey);
   if ("error" in recap) return { error: recap.error };
 
-  await createInkyDraftPost({
+  const postId = await createInkyDraftPost({
     leagueId: input.leagueId,
     seasonId: input.seasonId,
     postType: "series_recap",
     title: recap.title,
     body: recap.body,
+    briefJson: recap.brief,
     seriesKey: input.seriesKey,
     createdByUserId: auth.user.id,
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidatePostPaths(input.leagueId, input.seasonId, postId);
   return {};
 }
 
@@ -158,17 +173,19 @@ export async function generateInkyPreviewAction(input: {
   const recap = await generateInkyPreview(input.seasonId, input.gameId);
   if ("error" in recap) return { error: recap.error };
 
-  await createInkyDraftPost({
+  const postId = await createInkyDraftPost({
     leagueId: input.leagueId,
     seasonId: input.seasonId,
     postType: "preview",
     title: recap.title,
     body: recap.body,
+    briefJson: recap.brief,
     relatedGameId: input.gameId,
     createdByUserId: auth.user.id,
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidatePostPaths(input.leagueId, input.seasonId, postId, input.gameId);
   return {};
 }
 
@@ -183,16 +200,18 @@ export async function generateInkyDraftRecapAction(input: {
   const recap = await generateInkyDraftRecap(input.seasonId, input.variant);
   if ("error" in recap) return { error: recap.error };
 
-  await createInkyDraftPost({
+  const postId = await createInkyDraftPost({
     leagueId: input.leagueId,
     seasonId: input.seasonId,
     postType: "draft_recap",
     title: recap.title,
     body: recap.body,
+    briefJson: recap.brief,
     createdByUserId: auth.user.id,
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
+  revalidatePostPaths(input.leagueId, input.seasonId, postId);
   return {};
 }
 
@@ -220,6 +239,7 @@ export async function publishLeaguePostAction(input: {
 
   const postType = isInkyPostType(post.postType) ? post.postType : "season_recap";
   await postInkyArticleToDiscord({
+    postId: input.postId,
     postType,
     title: post.title,
     body: post.body,
@@ -228,7 +248,7 @@ export async function publishLeaguePostAction(input: {
   });
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
-  revalidateGameRecapPath(input.leagueId, input.seasonId, post.relatedGameId);
+  revalidatePostPaths(input.leagueId, input.seasonId, input.postId, post.relatedGameId);
   return {};
 }
 
@@ -262,7 +282,7 @@ export async function updateLeaguePostAction(input: {
     .where(eq(leaguePosts.id, input.postId));
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
-  revalidateGameRecapPath(input.leagueId, input.seasonId, post.relatedGameId);
+  revalidatePostPaths(input.leagueId, input.seasonId, input.postId, post.relatedGameId);
   return {};
 }
 
@@ -289,7 +309,7 @@ export async function deleteLeaguePostAction(input: {
     );
 
   revalidateNewsPaths(input.leagueId, input.seasonId);
-  revalidateGameRecapPath(input.leagueId, input.seasonId, post?.relatedGameId);
+  revalidatePostPaths(input.leagueId, input.seasonId, input.postId, post?.relatedGameId);
   return {};
 }
 

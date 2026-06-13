@@ -95,6 +95,11 @@ export default async function GameReportPage({ params, searchParams }: Props) {
           rawLineScore,
           game.awayScore!,
           game.homeScore!,
+          {
+            scheduleAwayTeamId: game.awayTeamId,
+            scheduleHomeTeamId: game.homeTeamId,
+            statsAwayTeamId: game.statsAwayTeamId,
+          },
         )
       : rawLineScore;
 

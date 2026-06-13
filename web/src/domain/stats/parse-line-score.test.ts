@@ -89,17 +89,65 @@ describe("alignLineScoreToSchedule", () => {
     homeTotal: 2,
   };
 
+  const swappedLineScore = {
+    inningNumbers: [1, 2],
+    awayRunsByInning: [0, 2],
+    homeRunsByInning: [2, 1],
+    awayTotal: 2,
+    homeTotal: 3,
+  };
+
   it("returns the same line score when orientation already matches", () => {
     expect(alignLineScoreToSchedule(lineScore, 3, 2)).toEqual(lineScore);
   });
 
   it("swaps rows when schedule away/home totals are reversed", () => {
-    expect(alignLineScoreToSchedule(lineScore, 2, 3)).toEqual({
+    expect(alignLineScoreToSchedule(lineScore, 2, 3)).toEqual(swappedLineScore);
+  });
+
+  it("uses stats field sides when JSON away maps to schedule home", () => {
+    expect(
+      alignLineScoreToSchedule(lineScore, 3, 2, {
+        scheduleAwayTeamId: "team-a",
+        scheduleHomeTeamId: "team-b",
+        statsAwayTeamId: "team-b",
+      }),
+    ).toEqual(swappedLineScore);
+  });
+
+  it("keeps rows when stats field sides match schedule away/home", () => {
+    expect(
+      alignLineScoreToSchedule(lineScore, 3, 2, {
+        scheduleAwayTeamId: "team-a",
+        scheduleHomeTeamId: "team-b",
+        statsAwayTeamId: "team-a",
+      }),
+    ).toEqual(lineScore);
+  });
+
+  it("prefers stats field sides over matching totals when both teams scored the same", () => {
+    const tiedLineScore = {
       inningNumbers: [1, 2],
-      awayRunsByInning: [0, 2],
-      homeRunsByInning: [2, 1],
-      awayTotal: 2,
-      homeTotal: 3,
+      awayRunsByInning: [5, 0],
+      homeRunsByInning: [0, 5],
+      awayTotal: 5,
+      homeTotal: 5,
+    };
+
+    expect(alignLineScoreToSchedule(tiedLineScore, 5, 5)).toEqual(tiedLineScore);
+
+    expect(
+      alignLineScoreToSchedule(tiedLineScore, 5, 5, {
+        scheduleAwayTeamId: "team-a",
+        scheduleHomeTeamId: "team-b",
+        statsAwayTeamId: "team-b",
+      }),
+    ).toEqual({
+      inningNumbers: [1, 2],
+      awayRunsByInning: [0, 5],
+      homeRunsByInning: [5, 0],
+      awayTotal: 5,
+      homeTotal: 5,
     });
   });
 });

@@ -2,7 +2,11 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { leaguePosts } from "@/db/schema";
 
-export { gameRecapPageHref } from "@/lib/league-news-links";
+export {
+  gameRecapPageHref,
+  leaguePostAbsoluteUrl,
+  leaguePostPageHref,
+} from "@/lib/league-news-links";
 /** Drafts are commissioner-only — pass includeDrafts from a server-checked role. */
 export async function getSeasonNewsPosts(seasonId: string, includeDrafts: boolean) {
   const rows = await db
@@ -25,6 +29,22 @@ export async function getGameRecapPost(gameId: string, includeDrafts: boolean) {
       ),
     )
     .orderBy(desc(leaguePosts.createdAt))
+    .limit(1);
+
+  if (!post) return null;
+  if (!includeDrafts && post.status !== "published") return null;
+  return post;
+}
+
+export async function getLeaguePostById(
+  postId: string,
+  seasonId: string,
+  includeDrafts: boolean,
+) {
+  const [post] = await db
+    .select()
+    .from(leaguePosts)
+    .where(and(eq(leaguePosts.id, postId), eq(leaguePosts.seasonId, seasonId)))
     .limit(1);
 
   if (!post) return null;

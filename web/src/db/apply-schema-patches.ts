@@ -85,5 +85,8 @@ export function applySqliteSchemaPatches(sqlite: Database.Database): void {
     if (!postColumns.some((column) => column.name === "week_number")) {
       sqlite.exec("ALTER TABLE league_posts ADD COLUMN week_number integer");
     }
+    if (!postColumns.some((column) => column.name === "brief_json")) {
+      sqlite.exec("ALTER TABLE league_posts ADD COLUMN brief_json text");
+    }
   }
 }

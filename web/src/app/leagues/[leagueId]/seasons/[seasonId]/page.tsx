@@ -20,7 +20,8 @@ import { SeasonRivalryOfWeekPanel } from "@/components/season/SeasonRivalryOfWee
 import { SeasonScoreboard } from "@/components/season/SeasonScoreboard";
 import { SeasonHubHeadlines } from "@/components/season/SeasonHubHeadlines";
 import { getSeasonRecords } from "@/lib/season-records";
-import { listSeriesOptions } from "@/lib/inky-briefs";
+import { listSeriesOptions, listUpcomingPreviewGames } from "@/lib/inky-briefs";
+import { getSeasonStatTickerLines } from "@/lib/inky-stat-ticker";
 import { buildSeasonOddsSnapshot } from "@/lib/season-odds";
 import { getManagedTeamInSeason } from "@/lib/manager-team";
 import {
@@ -51,6 +52,8 @@ export default async function SeasonPage({ params, searchParams }: Props) {
   const recentEvents = await getRecentSeasonEvents(seasonId, 20);
   const newsPosts = await getSeasonNewsPosts(seasonId, isAdmin);
   const seriesOptions = isAdmin ? await listSeriesOptions(seasonId) : [];
+  const previewGames = isAdmin ? await listUpcomingPreviewGames(seasonId) : [];
+  const statTickerLines = await getSeasonStatTickerLines(seasonId);
   const scheduleProposals = await getPendingScheduleProposalsForSeason(seasonId);
   const proposalMap = pendingProposalsByGameId(scheduleProposals);
   const { games: upcomingRaw } = selectUpcomingScheduleGames(games, 4);
@@ -196,7 +199,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
               isAdmin={isAdmin}
               aiEnabled={aiNewsEnabled()}
               seriesOptions={seriesOptions}
-              previewGameId={rivalry?.game.gameId ?? null}
+              previewGames={previewGames}
             />
 
             <SeasonHubFeaturedRecords
@@ -227,6 +230,7 @@ export default async function SeasonPage({ params, searchParams }: Props) {
               leagueId={leagueId}
               seasonId={seasonId}
               posts={mappedNewsPosts}
+              statTickerLines={statTickerLines}
               events={recentEvents.map((event) => ({
                 id: event.id,
                 message: event.message,

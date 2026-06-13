@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { InkyPostType } from "@/domain/inky/post-types";
 import { inkyPostTypeLabel } from "@/domain/inky/post-types";
 import { inkyArticleSystemPrompt } from "@/domain/inky/inky-persona";
+import { buildInkyMemoryContext } from "@/lib/inky-memory";
 import {
   buildDraftBrief,
   buildGameBrief,
@@ -72,14 +73,22 @@ async function callInkyModel(
   }
 }
 
+async function composeBriefWithMemory(seasonId: string, brief: string): Promise<string> {
+  const memory = await buildInkyMemoryContext(seasonId);
+  if (!memory) return brief;
+  return `${memory}\n\n---\n\n${brief}`;
+}
+
 export async function generateInkyArticleFromBrief(
   postType: InkyPostType,
   brief: string,
+  seasonId?: string,
 ): Promise<GeneratedInkyArticle | { error: string }> {
   if (!inkyEnabled()) {
     return { error: "Inky is not configured. Set ANTHROPIC_API_KEY." };
   }
-  return callInkyModel(postType, brief);
+  const enrichedBrief = seasonId ? await composeBriefWithMemory(seasonId, brief) : brief;
+  return callInkyModel(postType, enrichedBrief);
 }
 
 export async function generateInkyGameRecap(
@@ -88,7 +97,7 @@ export async function generateInkyGameRecap(
 ): Promise<(GeneratedInkyArticle & { brief: string }) | { error: string }> {
   const brief = await buildGameBrief(seasonId, gameId);
   if (!brief) return { error: "Game not found or stats not uploaded yet." };
-  const article = await generateInkyArticleFromBrief("game_recap", brief);
+  const article = await generateInkyArticleFromBrief("game_recap", brief, seasonId);
   if ("error" in article) return article;
   return { ...article, brief };
 }
@@ -101,7 +110,7 @@ export async function generateInkyWeeklyColumn(
 > {
   const built = await buildWeeklyBrief(seasonId, weekNumber);
   if (!built) return { error: "Season not found or no weeks in schedule." };
-  const article = await generateInkyArticleFromBrief("weekly", built.brief);
+  const article = await generateInkyArticleFromBrief("weekly", built.brief, seasonId);
   if ("error" in article) return article;
   return { ...article, weekNumber: built.weekNumber, brief: built.brief };
 }
@@ -112,7 +121,7 @@ export async function generateInkySeriesRecap(
 ): Promise<(GeneratedInkyArticle & { brief: string }) | { error: string }> {
   const brief = await buildSeriesBrief(seasonId, seriesKey);
   if (!brief) return { error: "Series not found or no games played yet." };
-  const article = await generateInkyArticleFromBrief("series_recap", brief);
+  const article = await generateInkyArticleFromBrief("series_recap", brief, seasonId);
   if ("error" in article) return article;
   return { ...article, brief };
 }
@@ -123,7 +132,7 @@ export async function generateInkyPreview(
 ): Promise<(GeneratedInkyArticle & { brief: string }) | { error: string }> {
   const brief = await buildPreviewBrief(seasonId, gameId);
   if (!brief) return { error: "Game not found." };
-  const article = await generateInkyArticleFromBrief("preview", brief);
+  const article = await generateInkyArticleFromBrief("preview", brief, seasonId);
   if ("error" in article) return article;
   return { ...article, brief };
 }
@@ -134,7 +143,7 @@ export async function generateInkyDraftRecap(
 ): Promise<(GeneratedInkyArticle & { brief: string }) | { error: string }> {
   const brief = await buildDraftBrief(seasonId, variant);
   if (!brief) return { error: "Season not found." };
-  const article = await generateInkyArticleFromBrief("draft_recap", brief);
+  const article = await generateInkyArticleFromBrief("draft_recap", brief, seasonId);
   if ("error" in article) return article;
   return { ...article, brief };
 }
@@ -144,7 +153,7 @@ export async function generateInkySeasonRecap(
 ): Promise<(GeneratedInkyArticle & { brief: string }) | { error: string }> {
   const brief = await buildSeasonBrief(seasonId);
   if (!brief) return { error: "Season not found." };
-  const article = await generateInkyArticleFromBrief("season_recap", brief);
+  const article = await generateInkyArticleFromBrief("season_recap", brief, seasonId);
   if ("error" in article) return article;
   return { ...article, brief };
 }

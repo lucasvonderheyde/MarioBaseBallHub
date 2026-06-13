@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { InkyWritingIndicator } from "@/components/inky/InkyWritingIndicator";
 import { inkyPostTypeLabel } from "@/domain/inky/post-types";
+import { leaguePostPageHref } from "@/lib/league-news-links";
 import {
   deleteLeaguePostAction,
   generateInkyGameRecapAction,
@@ -173,6 +175,14 @@ export function GameInkyPanel({
 
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-600">
               {post.createdAt.toLocaleDateString()}
+              {post.status === "published" ? (
+                <Link
+                  href={leaguePostPageHref(leagueId, seasonId, post.id)}
+                  className="text-amber-400 hover:underline"
+                >
+                  Read full article →
+                </Link>
+              ) : null}
               {isAdmin ? (
                 <>
                   {!editing ? (

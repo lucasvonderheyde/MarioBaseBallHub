@@ -209,9 +209,12 @@ export async function uploadStatsAction(
     rawJson: parsed.rawJson,
   });
 
-  const { maybeAutoDraftGameRecap } = await import("@/lib/inky-service");
+  const { maybeAutoDraftGameRecap, maybeAutoDraftSeriesRecap } = await import("@/lib/inky-service");
   void maybeAutoDraftGameRecap({ leagueId, seasonId, gameId }).catch((error) => {
     console.error("Inky auto-draft failed", error);
+  });
+  void maybeAutoDraftSeriesRecap({ leagueId, seasonId, gameId }).catch((error) => {
+    console.error("Inky series auto-draft failed", error);
   });
 
   const fieldAwayName =

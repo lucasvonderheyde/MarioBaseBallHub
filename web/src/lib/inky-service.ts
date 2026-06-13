@@ -8,11 +8,14 @@ import {
   inkyPressBoxFromGameRecap,
   INKY_BYLINE,
 } from "@/domain/inky/inky-persona";
-import { postDiscordMessage } from "@/lib/discord";
+import { postDiscordNewsMessage } from "@/lib/discord";
+import { findCompletedSeriesForGame } from "@/lib/inky-briefs";
 import {
   generateInkyGameRecap,
+  generateInkySeriesRecap,
   inkyEnabled,
 } from "@/lib/inky-generate";
+import { leaguePostAbsoluteUrl } from "@/lib/league-news-links";
 
 export type InkyDraftPostInput = {
   leagueId: string;
@@ -20,6 +23,7 @@ export type InkyDraftPostInput = {
   postType: InkyPostType;
   title: string;
   body: string;
+  briefJson?: string | null;
   createdByUserId?: string | null;
   relatedGameId?: string | null;
   seriesKey?: string | null;
@@ -70,6 +74,7 @@ export async function createInkyDraftPost(input: InkyDraftPostInput): Promise<st
     weekNumber: input.weekNumber ?? null,
     title: input.title,
     body: input.body,
+    briefJson: input.briefJson ?? null,
     source: "ai",
     status: "draft",
     createdByUserId: input.createdByUserId ?? null,
@@ -80,6 +85,13 @@ export async function createInkyDraftPost(input: InkyDraftPostInput): Promise<st
 
 export function inkyAutoDraftGameEnabled(): boolean {
   return process.env.INKY_AUTO_DRAFT_GAME === "1" || process.env.INKY_AUTO_DRAFT_GAME === "true";
+}
+
+export function inkyAutoDraftSeriesEnabled(): boolean {
+  const explicit = process.env.INKY_AUTO_DRAFT_SERIES?.trim();
+  if (explicit === "1" || explicit === "true") return true;
+  if (explicit === "0" || explicit === "false") return false;
+  return inkyAutoDraftGameEnabled();
 }
 
 /** Creates a commissioner-review draft after stats upload when enabled. */
@@ -109,6 +121,7 @@ export async function maybeAutoDraftGameRecap(input: {
     postType: "game_recap",
     title: recap.title,
     body: recap.body,
+    briefJson: recap.brief,
     relatedGameId: input.gameId,
   });
 
@@ -118,21 +131,62 @@ export async function maybeAutoDraftGameRecap(input: {
   );
 }
 
+/** Drafts a series recap when the final game of a playoff series is uploaded. */
+export async function maybeAutoDraftSeriesRecap(input: {
+  leagueId: string;
+  seasonId: string;
+  gameId: string;
+}): Promise<void> {
+  if (!inkyEnabled() || !inkyAutoDraftSeriesEnabled()) return;
+
+  const matchup = await findCompletedSeriesForGame(input.seasonId, input.gameId);
+  if (!matchup) return;
+
+  const existing = await findExistingInkyDraft({
+    seasonId: input.seasonId,
+    postType: "series_recap",
+    seriesKey: matchup.seriesKey,
+  });
+  if (existing) return;
+
+  const recap = await generateInkySeriesRecap(input.seasonId, matchup.seriesKey);
+  if ("error" in recap) {
+    console.error("maybeAutoDraftSeriesRecap failed", recap.error);
+    return;
+  }
+
+  await createInkyDraftPost({
+    leagueId: input.leagueId,
+    seasonId: input.seasonId,
+    postType: "series_recap",
+    title: recap.title,
+    body: recap.body,
+    briefJson: recap.brief,
+    seriesKey: matchup.seriesKey,
+  });
+
+  revalidatePath(`/leagues/${input.leagueId}/seasons/${input.seasonId}`);
+}
+
 export async function postInkyArticleToDiscord(input: {
+  postId: string;
   postType: InkyPostType;
   title: string;
   body: string;
   leagueId: string;
   seasonId: string;
 }): Promise<void> {
+  const articleUrl = leaguePostAbsoluteUrl(input.leagueId, input.seasonId, input.postId);
+
   if (input.postType === "game_recap") {
-    await postDiscordMessage(inkyPressBoxFromGameRecap(input.title, input.body));
+    const pressBox = inkyPressBoxFromGameRecap(input.title, input.body);
+    await postDiscordNewsMessage(`${pressBox}\n\nRead the full recap: ${articleUrl}`);
     return;
   }
 
   const excerpt = input.body.split(/\n\n+/)[0]?.trim() ?? input.body.slice(0, 400);
   const headline = input.title.toUpperCase();
-  await postDiscordMessage(
-    `🦑 **MORNING STAR — ${headline}**\n\n${excerpt.slice(0, 500)}\n\n— ${INKY_BYLINE}`,
+  await postDiscordNewsMessage(
+    `🦑 **MORNING STAR — ${headline}**\n\n${excerpt.slice(0, 500)}\n\nRead more: ${articleUrl}\n\n— ${INKY_BYLINE}`,
   );
 }

@@ -3,6 +3,11 @@ import {
   listPlayoffSeriesMatchups,
   type PlayoffSeriesMatchup,
 } from "@/domain/inky/series-matchups";
+import { computeGameMvp } from "@/domain/stats/compute-game-mvp";
+import {
+  formatGameMvpBriefLine,
+  winningTeamIdFromScore,
+} from "@/domain/inky/format-game-mvp-brief";
 import {
   alignLineScoreToSchedule,
   formatLineScoreForBrief,
@@ -108,7 +113,11 @@ export async function buildGameBrief(
   const parsed = parseCharacterGameStats(JSON.parse(game.statsRawJson));
   const rawLine = parseLineScoreFromEvents(JSON.parse(game.statsRawJson));
   const lineScore = rawLine
-    ? alignLineScoreToSchedule(rawLine, game.awayScore, game.homeScore)
+    ? alignLineScoreToSchedule(rawLine, game.awayScore, game.homeScore, {
+        scheduleAwayTeamId: game.awayTeamId,
+        scheduleHomeTeamId: game.homeTeamId,
+        statsAwayTeamId: game.statsAwayTeamId,
+      })
     : null;
 
   const stadium = normalizeStadiumId(game.statsStadiumId ?? parsed.stadiumId);
@@ -128,8 +137,30 @@ export async function buildGameBrief(
     `Managers: ${managerBriefLabel(managers.get(awayTeamId), awayName)} vs ${managerBriefLabel(managers.get(homeTeamId), homeName)}`,
   );
   if (lineScore) {
-    lines.push(`Line score:\n${formatLineScoreForBrief(lineScore, awayName, homeName)}`);
+    const scheduleAwayName = teamNames.get(game.awayTeamId) ?? "Away";
+    const scheduleHomeName = teamNames.get(game.homeTeamId) ?? "Home";
+    lines.push(
+      `Line score:\n${formatLineScoreForBrief(lineScore, scheduleAwayName, scheduleHomeName)}`,
+    );
   }
+
+  const winningTeamId = winningTeamIdFromScore(
+    game.awayScore,
+    game.homeScore,
+    awayTeamId,
+    homeTeamId,
+  );
+  const mvp = computeGameMvp(stats, winningTeamId);
+  if (mvp) {
+    lines.push(
+      formatGameMvpBriefLine(
+        mvp,
+        formatCharIdDisplay(mvp.charId),
+        teamNames.get(mvp.teamId) ?? "?",
+      ),
+    );
+  }
+
   lines.push(
     `Team hits: ${awayName} ${awayStats.reduce((s, r) => s + r.hits, 0)}, ${homeName} ${homeStats.reduce((s, r) => s + r.hits, 0)}`,
   );
@@ -344,6 +375,29 @@ export async function buildSeriesBrief(
   lines.push(`Season: ${dash.season.name}`);
   lines.push(...formatSeriesGameBrief(matchup, teamNames));
 
+  for (const [index, { game }] of matchup.games.entries()) {
+    if (game.homeScore == null || game.awayScore == null || !game.statsRawJson) continue;
+
+    const fieldSides = resolveGameFieldSides(game);
+    const gameStats = await getGameCharacterStats(game.id);
+    const gameWinningTeamId = winningTeamIdFromScore(
+      game.awayScore,
+      game.homeScore,
+      fieldSides.awayTeamId,
+      fieldSides.homeTeamId,
+    );
+    const gameMvp = computeGameMvp(gameStats, gameWinningTeamId);
+    if (gameMvp) {
+      lines.push(
+        `Game ${index + 1} MVP: ${formatGameMvpBriefLine(
+          gameMvp,
+          formatCharIdDisplay(gameMvp.charId),
+          teamNames.get(gameMvp.teamId) ?? "?",
+        )}`,
+      );
+    }
+  }
+
   return lines.join("\n");
 }
 
@@ -450,6 +504,40 @@ export async function buildSeasonBrief(seasonId: string): Promise<string | null>
   }
 
   return lines.join("\n");
+}
+
+export type UpcomingPreviewGame = {
+  gameId: string;
+  label: string;
+  isPlayoff: boolean;
+};
+
+export async function listUpcomingPreviewGames(
+  seasonId: string,
+): Promise<UpcomingPreviewGame[]> {
+  const dash = await getSeasonDashboard(seasonId);
+  if (!dash) return [];
+
+  const teamNames = new Map(dash.teams.map((t) => [t.team.id, t.team.name]));
+
+  return dash.games
+    .filter(
+      ({ game }) =>
+        game.homeScore == null && game.awayScore == null && !game.statsRawJson,
+    )
+    .map(({ game, round }) => {
+      const away = teamNames.get(game.awayTeamId) ?? "Away";
+      const home = teamNames.get(game.homeTeamId) ?? "Home";
+      const roundLabel =
+        round.phase === "playoffs"
+          ? `Playoffs R${round.roundNumber}`
+          : `Week ${round.roundNumber}`;
+      return {
+        gameId: game.id,
+        label: `${away} @ ${home} (${roundLabel})`,
+        isPlayoff: round.phase === "playoffs",
+      };
+    });
 }
 
 export async function listSeriesOptions(seasonId: string) {
