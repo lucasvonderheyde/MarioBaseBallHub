@@ -15,7 +15,16 @@ import {
   generateInkySeriesRecap,
   inkyEnabled,
 } from "@/lib/inky-generate";
+import {
+  inkyAutoDraftGameEnabled,
+  inkyAutoDraftSeriesEnabled,
+} from "@/lib/inky-auto-draft-settings";
+import { findAnyGameRecapPost } from "@/lib/league-news";
 import { leaguePostAbsoluteUrl } from "@/lib/league-news-links";
+
+export type EnsureGameRecapResult = "exists" | "created" | "skipped" | "failed";
+
+const gameRecapGenerationLocks = new Map<string, Promise<EnsureGameRecapResult>>();
 
 export type InkyDraftPostInput = {
   leagueId: string;
@@ -83,37 +92,25 @@ export async function createInkyDraftPost(input: InkyDraftPostInput): Promise<st
   return id;
 }
 
-export function inkyAutoDraftGameEnabled(): boolean {
-  return process.env.INKY_AUTO_DRAFT_GAME === "1" || process.env.INKY_AUTO_DRAFT_GAME === "true";
-}
-
-export function inkyAutoDraftSeriesEnabled(): boolean {
-  const explicit = process.env.INKY_AUTO_DRAFT_SERIES?.trim();
-  if (explicit === "1" || explicit === "true") return true;
-  if (explicit === "0" || explicit === "false") return false;
-  return inkyAutoDraftGameEnabled();
-}
-
-/** Creates a commissioner-review draft after stats upload when enabled. */
-export async function maybeAutoDraftGameRecap(input: {
+async function runEnsureGameRecapDraft(input: {
   leagueId: string;
   seasonId: string;
   gameId: string;
-}): Promise<void> {
-  if (!inkyEnabled() || !inkyAutoDraftGameEnabled()) return;
+  createdByUserId?: string | null;
+}): Promise<EnsureGameRecapResult> {
+  if (!inkyEnabled()) return "skipped";
 
-  const existing = await findExistingInkyDraft({
-    seasonId: input.seasonId,
-    postType: "game_recap",
-    relatedGameId: input.gameId,
-  });
-  if (existing) return;
+  const existing = await findAnyGameRecapPost(input.gameId);
+  if (existing) return "exists";
 
   const recap = await generateInkyGameRecap(input.seasonId, input.gameId);
   if ("error" in recap) {
-    console.error("maybeAutoDraftGameRecap failed", recap.error);
-    return;
+    console.error("ensureGameRecapDraft failed", recap.error);
+    return "failed";
   }
+
+  const stillAvailable = await findAnyGameRecapPost(input.gameId);
+  if (stillAvailable) return "exists";
 
   await createInkyDraftPost({
     leagueId: input.leagueId,
@@ -123,12 +120,49 @@ export async function maybeAutoDraftGameRecap(input: {
     body: recap.body,
     briefJson: recap.brief,
     relatedGameId: input.gameId,
+    createdByUserId: input.createdByUserId ?? null,
   });
 
   revalidatePath(`/leagues/${input.leagueId}/seasons/${input.seasonId}`);
   revalidatePath(
     `/leagues/${input.leagueId}/seasons/${input.seasonId}/games/${input.gameId}`,
   );
+  return "created";
+}
+
+/**
+ * Idempotent game recap draft — skips when a recap already exists or generation is in flight.
+ */
+export async function ensureGameRecapDraft(input: {
+  leagueId: string;
+  seasonId: string;
+  gameId: string;
+  createdByUserId?: string | null;
+}): Promise<EnsureGameRecapResult> {
+  if (!inkyEnabled()) return "skipped";
+
+  const existing = await findAnyGameRecapPost(input.gameId);
+  if (existing) return "exists";
+
+  const lockKey = `${input.seasonId}:${input.gameId}`;
+  const inFlight = gameRecapGenerationLocks.get(lockKey);
+  if (inFlight) return inFlight;
+
+  const work = runEnsureGameRecapDraft(input).finally(() => {
+    gameRecapGenerationLocks.delete(lockKey);
+  });
+  gameRecapGenerationLocks.set(lockKey, work);
+  return work;
+}
+
+/** Creates a commissioner-review draft after stats upload when enabled. */
+export async function maybeAutoDraftGameRecap(input: {
+  leagueId: string;
+  seasonId: string;
+  gameId: string;
+}): Promise<void> {
+  if (!inkyAutoDraftGameEnabled()) return;
+  await ensureGameRecapDraft(input);
 }
 
 /** Drafts a series recap when the final game of a playoff series is uploaded. */

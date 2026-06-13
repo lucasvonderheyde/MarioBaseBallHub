@@ -18,7 +18,7 @@ export async function getSeasonNewsPosts(seasonId: string, includeDrafts: boolea
   return includeDrafts ? rows : rows.filter((row) => row.status === "published");
 }
 
-export async function getGameRecapPost(gameId: string, includeDrafts: boolean) {
+export async function findAnyGameRecapPost(gameId: string) {
   const [post] = await db
     .select()
     .from(leaguePosts)
@@ -31,6 +31,11 @@ export async function getGameRecapPost(gameId: string, includeDrafts: boolean) {
     .orderBy(desc(leaguePosts.createdAt))
     .limit(1);
 
+  return post ?? null;
+}
+
+export async function getGameRecapPost(gameId: string, includeDrafts: boolean) {
+  const post = await findAnyGameRecapPost(gameId);
   if (!post) return null;
   if (!includeDrafts && post.status !== "published") return null;
   return post;

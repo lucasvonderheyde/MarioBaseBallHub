@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Card } from "@/components/ui/Card";
 import { InkyWritingIndicator } from "@/components/inky/InkyWritingIndicator";
 import { inkyPostTypeLabel } from "@/domain/inky/post-types";
 import { leaguePostPageHref } from "@/lib/league-news-links";
 import {
   deleteLeaguePostAction,
-  generateInkyGameRecapAction,
+  ensureGameRecapDraftAction,
   publishLeaguePostAction,
   updateLeaguePostAction,
 } from "@/server/actions/league-news-actions";
@@ -32,6 +32,8 @@ type Props = {
   post: GameRecapPost | null;
 };
 
+const RECAP_POLL_MS = 3000;
+
 export function GameInkyPanel({
   leagueId,
   seasonId,
@@ -43,13 +45,50 @@ export function GameInkyPanel({
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [generating, setGenerating] = useState(false);
+  const [waitingForRecap, setWaitingForRecap] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
+  const ensureStartedRef = useRef(false);
 
-  if (!post && !(isAdmin && hasStats)) return null;
+  const shouldAutoGenerate = isAdmin && hasStats && aiEnabled && post == null;
+  const showPanel = post != null || shouldAutoGenerate;
+
+  useEffect(() => {
+    if (!shouldAutoGenerate || ensureStartedRef.current) return;
+    ensureStartedRef.current = true;
+    setWaitingForRecap(true);
+    setError(null);
+
+    void ensureGameRecapDraftAction({ leagueId, seasonId, gameId }).then((result) => {
+      if (result.error) {
+        setError(result.error);
+        setWaitingForRecap(false);
+        ensureStartedRef.current = false;
+        return;
+      }
+      router.refresh();
+    });
+  }, [shouldAutoGenerate, leagueId, seasonId, gameId, router]);
+
+  useEffect(() => {
+    if (post) {
+      setWaitingForRecap(false);
+    }
+  }, [post]);
+
+  useEffect(() => {
+    if (!waitingForRecap || post) return;
+
+    const interval = setInterval(() => {
+      router.refresh();
+    }, RECAP_POLL_MS);
+
+    return () => clearInterval(interval);
+  }, [waitingForRecap, post, router]);
+
+  if (!showPanel) return null;
 
   function refreshAfterAction(result: { error?: string }) {
     if (result.error) {
@@ -67,15 +106,20 @@ export function GameInkyPanel({
     });
   }
 
-  function runGenerate(action: () => Promise<{ error?: string }>) {
+  function retryGeneration() {
+    ensureStartedRef.current = false;
     setError(null);
-    setGenerating(true);
-    startTransition(async () => {
-      try {
-        refreshAfterAction(await action());
-      } finally {
-        setGenerating(false);
+    setWaitingForRecap(true);
+    ensureStartedRef.current = true;
+
+    void ensureGameRecapDraftAction({ leagueId, seasonId, gameId }).then((result) => {
+      if (result.error) {
+        setError(result.error);
+        setWaitingForRecap(false);
+        ensureStartedRef.current = false;
+        return;
       }
+      router.refresh();
     });
   }
 
@@ -225,26 +269,22 @@ export function GameInkyPanel({
               ) : null}
             </div>
           </article>
-        ) : generating ? (
+        ) : waitingForRecap ? (
           <InkyWritingIndicator message="Inky is writing the game recap…" />
         ) : (
-          <>
+          <div className="space-y-3">
             <p className="text-sm text-zinc-400">
-              Ask Inky to write a game recap from the uploaded box score. The recap stays
-              on this game page for commissioner review before publishing.
+              Inky could not file this recap from the press box.
             </p>
             <button
               type="button"
               disabled={!aiEnabled}
-              title={aiEnabled ? undefined : "Set ANTHROPIC_API_KEY to enable Inky"}
-              onClick={() =>
-                runGenerate(() => generateInkyGameRecapAction({ leagueId, seasonId, gameId }))
-              }
-              className="msb-btn-outline-gold mt-3 text-sm"
+              onClick={retryGeneration}
+              className="msb-btn-outline-gold text-sm"
             >
-              Ask Inky for a recap
+              Try again
             </button>
-          </>
+          </div>
         )}
       </div>
 

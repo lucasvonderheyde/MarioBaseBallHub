@@ -8,7 +8,6 @@ import type { InkyPostType } from "@/domain/inky/post-types";
 import { isInkyPostType } from "@/domain/inky/post-types";
 import {
   generateInkyDraftRecap,
-  generateInkyGameRecap,
   generateInkyPreview,
   generateInkySeasonRecap,
   generateInkySeriesRecap,
@@ -17,7 +16,7 @@ import {
 } from "@/lib/inky-generate";
 import {
   createInkyDraftPost,
-  findExistingInkyDraft,
+  ensureGameRecapDraft,
   postInkyArticleToDiscord,
 } from "@/lib/inky-service";
 import { leaguePostPageHref } from "@/lib/league-news-links";
@@ -81,31 +80,33 @@ export async function generateSeasonRecapAction(input: {
   return {};
 }
 
+export async function ensureGameRecapDraftAction(input: {
+  leagueId: string;
+  seasonId: string;
+  gameId: string;
+}): Promise<{ error?: string; status?: "exists" | "created" | "skipped" | "failed" }> {
+  const auth = await requireCommissioner(input.leagueId);
+  if ("error" in auth) return auth;
+
+  const status = await ensureGameRecapDraft({
+    ...input,
+    createdByUserId: auth.user.id,
+  });
+
+  if (status === "failed") {
+    return { error: "Inky could not file this recap. Try again in a moment.", status };
+  }
+
+  return { status };
+}
+
+/** @deprecated Prefer ensureGameRecapDraftAction — kept for manual retry flows. */
 export async function generateInkyGameRecapAction(input: {
   leagueId: string;
   seasonId: string;
   gameId: string;
-}): Promise<{ error?: string }> {
-  const auth = await requireCommissioner(input.leagueId);
-  if ("error" in auth) return auth;
-
-  const recap = await generateInkyGameRecap(input.seasonId, input.gameId);
-  if ("error" in recap) return { error: recap.error };
-
-  const postId = await createInkyDraftPost({
-    leagueId: input.leagueId,
-    seasonId: input.seasonId,
-    postType: "game_recap",
-    title: recap.title,
-    body: recap.body,
-    briefJson: recap.brief,
-    relatedGameId: input.gameId,
-    createdByUserId: auth.user.id,
-  });
-
-  revalidateNewsPaths(input.leagueId, input.seasonId);
-  revalidatePostPaths(input.leagueId, input.seasonId, postId, input.gameId);
-  return {};
+}): Promise<{ error?: string; status?: "exists" | "created" | "skipped" | "failed" }> {
+  return ensureGameRecapDraftAction(input);
 }
 
 export async function generateInkyWeeklyAction(input: {
