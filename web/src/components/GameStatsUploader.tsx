@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   uploadStatsFormAction,
@@ -57,6 +57,7 @@ function GameStatsUploaderForm({
   compact = false,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [state, action, pending] = useActionState(uploadStatsFormAction, null);
   const [mode, setMode] = useState<UploadMode>("file");
   const [jsonText, setJsonText] = useState("");
@@ -95,9 +96,11 @@ function GameStatsUploaderForm({
 
   useEffect(() => {
     if (state && "ok" in state && state.ok) {
+      const url = `${pathname}?inky=pending`;
+      router.replace(url, { scroll: false });
       router.refresh();
     }
-  }, [state, router]);
+  }, [state, router, pathname]);
 
   return (
     <form action={action} className="space-y-3">
